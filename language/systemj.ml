@@ -27,6 +27,9 @@ type io =
 | Input
 | Output
 
+type sysj_bool =
+| True
+| False
 
 type stmt = 
 | Block of stmt list * (line * column)
@@ -42,6 +45,7 @@ type stmt =
 | Suspend of expr * stmt * (line * column)
 | Send of symbol * (line * column)
 | Receive of symbol * (line * column)
+| While of sysj_bool * stmt * (line * column)
 | Noop
 
 type ast =

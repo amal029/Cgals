@@ -22,7 +22,8 @@ rule lexer = parse
   | "&&" {Parser.And}
   | "par" {Parser.TSplit}
   | "||" {Parser.Or}
-  | "||" {Parser.TWhile}
+  | "trap" {Parser.TTrap}
+  | "while" {Parser.TWhile}
   | "true" {Parser.TTrue}
   | "false" {Parser.TFalse}
   | "><" {Parser.TASYNC}

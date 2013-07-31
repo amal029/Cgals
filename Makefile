@@ -17,4 +17,4 @@ clean:
 	$(MAKE) -e -C language/ clean
 	$(MAKE) -e -C error/ clean
 	$(MAKE) -e -C parser/ clean
-	rm -rf *.ll *.lle *.bc *.s *.dot *.grf *.part* gmon.out TAGS *.mli *.cm* *.o
+	rm -rf *.ll *.lle *.bc *.s *.dot *.grf *.part* gmon.out TAGS *.mli *.cm* *.o systemjc

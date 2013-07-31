@@ -21,7 +21,7 @@
 /* The tokens */
 /* Constant constructors */
 %token TPlus TMinus TTimes TDiv TPow TOP TSEMICOLON TCP TEqual TOB TCB TComma TLess TLessEqual TGreater TGreaterEqual TEqualEqual TMod TASYNC
-%token And Or Where TXCL TQ TSuspend TAbort TWhile
+%token And Or Where TXCL TQ TSuspend TAbort TWhile TTrue TFalse TWhile TTrap
 %token TLbrack TRbrack TColon TPresent TEof TLShift TRShift TElse TExit TEmit
 %token TMain TIn TOut TOtherwise TPar TFor TSignal TChannel TPause
 %token TInt8 TInt16 TInt32 TInt64 TInt8s TInt16s TInt32s TInt64s TFloat8 TFloat32 TFloat64 TFloat16
@@ -70,6 +70,7 @@ stmt:
     | TIn TChannel symbol {Systemj.Channel(Systemj.Input, $3, ln())}
     | TOut TChannel symbol {Systemj.Channel(Systemj.Output, $3, ln())}
     | TOB stmtlist TCB {Systemj.Block ($2, ln())}
+    | TOB TCB {Systemj.Noop}
     | present {$1}
     | abort {$1}
     | suspend {$1}
@@ -79,6 +80,8 @@ stmt:
     | TSplit TOP stmtlist TCP {Systemj.Spar($3,ln())}
     | send {$1}
     | receive {$1}
+    | twhile {$1}
+    | trap {$1}
 ;
 
 send:
@@ -89,6 +92,9 @@ receive:
     | symbol TQ  {Systemj.Receive($1,ln())}
 ;
 
+trap:
+    | TTrap TOP symbol TCP stmt {Systemj.Trap($3,$5,ln())}
+;
 suspend:
     | TSuspend TOP expr TCP stmt {Systemj.Suspend($3,$5,ln())}
 ;
@@ -102,13 +108,19 @@ present:
 ;
 
 twhile:
-    | TWhile TOP expr TCP stmt 
+    | TWhile TOP bool_expr TCP stmt {Systemj.While($3,$5,ln())}
+;
 
 expr:
     | symbol {Systemj.Esymbol($1,ln())}
     | expr Or expr {Systemj.Or($1,$3,ln())}
     | expr And expr {Systemj.And($1,$3,ln())}
     | TOP expr TCP {Systemj.Brackets($2,ln())}
+;
+
+bool_expr:
+    | TTrue {Systemj.True}
+    | TFalse {Systemj.False}
 ;
 
 symbol:
