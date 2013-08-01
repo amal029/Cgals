@@ -1,17 +1,21 @@
+CC=ocamlopt
 PARSERLIB=parser.cmxa
 LANGUAGELIB=systemj.cmxa
+LOGICLIB=propositionalLogic.cmxa
+ERRORLIB=error.cmxa
 
 all: compile
 
 
 compile:
-	$(MAKE) -e -C language/ all
 	$(MAKE) -e -C error/ all
+	$(MAKE) -e -C language/ all
 	$(MAKE) -e -C parser/ all
 	$(MAKE) -e -C induction/ all
-	ocamlfind ocamlopt -o systemjc -linkpkg -package batteries \
-	-I ./language -I ./error -I ./parser \
-	$(LANGUAGELIB) $(PARSERLIB) systemjc.ml 
+	ocamlfind $(CC) -pp "camlp4o pa_macro.cmo -DDEBUG" -o systemjc	\
+	-linkpkg -package batteries -I ./language -I ./error -I		\
+	./parser -I ./induction $(ERRORLIB) $(LANGUAGELIB) $(PARSERLIB)	\
+	$(LOGICLIB) systemjc.ml
 	ctags -R -e *
 
 clean:

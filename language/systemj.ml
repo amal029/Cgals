@@ -48,3 +48,57 @@ type stmt =
 
 type ast =
 | Apar of stmt list * (line * column)
+
+
+let print_symbol = function
+  | Symbol (x,ln) -> x
+
+let print_expr x = "EXPR HERE"
+
+let rec print_stmt = function
+  | Block (x,ln) -> 
+    let () = print_string ((Reporting.get_line_and_column ln) ^ " : ") in
+    let () = List.iter print_stmt x in ()
+  | Pause (Some x, ln) -> 
+    let () = print_string ((Reporting.get_line_and_column ln) ^ " : ") in
+    let () = print_endline ("Pause: " ^ x) in ()
+  | Pause (None, ln) -> 
+    let () = print_string ((Reporting.get_line_and_column ln) ^ " : ") in
+    let () = print_endline "Pause: " in ()
+  | Emit (x,ln) ->
+    let () = print_string ((Reporting.get_line_and_column ln) ^ " : ") in
+    let () = print_endline ("emit " ^(print_symbol x)) in ()
+  | Present (expr,s,None,ln) ->
+    let () = print_string ((Reporting.get_line_and_column ln) ^ " : ") in
+    let () = print_endline ("Present (" ^ (print_expr expr) ^ ") {") in
+    let () = print_stmt s in
+    let () = print_endline "}" in ()
+  | Present (expr,s,Some e,ln) ->
+    let () = print_string ((Reporting.get_line_and_column ln) ^ " : ") in
+    let () = print_endline ("Present (" ^ (print_expr expr) ^ ") {") in
+    let () = print_stmt s in
+    let () = print_endline "}" in 
+    let () = print_endline "else {" in
+    let () = print_stmt e in
+    let () = print_endline "}" in ()
+  | Trap (s,st,ln) ->
+    let () = print_string ((Reporting.get_line_and_column ln) ^ " : ") in
+    let () = print_endline ("trap (" ^ (print_symbol s) ^ "){") in
+    let () = print_stmt st in
+    let () = print_endline "}" in ()
+  | Signal (_,s,ln) ->
+    let () = print_string ((Reporting.get_line_and_column ln) ^ " : ") in
+    let () = print_endline ("signal " ^ (print_symbol s)) in () 
+  | Channel (_,s,ln) ->
+    let () = print_string ((Reporting.get_line_and_column ln) ^ " : ") in
+    let () = print_endline ("channel " ^ (print_symbol s)) in () 
+  | Spar (ll,ln) -> 
+    let () = print_string ((Reporting.get_line_and_column ln) ^ " : ") in
+    let () = List.iter print_stmt ll in ()
+  | _ -> print_endline "Need to complete this printing routine!"
+
+
+let print = function
+  | Apar (x,ln) -> 
+    let () = print_string ((Reporting.get_line_and_column ln) ^ " : ") in
+    let () = List.iter print_stmt x in ()
