@@ -1,15 +1,15 @@
 CC=ocamlopt
 LANGUAGELIB=systemj.cmxa
 LANGUAGEDIR=../language
-SRC=induction.ml
-all: induction.cmxa
+SRC=propositionalLogic.ml
+all: propositionalLogic.cmxa
 
 
-induction.cmxa: induction.cmx
+propositionalLogic.cmxa: propositionalLogic.cmx
 	ocamlfind $(CC) -o $@ -linkpkg -package batteries \
-	-I $(LANGUAGEDIR) $(LANGUAGELIB) induction.cmx
+	-I $(LANGUAGEDIR) $(LANGUAGELIB) propositionalLogic.cmx
 
-induction.cmx:
+propositionalLogic.cmx:
 	ocamlfind $(CC) -pp "camlp4o pa_macro.cmo -DDEBUG" \
 	-o $@ -linkpkg -package batteries -I $(LANGUAGEDIR) -c $(SRC)
 
