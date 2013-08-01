@@ -8,8 +8,6 @@
    The language goes a bit beyond SystemJ/Esterel towards, VHDL.
 *)
 
-exception Error of string;;
-
 (* The current position for error reporting *)
 type line = int
 type column = int
@@ -33,7 +31,7 @@ type sysj_bool =
 
 type stmt = 
 | Block of stmt list * (line * column)
-| Pause of (line * column)
+| Pause of string option * (line * column)
 | Emit of symbol * (line * column)
 | Present of expr * stmt * stmt option * (line * column)
 | Trap of symbol * stmt * (line * column)
