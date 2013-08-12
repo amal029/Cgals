@@ -16,7 +16,6 @@ compile:
 	-linkpkg -package batteries -I ./language -I ./error -I		\
 	./parser -I ./induction $(ERRORLIB) $(LANGUAGELIB) $(PARSERLIB)	\
 	$(LOGICLIB) systemjc.ml
-	ctags -R -e *
 
 clean:
 	$(MAKE) -e -C language/ clean

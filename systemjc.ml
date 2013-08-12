@@ -17,10 +17,10 @@ try
   let (insts,enters) = PropositionalLogic.build_propositional_tree_logic ast in
   let () = IFDEF DEBUG THEN 
     let () = print_endline "Inst propositional logic tree: " in
-    List.iter print_endline (List.map PropositionalLogic.print_inst insts) ELSE () ENDIF in
+    List.iter print_endline (List.map PropositionalLogic.print insts) ELSE () ENDIF in
   let () = IFDEF DEBUG THEN 
     let () = print_endline "Enter propositional logic tree: " in
-    List.iter print_endline (List.map PropositionalLogic.print_enter enters) ELSE () ENDIF in 
+    List.iter print_endline (List.map PropositionalLogic.print enters) ELSE () ENDIF in 
   ()
   
 with
