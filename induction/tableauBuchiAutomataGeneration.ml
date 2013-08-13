@@ -11,13 +11,11 @@ let new_name () =
   counter := !counter + 1; 
   "N" ^ (string_of_int !counter)
 
-
 let negate = function
   | Proposition x -> Not (Proposition x)
   | Not (Proposition x) -> Proposition x
   | _ -> raise (Internal_error "Don't know how to negate non-proposition clauses!!")
 
-(* TODO: Complete me!  *)
 let rec expand node nodes_set = 
   match node.neew with
   | [] -> 
