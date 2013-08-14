@@ -21,7 +21,7 @@ let rec expand node nodes_set =
   | [] -> 
     (try
        let shared_node = List.find (fun x -> (x.old = node.old) && (node.next = x.next)) !nodes_set in
-       shared_node.incoming <- shared.node @ node.incoming
+       shared_node.incoming <- shared_node.incoming @ node.incoming
      with
      | Not_found -> 
        nodes_set := node :: !nodes_set;
@@ -33,7 +33,7 @@ let rec expand node nodes_set =
        expand st nodes_set)
   | _ -> 
     (* Here n stands for $\nu$ the greek letter *)
-    let n = List.head node.neew in
+    let n = List.hd node.neew in
     let () = node.neew <- List.remove_all node.neew n in
     let () = (match n with
       | Proposition _
@@ -47,24 +47,24 @@ let rec expand node nodes_set =
 	  expand node nodes_set
       | And (x,y) -> 
 	let ups = ref [x;y] in
-	let nn = List.iter (fun y -> ups := (List.remove_all (fun x -> x = y) !ups)) node.old in
+	let () = List.iter (fun y -> ups := (List.drop_while (fun x -> x = y) !ups)) node.old in
 	let st = {name=node.name; father=node.name;
 		  incoming=node.incoming;
 		  neew=node.neew @ !ups;
 		  old=node.old @ [n]; next=node.next} in
 	expand st nodes_set
       | Or (x,y) -> 
-	let nn1 = new_name in
+	let nn1 = new_name () in
 	let ups = ref [x] in
-	let nn = List.iter (fun y -> ups := (List.remove_all (fun x -> x = y) !ups)) node.old in
-	let node1 = {name=nn;father=node.name;incoming=node.incoming;
-		     neew=node.neew@!ups;old=node.old@[n];
+	let () = List.iter (fun y -> ups := (List.drop_while (fun x -> x = y) !ups)) node.old in
+	let node1 = {name=nn1;father=node.name;incoming=node.incoming;
+		     neew=node.neew @ !ups;old=node.old @ [n];
 		     next=node.next} in
-	let nn2 = new_name in
+	let nn2 = new_name () in
 	let ups = ref [y] in
-	let nn = List.iter (fun y -> ups := (List.remove_all (fun x -> x = y) !ups)) node.old in
-	let node2 = {name=nn;father=node.name;incoming=node.incoming;
-		     neew=node.neew@!ups;old=node.old@[n];
+	let () = List.iter (fun y -> ups := (List.drop_while (fun x -> x = y) !ups)) node.old in
+	let node2 = {name=nn2;father=node.name;incoming=node.incoming;
+		     neew=node.neew @ !ups;old=node.old @ [n];
 		     next=node.next} in
 	let () = expand node1 nodes_set in
 	expand node2 nodes_set
@@ -74,7 +74,7 @@ let rec expand node nodes_set =
 		    next=node.next@[x]} in
 	expand node nodes_set
       | Brackets x -> expand node nodes_set
-      | _ as s -> raise (Internal_error "Don't know how to handle the formula!")
+      | _ -> raise (Internal_error "Don't know how to handle the formula!")
     ) in
     ()
 

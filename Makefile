@@ -1,7 +1,7 @@
 CC=ocamlopt
 PARSERLIB=parser.cmxa
 LANGUAGELIB=systemj.cmxa
-LOGICLIB=propositionalLogic.cmxa
+LOGICLIB=logic.cmxa
 ERRORLIB=error.cmxa
 
 all: compile

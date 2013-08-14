@@ -59,23 +59,23 @@ type logic =
 | And of logic * logic
 | Proposition of proposition
 | Brackets of logic
-| NextTime of proposition
+| NextTime of logic
 
 let rec collect_labels = function
-  | Noop | Emit _ | Signal _ 
-  | Channel _ | Exit _ -> False
-  | Pause (Some x,) -> Proposition x
-  | Block (x,_)  
-  | Spar (s,_) -> List.reduce (fun x y -> Or (x,y)) (List.map collect_labels x)
-  | Abort (_,s,_) | Suspend (_,s,_) |
-  | While (_,s,_) -> collect_labels s
+  | Systemj.Noop | Systemj.Emit _ | Systemj.Signal _ 
+  | Systemj.Channel _ | Systemj.Exit _ -> False
+  | Systemj.Pause (Some x,_) -> Proposition x
+  | Systemj.Block (x,_)  
+  | Systemj.Spar (x,_) -> List.reduce (fun x y -> Or (x,y)) (List.map collect_labels x)
+  | Systemj.Abort (_,s,_) | Systemj.Suspend (_,s,_)
+  | Systemj.While (_,s,_) -> collect_labels s
   | _ -> raise (Internal_error "Send/Receive after re-writing!")
 
 let rec expr_to_logic = function
   | Systemj.And (x,y,_) -> And(expr_to_logic x, expr_to_logic y)
   | Systemj.Or (x,y,_) -> Or(expr_to_logic x, expr_to_logic y)
   | Systemj.Brackets (x,_) -> Brackets (expr_to_logic x)
-  | Systemj.Esymbol (Systemj.Symbol(x,_),_) -> Porposition x
+  | Systemj.Esymbol (Systemj.Symbol(x,_),_) -> Proposition x
 
 let rec solve_logic = function
   | And (x,y) -> 
@@ -103,7 +103,7 @@ let rec solve_logic = function
     | False -> False
     | _ as s -> Brackets s)
   | True | False as s -> s
-  | Porposition _ as s -> s
+  | Proposition _ as s -> s
   | NextTime _ as s -> s
 
 (* Function, which states if the statements are instantaneous with
@@ -133,6 +133,7 @@ let rec print = function
   | Proposition x -> "Proposition("^ x ^ ")"
   | Brackets x -> "(" ^ print x ^ ")"
   | Not x -> "Not(" ^ print x ^ ")"
+  | NextTime x -> "X" ^ (print x)
 
 
 (* The function that states if the statements can create a state in the
@@ -140,7 +141,7 @@ let rec print = function
 let rec enter = function
   | Systemj.Noop -> False
   | Systemj.Emit _ -> False
-  | Systemj.Pause (Some x,_) -> NextTime x
+  | Systemj.Pause (Some x,_) -> NextTime (Proposition x)
   | Systemj.Present (e,t,Some el,_) -> Or(And (NextTime (Not (collect_labels el)), 
 					       And (enter t, expr_to_logic e)), 
 					  And (NextTime (Not (collect_labels t)),
@@ -160,7 +161,7 @@ let rec enter = function
     let () = Systemj.print_stmt s in
     raise (Internal_error "Enter: Cannot get send/receive after rewriting!!")
 and enter_seq r = function
-  | h::t -> Or (And(NextTime(Not (collect_labels Systemj.Block(t,r))),enter h), 
+  | h::t -> Or (And(NextTime(Not (collect_labels (Systemj.Block(t,r)))),enter h), 
 		And(NextTime (Not (collect_labels h)),
 		    And(enter (Systemj.Block(t,r)), solve_logic (inst h)))) 
   | [] -> False
@@ -168,7 +169,7 @@ and enter_spar r = function
   | h::t -> 
     Or(Or(And(NextTime (Not (collect_labels h)),
 	      And(enter (Systemj.Spar(t,r)),(solve_logic (inst h)))),
-	  And(NextTime (Not (collect_labels Systemj.Spar(t,r))),
+	  And(NextTime (Not (collect_labels (Systemj.Spar(t,r)))),
 	      And((solve_logic (inst (Systemj.Spar(t,r)))),enter h))),
        And(enter h,enter (Systemj.Spar(t,r))))
   | [] -> False
@@ -180,8 +181,8 @@ and enter_spar r = function
 let rec term = function
   | Systemj.Noop -> False
   | Systemj.Emit (s,_) -> False
-  | Systemj.Pause (Some (Systemj.Symbol x, _)) -> Proposition x
-  | Systemj.Pause (None,lc) -> raise (Internal_error "Pause without a label: " ^ (Reporting.get_line_and_column lc))
+  | Systemj.Pause (Some x,_) -> Proposition x
+  | Systemj.Pause (None,lc) -> raise (Internal_error ("Pause without a label: " ^ (Reporting.get_line_and_column lc)))
   | Systemj.Present (e,t,Some el,_) -> And(term t, Not(collect_labels el))
   | Systemj.Present (e,t,None,_) -> term t
   | Systemj.Block (sl,r) -> term_seq r sl
@@ -190,18 +191,18 @@ let rec term = function
   | Systemj.Suspend (e,s,_) -> And(Not (expr_to_logic e), term s)
   | Systemj.Abort(e,s,_)  -> And(collect_labels s,Or(expr_to_logic e, term s))
   | Systemj.Trap (e,s,_) -> And(collect_labels s, term s) 	(* You can exit it if the body exits it! *)
-  | Systemj.Exit (Systemj.Symbol s,_) -> False
+  | Systemj.Exit (Systemj.Symbol (s,_),_) -> False
   | Systemj.Signal _ 
   | Systemj.Channel _ -> False
   | _ -> raise (Internal_error "Inst: Cannot get send/receive after rewriting!!")
 and term_seq r = function
   | h::t -> Or(And(Not(collect_labels (Systemj.Block(t,r))),
-		   And(term h, solve_logic (inst Systemj.Block (t,r)))),
+		   And(term h, solve_logic (inst (Systemj.Block (t,r))))),
 	       And(term (Systemj.Block(t,r)),Not(collect_labels h)))
   | [] -> False 			
 and term_spar r = function
-  | h::t -> Or(And(term h, Not(collect_labels (Systemj.Spar(t,r)))),
-	       And(term (Systemj.Spar(t,r)), Not(collect_labels h)),
+  | h::t -> Or(Or(And(term h, Not(collect_labels (Systemj.Spar(t,r)))),
+		  And(term (Systemj.Spar(t,r)), Not(collect_labels h))),
 	       And(term h, term (Systemj.Spar(t,r))))
   | [] -> False
 
@@ -219,21 +220,21 @@ let rec move = function
   | Systemj.While (_,s,_) -> Or(move s,And(term s, solve_logic (enter s)))
   | Systemj.Abort(e,s,_)  -> And(Not(expr_to_logic e),move s)
   | Systemj.Trap (e,s,_) -> move s
-  | Systemj.Exit (Systemj.Symbol s,_) -> False
+  | Systemj.Exit (Systemj.Symbol (s,_),_) -> False
   | Systemj.Signal _ 
   | Systemj.Channel _ -> False
   | Systemj.Suspend (e,s,lc) -> raise (Internal_error ("Suspend current not supported: " ^ (Reporting.get_line_and_column lc)))
   | _ -> raise (Internal_error "Inst: Cannot get send/receive after rewriting!!")
 and move_seq r = function
-  | h::t -> Or(And(move h, And(Not(collect_labels (Systemj.Block(t,r))),NextTime(Not(collect_labels (Systemj.Block(t,r)))))),
-	       And(And(Not(collect_labels h),NextTime(Not(collect_labels h))),move (Systemj.Block(t,r))),
+  | h::t -> Or(Or(And(move h, And(Not(collect_labels (Systemj.Block(t,r))),NextTime(Not(collect_labels (Systemj.Block(t,r)))))),
+		  And(And(Not(collect_labels h),NextTime(Not(collect_labels h))),move (Systemj.Block(t,r)))),
 	       And(term h,And(NextTime(Not(collect_labels h)),And(Not(collect_labels (Systemj.Block(t,r))),enter(Systemj.Block(t,r))))))
   | [] -> False
 and move_spar r = function
-  | h::t -> Or (And(move h,And(Not(collect_labels (Systemj.Spar(r,t))),NextTime(Not(collect_labels (Systemj.Spar(t,r))),NextTime()))),
-		And(move (Systemj.Spar(t,r)),And(Not(collect_labels h),NextTime(Not (collect_labels h)))),
-		And(move (Systemj.Spar(t,r)), move h),
-		And(move h, And(term (Systemj.Spar(t,r)),NextTime(Not(collect_labels (Systemj.Spar(t,r)))))),
+  | h::t -> Or (Or(Or(And(move h,And(Not(collect_labels (Systemj.Spar(t,r))),NextTime(Not(collect_labels (Systemj.Spar(t,r)))))),
+		      And(move (Systemj.Spar(t,r)),And(Not(collect_labels h),NextTime(Not (collect_labels h))))),
+		   Or(And(move (Systemj.Spar(t,r)), move h),
+		      And(move h, And(term (Systemj.Spar(t,r)),NextTime(Not(collect_labels (Systemj.Spar(t,r)))))))),
 		And(move (Systemj.Spar(t,r)),And(term h, NextTime(Not(collect_labels h)))))
   | [] -> False
 
