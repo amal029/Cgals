@@ -9,25 +9,34 @@
 *)
 
 (* The current position for error reporting *)
+open Sexplib.Std
+
 type line = int
+with sexp
 type column = int
+with sexp
+
 
 type symbol =
 | Symbol of string * (line * column)
+with sexp
 
 type expr =
 | Esymbol of symbol * (line * column)
 | And of expr * expr * (line * column)
 | Or of expr * expr * (line * column)
 | Brackets of expr * (line * column)
+with sexp
 
 type io = 
 | Input
 | Output
+with sexp
 
 type sysj_bool =
 | True
 | False
+with sexp
 
 type stmt = 
 | Block of stmt list * (line * column)
@@ -45,9 +54,10 @@ type stmt =
 | Receive of symbol * (line * column)
 | While of sysj_bool * stmt * (line * column)
 | Noop
-
+with sexp
 type ast =
 | Apar of stmt list * (line * column)
+with sexp
 
 
 let print_symbol = function

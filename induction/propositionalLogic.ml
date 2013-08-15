@@ -14,6 +14,9 @@
 
 module List = Batteries.List
 
+open Sexplib.Sexp
+open Sexplib.Std
+
 exception Internal_error of string
 
 (* TODO: The two functions below need to be completed *)
@@ -31,7 +34,7 @@ let rewrite_receive cnt = function
   | _ -> raise (Internal_error "Tried to rewrite a non-receive as receive")
 
 let rec add_labels_and_rewrite cnt = function
-  | Systemj.Pause (_,x) -> cnt := !cnt + 1; Systemj.Pause(Some ("L" ^ (string_of_int !cnt)), x)
+  | Systemj.Pause (_,x) as s -> cnt := !cnt + 1; Systemj.Pause(Some ("L" ^ (string_of_int !cnt)), x)
   | Systemj.Present (e,t,Some el,x) -> Systemj.Present(e,add_labels_and_rewrite cnt t, Some (add_labels_and_rewrite cnt el),x)
   | Systemj.Present (e,t,None,x) -> Systemj.Present(e,add_labels_and_rewrite cnt t, None ,x)
   | Systemj.Block (sl,x) -> Systemj.Block(List.rev (List.map (add_labels_and_rewrite cnt) sl), x)
@@ -50,6 +53,7 @@ let rewrite_ast = function
   | Systemj.Apar (x,s) -> Systemj.Apar (List.map (add_labels_and_rewrite (ref 0)) (List.rev x),s)
 
 type proposition = string
+with sexp
 
 type logic = 
 | True
@@ -60,13 +64,33 @@ type logic =
 | Proposition of proposition
 | Brackets of logic
 | NextTime of logic
+with sexp
+
+let rec push_not = function
+  | Not x -> invert_not x
+  | True | False as s -> s
+  | Brackets x -> Brackets (push_not x)
+  | Proposition _ as s -> s
+  | NextTime x -> NextTime (push_not x)
+  | Or (x,y) -> Or (push_not x, push_not y)
+  | And (x,y) -> And (push_not x, push_not y)
+and invert_not = function
+  | True -> False
+  | False -> True
+  | Or (x,y) -> push_not (And (Not x, Not y))
+  | And (x,y) -> push_not (Or (Not x, Not y))
+  | Not x -> push_not x 		(* Not Not x *)
+  | _ as s -> Not(push_not s)
 
 let rec collect_labels = function
   | Systemj.Noop | Systemj.Emit _ | Systemj.Signal _ 
   | Systemj.Channel _ | Systemj.Exit _ -> False
   | Systemj.Pause (Some x,_) -> Proposition x
   | Systemj.Block (x,_)  
-  | Systemj.Spar (x,_) -> List.reduce (fun x y -> Or (x,y)) (List.map collect_labels x)
+  | Systemj.Spar (x,_) -> 
+    if x = [] then False
+    else
+      List.reduce (fun x y -> Or (x,y)) (List.map collect_labels x)
   | Systemj.Abort (_,s,_) | Systemj.Suspend (_,s,_)
   | Systemj.While (_,s,_) -> collect_labels s
   | _ -> raise (Internal_error "Send/Receive after re-writing!")
@@ -125,17 +149,6 @@ let rec inst = function
   | _ -> raise (Internal_error "Inst: Cannot get send/receive after rewriting!!")
 
 
-let rec print = function
-  | True -> "(True)"
-  | False -> "(False)"
-  | Or (x,y) -> "Or("^ print x ^ "," ^ print y ^ ")"
-  | And (x,y) -> "And("^ print x ^ "," ^ print y ^ ")"
-  | Proposition x -> "Proposition("^ x ^ ")"
-  | Brackets x -> "(" ^ print x ^ ")"
-  | Not x -> "Not(" ^ print x ^ ")"
-  | NextTime x -> "X" ^ (print x)
-
-
 (* The function that states if the statements can create a state in the
    big-step semantics *)
 let rec enter = function
@@ -147,7 +160,9 @@ let rec enter = function
 					  And (NextTime (Not (collect_labels t)),
 					       And (enter el, Not (expr_to_logic e))))
   | Systemj.Present (e,t,None,_) -> And (enter t, expr_to_logic e)
-  | Systemj.Block (sl,t) -> enter_seq t sl
+  | Systemj.Block (sl,t) as s -> 
+    let () = IFDEF SDEBUG THEN let () = output_hum stdout (Systemj.sexp_of_stmt s) in print_endline "" ELSE () ENDIF in
+    enter_seq t sl
   | Systemj.Spar (sl,t) -> enter_spar t sl
   | Systemj.While (_,s,_)
   | Systemj.Suspend (_,s,_) 
@@ -242,7 +257,19 @@ let build_propositional_tree_logic = function
   | Systemj.Apar (x,_) -> 
     let () = IFDEF DEBUG THEN print_endline "Building INST Tree" ELSE () ENDIF in
     let insts = List.map solve_logic (List.map inst x) in
+    let insts = List.map push_not insts in
+    let () = IFDEF DEBUG THEN List.iter (fun x -> output_hum stdout (sexp_of_logic x); print_endline "") insts ELSE () ENDIF in
     let () = IFDEF DEBUG THEN print_endline "Building ENTER Tree" ELSE () ENDIF in
     let enters = List.map solve_logic (List.map enter x) in
-    (insts,enters)
+    let enters = List.map push_not enters in
+    let () = IFDEF DEBUG THEN List.iter (fun x -> output_hum stdout (sexp_of_logic x); print_endline "") enters ELSE () ENDIF in
+    let () = IFDEF DEBUG THEN print_endline "Building TERM Tree" ELSE () ENDIF in
+    let terms = List.map solve_logic (List.map term x) in
+    let terms = List.map push_not terms in
+    let () = IFDEF DEBUG THEN List.iter (fun x -> output_hum stdout (sexp_of_logic x); print_endline "") terms ELSE () ENDIF in
+    let () = IFDEF DEBUG THEN print_endline "Building MOVE Tree" ELSE () ENDIF in
+    let moves = List.map solve_logic (List.map term x) in
+    let moves = List.map push_not moves in
+    let () = IFDEF DEBUG THEN List.iter (fun x -> output_hum stdout (sexp_of_logic x); print_endline "") moves ELSE () ENDIF in
+    (insts,enters,terms,moves)
 

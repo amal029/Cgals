@@ -1,4 +1,7 @@
-open Batteries;;
+open Batteries
+
+module SS = Sexplib.Sexp
+
 let usage_msg = "Usage: systemjc [options] <filename>\nsee -help for more options" in
 try
   let file_name = ref "" in
@@ -14,13 +17,7 @@ try
   let () = print_endline "....Rewriting the ast ..." in
   let ast = PropositionalLogic.rewrite_ast ast in
   let () = print_endline "....Building Propositional logic trees ..." in
-  let (insts,enters) = PropositionalLogic.build_propositional_tree_logic ast in
-  let () = IFDEF DEBUG THEN 
-    let () = print_endline "Inst propositional logic tree: " in
-    List.iter print_endline (List.map PropositionalLogic.print insts) ELSE () ENDIF in
-  let () = IFDEF DEBUG THEN 
-    let () = print_endline "Enter propositional logic tree: " in
-    List.iter print_endline (List.map PropositionalLogic.print enters) ELSE () ENDIF in 
+  let (insts,enters,terms,moves) = PropositionalLogic.build_propositional_tree_logic ast in
   ()
   
 with

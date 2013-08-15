@@ -13,7 +13,7 @@ compile:
 	$(MAKE) -e -C parser/ all
 	$(MAKE) -e -C induction/ all
 	ocamlfind $(CC) -pp "camlp4o pa_macro.cmo -DDEBUG" -o systemjc	\
-	-linkpkg -package batteries -I ./language -I ./error -I		\
+	-linkpkg -package batteries -package sexplib -I ./language -I ./error -I		\
 	./parser -I ./induction $(ERRORLIB) $(LANGUAGELIB) $(PARSERLIB)	\
 	$(LOGICLIB) systemjc.ml
 

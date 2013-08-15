@@ -2,6 +2,8 @@ OCMLOPTS=-a
 OCMALDEBUG=-g
 CC=ocamlopt
 SRC=systemj.ml
+TYPECONV=`ocamlfind query type_conv`
+SEXPLIB=`ocamlfind query sexplib`
 
 all: systemj.cmxa
 
@@ -9,7 +11,10 @@ systemj.cmxa: check
 	$(CC) $(OCMLOPTS) systemj.cmx -o $@
 
 check:
-	$(CC) -pp "camlp4o pa_macro.cmo -DDEBUG" -I ../error -c $(SRC)
+	@echo $(TYPECONV)
+	$(CC) -pp "camlp4o -I $(TYPECONV) -I $(SEXPLIB)			\
+	pa_type_conv.cma pa_sexp_conv.cma pa_macro.cmo	\
+	-DDEBUG" -I $(SEXPLIB) -I ../error -c $(SRC)
 	cp systemj.cmi ../parser/systemj.cmi
 clean:
 	rm -rf *cm* *o *a *mli
