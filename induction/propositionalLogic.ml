@@ -128,7 +128,11 @@ let rec solve_logic = function
     | _ as s -> Brackets s)
   | True | False as s -> s
   | Proposition _ as s -> s
-  | NextTime _ as s -> s
+  | NextTime x -> 
+    (match x with
+    | True -> True
+    | False -> False
+    | _ as s-> NextTime (solve_logic x))
 
 (* Function, which states if the statements are instantaneous with
    respect to the logical clock *)
@@ -155,9 +159,9 @@ let rec enter = function
   | Systemj.Noop -> False
   | Systemj.Emit _ -> False
   | Systemj.Pause (Some x,_) -> NextTime (Proposition x)
-  | Systemj.Present (e,t,Some el,_) -> Or(And (NextTime (Not (collect_labels el)), 
+  | Systemj.Present (e,t,Some el,_) -> Or(And (NextTime (Not (solve_logic(collect_labels el))), 
 					       And (enter t, expr_to_logic e)), 
-					  And (NextTime (Not (collect_labels t)),
+					  And (NextTime (Not (solve_logic(collect_labels t))),
 					       And (enter el, Not (expr_to_logic e))))
   | Systemj.Present (e,t,None,_) -> And (enter t, expr_to_logic e)
   | Systemj.Block (sl,t) as s -> 
@@ -176,15 +180,15 @@ let rec enter = function
     let () = Systemj.print_stmt s in
     raise (Internal_error "Enter: Cannot get send/receive after rewriting!!")
 and enter_seq r = function
-  | h::t -> Or (And(NextTime(Not (collect_labels (Systemj.Block(t,r)))),enter h), 
-		And(NextTime (Not (collect_labels h)),
+  | h::t -> Or (And(NextTime(Not (solve_logic(collect_labels (Systemj.Block(t,r))))),enter h), 
+		And(NextTime (Not (solve_logic(collect_labels h))),
 		    And(enter (Systemj.Block(t,r)), solve_logic (inst h)))) 
   | [] -> False
 and enter_spar r = function
   | h::t -> 
-    Or(Or(And(NextTime (Not (collect_labels h)),
+    Or(Or(And(NextTime (Not (solve_logic(collect_labels h))),
 	      And(enter (Systemj.Spar(t,r)),(solve_logic (inst h)))),
-	  And(NextTime (Not (collect_labels (Systemj.Spar(t,r)))),
+	  And(NextTime (Not (solve_logic(collect_labels (Systemj.Spar(t,r))))),
 	      And((solve_logic (inst (Systemj.Spar(t,r)))),enter h))),
        And(enter h,enter (Systemj.Spar(t,r))))
   | [] -> False
@@ -198,26 +202,26 @@ let rec term = function
   | Systemj.Emit (s,_) -> False
   | Systemj.Pause (Some x,_) -> Proposition x
   | Systemj.Pause (None,lc) -> raise (Internal_error ("Pause without a label: " ^ (Reporting.get_line_and_column lc)))
-  | Systemj.Present (e,t,Some el,_) -> And(term t, Not(collect_labels el))
+  | Systemj.Present (e,t,Some el,_) -> And(term t, Not(solve_logic(collect_labels el)))
   | Systemj.Present (e,t,None,_) -> term t
   | Systemj.Block (sl,r) -> term_seq r sl
   | Systemj.Spar (sl,r) -> term_spar r sl
   | Systemj.While (_,s,_) -> False
   | Systemj.Suspend (e,s,_) -> And(Not (expr_to_logic e), term s)
-  | Systemj.Abort(e,s,_)  -> And(collect_labels s,Or(expr_to_logic e, term s))
-  | Systemj.Trap (e,s,_) -> And(collect_labels s, term s) 	(* You can exit it if the body exits it! *)
+  | Systemj.Abort(e,s,_)  -> And(solve_logic(collect_labels s),Or(expr_to_logic e, term s))
+  | Systemj.Trap (e,s,_) -> And(solve_logic(collect_labels s), term s) 	(* You can exit it if the body exits it! *)
   | Systemj.Exit (Systemj.Symbol (s,_),_) -> False
   | Systemj.Signal _ 
   | Systemj.Channel _ -> False
   | _ -> raise (Internal_error "Inst: Cannot get send/receive after rewriting!!")
 and term_seq r = function
-  | h::t -> Or(And(Not(collect_labels (Systemj.Block(t,r))),
+  | h::t -> Or(And(Not(solve_logic(collect_labels (Systemj.Block(t,r)))),
 		   And(term h, solve_logic (inst (Systemj.Block (t,r))))),
-	       And(term (Systemj.Block(t,r)),Not(collect_labels h)))
+	       And(term (Systemj.Block(t,r)),Not(solve_logic(collect_labels h))))
   | [] -> False 			
 and term_spar r = function
-  | h::t -> Or(Or(And(term h, Not(collect_labels (Systemj.Spar(t,r)))),
-		  And(term (Systemj.Spar(t,r)), Not(collect_labels h))),
+  | h::t -> Or(Or(And(term h, Not(solve_logic(collect_labels (Systemj.Spar(t,r))))),
+		  And(term (Systemj.Spar(t,r)), Not(solve_logic(collect_labels h)))),
 	       And(term h, term (Systemj.Spar(t,r))))
   | [] -> False
 
@@ -227,8 +231,8 @@ let rec move = function
   | Systemj.Emit (s,_) -> False
   | Systemj.Pause _ -> False
   | Systemj.Present (e,t,Some el,_) -> 
-    Or(And(And(move t,Not(collect_labels el)),NextTime(Not(collect_labels el))),
-       And(And(move el,Not(collect_labels t)),NextTime(Not(collect_labels t))))
+    Or(And(And(move t,Not(solve_logic(collect_labels el))),NextTime(Not(solve_logic(collect_labels el)))),
+       And(And(move el,Not(solve_logic(collect_labels t))),NextTime(Not(solve_logic(collect_labels t)))))
   | Systemj.Present (e,t,None,_) -> False
   | Systemj.Block (sl,r) -> move_seq r sl
   | Systemj.Spar (sl,r) -> move_spar r sl
@@ -241,35 +245,29 @@ let rec move = function
   | Systemj.Suspend (e,s,lc) -> raise (Internal_error ("Suspend current not supported: " ^ (Reporting.get_line_and_column lc)))
   | _ -> raise (Internal_error "Inst: Cannot get send/receive after rewriting!!")
 and move_seq r = function
-  | h::t -> Or(Or(And(move h, And(Not(collect_labels (Systemj.Block(t,r))),NextTime(Not(collect_labels (Systemj.Block(t,r)))))),
-		  And(And(Not(collect_labels h),NextTime(Not(collect_labels h))),move (Systemj.Block(t,r)))),
-	       And(term h,And(NextTime(Not(collect_labels h)),And(Not(collect_labels (Systemj.Block(t,r))),enter(Systemj.Block(t,r))))))
+  | h::t -> Or(Or(And(move h, And(Not(solve_logic(collect_labels (Systemj.Block(t,r)))),NextTime(Not(solve_logic(collect_labels (Systemj.Block(t,r))))))),
+		  And(And(Not(solve_logic(collect_labels h)),NextTime(Not(solve_logic(collect_labels h)))),move (Systemj.Block(t,r)))),
+	       And(term h,And(NextTime(Not(solve_logic(collect_labels h))),And(Not(solve_logic(collect_labels (Systemj.Block(t,r)))),enter(Systemj.Block(t,r))))))
   | [] -> False
 and move_spar r = function
-  | h::t -> Or (Or(Or(And(move h,And(Not(collect_labels (Systemj.Spar(t,r))),NextTime(Not(collect_labels (Systemj.Spar(t,r)))))),
-		      And(move (Systemj.Spar(t,r)),And(Not(collect_labels h),NextTime(Not (collect_labels h))))),
+  | h::t -> Or (Or(Or(And(move h,And(Not(solve_logic(collect_labels (Systemj.Spar(t,r)))),NextTime(Not(solve_logic(collect_labels (Systemj.Spar(t,r))))))),
+		      And(move (Systemj.Spar(t,r)),And(Not(solve_logic (solve_logic(collect_labels h))),NextTime(Not (solve_logic(collect_labels h)))))),
 		   Or(And(move (Systemj.Spar(t,r)), move h),
-		      And(move h, And(term (Systemj.Spar(t,r)),NextTime(Not(collect_labels (Systemj.Spar(t,r)))))))),
-		And(move (Systemj.Spar(t,r)),And(term h, NextTime(Not(collect_labels h)))))
+		      And(move h, And(term (Systemj.Spar(t,r)),NextTime(Not(solve_logic (collect_labels (Systemj.Spar(t,r))))))))),
+		And(move (Systemj.Spar(t,r)),And(term h, NextTime(Not (solve_logic (collect_labels h))))))
   | [] -> False
+
+let build_ltl stmt = 
+  Or(Or(Or(And(And(Or(Not(solve_logic (collect_labels stmt)),term stmt),
+		   inst stmt),NextTime(Not(solve_logic(collect_labels stmt)))),
+	   And(Or(Not(solve_logic (collect_labels stmt)),term stmt),
+	       enter stmt)),
+	And(Or(Not(solve_logic (collect_labels stmt)),term stmt),
+	    NextTime(Not(solve_logic (collect_labels stmt))))),
+     move stmt)
 
 let build_propositional_tree_logic = function
   | Systemj.Apar (x,_) -> 
-    let () = IFDEF DEBUG THEN print_endline "Building INST Tree" ELSE () ENDIF in
-    let insts = List.map solve_logic (List.map inst x) in
-    let insts = List.map push_not insts in
-    let () = IFDEF DEBUG THEN List.iter (fun x -> output_hum stdout (sexp_of_logic x); print_endline "") insts ELSE () ENDIF in
-    let () = IFDEF DEBUG THEN print_endline "Building ENTER Tree" ELSE () ENDIF in
-    let enters = List.map solve_logic (List.map enter x) in
-    let enters = List.map push_not enters in
-    let () = IFDEF DEBUG THEN List.iter (fun x -> output_hum stdout (sexp_of_logic x); print_endline "") enters ELSE () ENDIF in
-    let () = IFDEF DEBUG THEN print_endline "Building TERM Tree" ELSE () ENDIF in
-    let terms = List.map solve_logic (List.map term x) in
-    let terms = List.map push_not terms in
-    let () = IFDEF DEBUG THEN List.iter (fun x -> output_hum stdout (sexp_of_logic x); print_endline "") terms ELSE () ENDIF in
-    let () = IFDEF DEBUG THEN print_endline "Building MOVE Tree" ELSE () ENDIF in
-    let moves = List.map solve_logic (List.map term x) in
-    let moves = List.map push_not moves in
-    let () = IFDEF DEBUG THEN List.iter (fun x -> output_hum stdout (sexp_of_logic x); print_endline "") moves ELSE () ENDIF in
-    (insts,enters,terms,moves)
+    List.map solve_logic ((List.map push_not) (List.map build_ltl x))
 
+(* Actual computation LTL formula *)

@@ -17,7 +17,10 @@ try
   let () = print_endline "....Rewriting the ast ..." in
   let ast = PropositionalLogic.rewrite_ast ast in
   let () = print_endline "....Building Propositional logic trees ..." in
-  let (insts,enters,terms,moves) = PropositionalLogic.build_propositional_tree_logic ast in
+  let ltls = PropositionalLogic.build_propositional_tree_logic ast in
+  let () = IFDEF DEBUG THEN List.iter (fun x -> 
+    let () = SS.output_hum Pervasives.stdout (PropositionalLogic.sexp_of_logic x) in
+    print_endline "") ltls ELSE () ENDIF in
   ()
   
 with
