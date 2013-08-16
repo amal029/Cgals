@@ -93,6 +93,8 @@ let rec collect_labels = function
       List.reduce (fun x y -> Or (x,y)) (List.map collect_labels x)
   | Systemj.Abort (_,s,_) | Systemj.Suspend (_,s,_)
   | Systemj.While (_,s,_) -> collect_labels s
+  | Systemj.Present (_,s,Some el,_) -> Or(collect_labels s, collect_labels el)
+  | Systemj.Present (_,s,None,_) -> collect_labels s
   | _ -> raise (Internal_error "Send/Receive after re-writing!")
 
 let rec expr_to_logic = function
@@ -108,6 +110,10 @@ let rec solve_logic = function
     | (True,True) -> True
     | (x,True) -> x
     | (True,x) -> x
+    | (Not (Proposition a), Proposition b) when a = b -> False
+    | (Proposition a, Not(Proposition b)) when a = b -> False
+    | (NextTime (Not (Proposition a)), NextTime(Proposition b)) when a = b -> False
+    | (NextTime (Proposition a), NextTime(Not(Proposition b))) when a = b -> False
     | (x,y) -> And (x,y))
   | Or (x,y) -> 
     (match (solve_logic x, solve_logic y) with
@@ -115,6 +121,10 @@ let rec solve_logic = function
     | (False,False) -> False
     | (x,False) -> x
     | (False,x) -> x
+    | (Not (Proposition a), Proposition b) when a = b -> True
+    | (Proposition a, Not(Proposition b)) when a = b -> True
+    | (NextTime (Not (Proposition a)), NextTime(Proposition b)) when a = b -> True
+    | (NextTime (Proposition a), NextTime(Not(Proposition b))) when a = b -> True
     | (x,y) -> Or (x,y))
   | Not x -> 
     (match (solve_logic x) with
