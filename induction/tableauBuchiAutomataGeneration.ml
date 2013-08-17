@@ -111,7 +111,7 @@ let rec expand node nodes_set =
 let create_graph formula = 
   let nn = new_name () in
   let st = {name=nn; father=nn;
-	    incoming=["init"];
+	    incoming=["Init"];
 	    neew=[formula];
 	    old=[]; next=[]} in
   let nodes_set = ref [] in
