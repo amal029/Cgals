@@ -19,9 +19,9 @@ logic.cmx:
 	@echo $(BATDIR)
 	@echo $(SEXPLIB)
 	$(CC) -pp "camlp4o -I $(TYPECONV) -I $(SEXPLIB)			\
-	pa_type_conv.cma pa_sexp_conv.cma pa_macro.cmo	\
-	-UDEBUG" -I $(REPORTDIR) -I $(LANGUAGEDIR) -I	\
-	$(BATDIR) -I $(SEXPLIB) -c $(SRC)
+	pa_type_conv.cma pa_sexp_conv.cma pa_macro.cmo -UDEBUG		\
+	-USDEBUG" -I $(REPORTDIR) -I $(LANGUAGEDIR) -I $(BATDIR) -I	\
+	$(SEXPLIB) -c $(SRC)
 
 clean:
 	rm -rf *cm* *o *a *mli

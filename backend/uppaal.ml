@@ -48,7 +48,8 @@ let ss = ref ""
 let ss1 = ref []
 
 (* Outputs the XML file for Uppaal model-checker *)
-let make_xml nodes_set = 
+(* This is for each clock-domain *)
+let make_xml lgn = 
   let ob = B.create(10000) in
   let () = B.add_string ob "<template>\n" in
   counter := !counter + 1;
@@ -57,10 +58,10 @@ let make_xml nodes_set =
   ss1 := ("Process" ^ (string_of_int !counter)) :: !ss1;
   (* make the nodes *)
   let () = make_init ob in
-  let () = List.iter (make_locations ob) nodes_set in
+  let () = List.iter (make_locations ob) (List.map (fun x -> x.node) lgn) in
   let () = B.add_string ob "<init ref=\"Init\"/>\n" in
   (* Make transitions *)
-  let () = List.iter (make_transitions ob) nodes_set in
+  let () = List.iter (make_transitions ob) (List.map (fun x -> x.node) lgn) in
   (* Add the system declaration *)
   let () = B.add_string ob "</template>\n" in 
   ob

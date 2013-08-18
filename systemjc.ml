@@ -27,10 +27,12 @@ try
     print_endline "\n\n\n\n\n\n-----------------------------------------------\n\n\n\n") ltls ELSE () ENDIF in
   let () = print_endline "....Building Buchi Automata ..." in
   let buchi_automatas = List.map TableauBuchiAutomataGeneration.create_graph ltls in
+  let labeled_buchi_automatas = List.map2 TableauBuchiAutomataGeneration.add_labels ltls buchi_automatas in
   let () = IFDEF DEBUG THEN List.iter (fun x -> 
-    let () = SS.output_hum Pervasives.stdout (SSL.sexp_of_list TableauBuchiAutomataGeneration.sexp_of_graph_node x) in
-    print_endline "\n\n\n\n\n\n-----------------------------------------------------\n\n\n\n") buchi_automatas ELSE () ENDIF in
-  let uppaal_automatas = List.map Uppaal.make_xml buchi_automatas in
+    let () = SS.output_hum Pervasives.stdout (SSL.sexp_of_list TableauBuchiAutomataGeneration.sexp_of_labeled_graph_node x) in
+    print_endline "\n\n\n\n\n\n-----------------------------------------------------\n\n\n\n") labeled_buchi_automatas ELSE () ENDIF in
+  (* This map is for each clock-domain *)
+  let uppaal_automatas = List.map Uppaal.make_xml labeled_buchi_automatas in
   let strings = Buffer.create(10000) in
   let () = List.iter (fun x -> Buffer.add_buffer strings x) uppaal_automatas in
   let uppaal_automata = Uppaal.make_uppaal strings in

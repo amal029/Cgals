@@ -66,6 +66,37 @@ type logic =
 | NextTime of logic
 with sexp
 
+let rec props = function
+  | True | False | Proposition _ as s -> [s]
+  | And (x,y) | Or (x,y) -> (props x) @ (props y)
+  | Brackets x -> props x
+  | NextTime x -> props x
+  | Not x -> props x
+
+let rec pos_props = function
+  | True | Proposition _ as s -> [s]
+  | And (x,y) | Or (x,y) -> (pos_props x) @ (pos_props y)
+  | Brackets x -> pos_props x
+  | NextTime x -> pos_props x
+  | Not (Proposition _) -> []
+  | False -> 
+    raise (Internal_error "False proposition should never have happened!")
+  | _ as s -> 
+    let () = output_hum stderr (sexp_of_logic s) in
+    raise (Internal_error "Pos_props: ^^^^^^^ cannot solve this formula type!")
+
+let rec neg_props = function
+  | True | Proposition _ as s -> []
+  | And (x,y) | Or (x,y) -> (neg_props x) @ (neg_props y)
+  | Brackets x -> neg_props x
+  | NextTime x -> neg_props x
+  | Not (Proposition _ as s) -> [s]
+  | False -> 
+    raise (Internal_error "False proposition should never have happened!")
+  | _ as s -> 
+    let () = output_hum stderr (sexp_of_logic s) in
+    raise (Internal_error "Neg_props: ^^^^^^^ cannot solve this logic formula type!")
+
 let rec push_not = function
   | Not x -> invert_not x
   | True | False as s -> s
@@ -175,7 +206,7 @@ let rec enter = function
 					       And (enter el, Not (expr_to_logic e))))
   | Systemj.Present (e,t,None,_) -> And (enter t, expr_to_logic e)
   | Systemj.Block (sl,t) as s -> 
-    let () = IFDEF SDEBUG THEN let () = output_hum stdout (Systemj.sexp_of_stmt s) in print_endline "" ELSE () ENDIF in
+    let () = IFDEF DEBUG THEN let () = output_hum stdout (Systemj.sexp_of_stmt s) in print_endline "" ELSE () ENDIF in
     enter_seq t sl
   | Systemj.Spar (sl,t) -> enter_spar t sl
   | Systemj.While (_,s,_)
@@ -279,5 +310,3 @@ let build_ltl stmt =
 let build_propositional_tree_logic = function
   | Systemj.Apar (x,_) -> 
     List.map solve_logic ((List.map push_not) (List.map build_ltl x))
-
-(* Actual computation LTL formula *)
