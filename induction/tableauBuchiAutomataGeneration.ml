@@ -214,7 +214,11 @@ let add_labels formula nodes_set =
       let (_,h) = (List.partition (fun x -> x = y) n.incoming) in 
       n.incoming <- h) torem in
     if n.incoming = [] then n.incoming <- ["Init"] else ();s) lba in
-  lba
 
   (* Now remove the extra dangling nodes without a path to the acceptance state *)
+  let all_incoming_nodes = List.sort_unique (compare) (List.flatten (List.map (fun {node=n} -> n.incoming)lba)) in
+  let () = IFDEF ZDEBUG THEN output_hum stdout (sexp_of_list sexp_of_string all_incoming_nodes) ELSE () ENDIF in
+  let ret = ref [] in
+  let () = List.iter(fun x -> ret := (List.filter (fun {node=n} -> n.name=x)lba) @ !ret) all_incoming_nodes in
+ !ret
   
