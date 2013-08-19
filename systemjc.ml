@@ -3,6 +3,8 @@ module List = Batteries.List
 module SS = Sexplib.Sexp
 module SSL = Sexplib.Std
 
+module PL = PropositionalLogic
+
 let usage_msg = "Usage: systemjc [options] <filename>\nsee -help for more options" in
 try
   let file_name = ref "" in
@@ -48,6 +50,22 @@ try
       with
       | Sys_error _ as s -> raise s
   in
+  let () = IFDEF SDEBUG THEN
+let () = List.iter (fun (Systemj.Apar(stmt,_)) ->
+  List.iter (fun stmt -> 
+    let (s,f,se,t,fo) = PropositionalLogic.dltl stmt in
+    let fo = PL.Or(PL.Proposition "A", PL.Proposition "B") in
+    let () = print_endline "The partial formulas and their BAs" in
+    let () = SS.output_hum stdout (PropositionalLogic.sexp_of_logic (PropositionalLogic.solve_logic (PropositionalLogic.push_not (fo)))) in
+    let () = print_endline "\n\n\n" in
+    let ba = TableauBuchiAutomataGeneration.create_graph (PropositionalLogic.solve_logic (PropositionalLogic.push_not (fo))) in
+    let () = print_endline "Nodes in the nodes set" in
+    let () = List.iter (fun x -> SS.output_hum stdout (TableauBuchiAutomataGeneration.sexp_of_graph_node x); print_endline"\n") ba in
+    let lba = TableauBuchiAutomataGeneration.add_labels (PropositionalLogic.solve_logic (PropositionalLogic.push_not (fo))) ba in
+    List.iter (fun x -> SS.output_hum Pervasives.stdout (SSL.sexp_of_list TableauBuchiAutomataGeneration.sexp_of_labeled_graph_node x))[lba])stmt) [ast] in
+    let () = print_endline "\n\n\n" in
+    ()
+ELSE() ENDIF in
   ()
     
 with

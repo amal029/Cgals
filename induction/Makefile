@@ -20,7 +20,7 @@ logic.cmx:
 	@echo $(SEXPLIB)
 	$(CC) -pp "camlp4o -I $(TYPECONV) -I $(SEXPLIB)			\
 	pa_type_conv.cma pa_sexp_conv.cma pa_macro.cmo -UDEBUG		\
-	-USDEBUG" -I $(REPORTDIR) -I $(LANGUAGEDIR) -I $(BATDIR) -I	\
+	-USDEBUG -UPDEBUG" -I $(REPORTDIR) -I $(LANGUAGEDIR) -I $(BATDIR) -I	\
 	$(SEXPLIB) -c $(SRC)
 
 clean:

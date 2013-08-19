@@ -32,7 +32,11 @@ let rec expand node nodes_set =
   match node.neew with
   | [] -> 
     (try
-       let shared_node = List.find (fun x -> (x.old = node.old) && (node.next = x.next)) !nodes_set in
+       let shared_node = List.filter (fun x -> (x.old = node.old) && (node.next = x.next)) !nodes_set in
+       let shared_node = if (List.length shared_node > 1) then raise (Internal_error "More than one shared node!") 
+	 else 
+	   if shared_node <> [] then
+	     List.hd shared_node else raise Not_found in
        let () = shared_node.incoming <- shared_node.incoming @ node.incoming in
        let () = IFDEF DEBUG THEN print_endline "almost done" ELSE () ENDIF in ()
      with
@@ -71,10 +75,13 @@ let rec expand node nodes_set =
 	  output_hum stdout (PropositionalLogic.sexp_of_logic x); 
 	  print_endline "\nAND";
 	  output_hum stdout (PropositionalLogic.sexp_of_logic y); 
-	  print_endline "\n\n\n\n";
+	  print_endline "\n";
 	  ELSE () ENDIF in
 	let ups = ref [x;y] in
-	let () = List.iter (fun y -> ups := (List.drop_while (fun x -> x = y) !ups)) node.old in
+	let () = List.iter (fun y -> ups := (List.remove_all !ups y)) node.old in
+	let () = IFDEF DEBUG THEN print_endline (string_of_int (List.length !ups)) ELSE () ENDIF in
+	let () = IFDEF DEBUG THEN output_hum stdout ((sexp_of_list PropositionalLogic.sexp_of_logic) !ups); print_endline "" ELSE () ENDIF in
+	(* let () = List.iter (fun y -> ups := (List.drop_while (fun x -> x = y) !ups)) node.old in *)
 	let st = {name=node.name; father=node.name;
 		  incoming=node.incoming;
 		  neew=node.neew @ !ups;
@@ -91,14 +98,15 @@ let rec expand node nodes_set =
 	  ELSE () ENDIF in
 	let nn1 = new_name () in
 	let ups = ref [x] in
-	let () = List.iter (fun y -> ups := (List.drop_while (fun x -> x = y) !ups)) node.old in
+	let () = List.iter (fun y -> ups := (List.remove_all !ups y)) node.old in
 	let node1 = {name=nn1;father=node.name;incoming=node.incoming;
 		     neew=node.neew @ !ups;old=node.old @ [n];
 		     next=node.next} in
 	let () = IFDEF DEBUG THEN output_hum stdout (sexp_of_graph_node node1) ELSE () ENDIF in
 	let nn2 = new_name () in
 	let ups = ref [y] in
-	let () = List.iter (fun y -> ups := (List.drop_while (fun x -> x = y) !ups)) node.old in
+	let () = List.iter (fun y -> ups := (List.remove_all !ups y)) node.old in
+	(* let () = List.iter (fun y -> ups := (List.drop_while (fun x -> x = y) !ups)) node.old in *)
 	let node2 = {name=nn2;father=node.name;incoming=node.incoming;
 		     neew=node.neew @ !ups;old=node.old @ [n];
 		     next=node.next} in
@@ -126,21 +134,34 @@ let create_graph formula =
   let () = IFDEF DEBUG THEN print_endline "done expand" ELSE () ENDIF in
   !nodes_set
 
-let state_label powerset = function
+let state_label propositions powerset = function
   | {name=n;old=o} as s -> 
-    let () = IFDEF SDEBUG THEN
+    let () = IFDEF DEBUG THEN
        let () = print_endline ("Node name: " ^n^ "\n") in
        let () = print_endline " Powerset labels :\n" in
        let () = output_hum stdout (sexp_of_list (sexp_of_list sexp_of_logic) powerset) in 
        print_endline "\n***********\n" ELSE () ENDIF in
-    let pos_props = (List.sort_unique compare) (List.flatten (List.map pos_props o)) in
-    let () = IFDEF SDEBUG THEN 
+    let pos_props = ref [] in
+    let () = List.iter (fun x ->  
+      pos_props := !pos_props @ List.filter (fun y -> x=y) o;
+    ) propositions in
+    let pos_props = (List.sort_unique compare) !pos_props in
+    (* let pos_props = (List.sort_unique compare) (List.flatten (List.map pos_props o)) in *)
+    let () = IFDEF DEBUG THEN 
         let () = print_endline ("Node name: " ^n^ "\n") in
         let () = print_endline "Positive propositions:\n" in
         let () = output_hum stdout (sexp_of_list sexp_of_logic pos_props) in 
 	print_endline "\n***********\n" ELSE () ENDIF in
-    let neg_props = (List.sort_unique compare) (List.flatten (List.map neg_props o)) in
-    let () = IFDEF SDEBUG THEN 
+    let neg_props = ref (List.map (fun (Not (Proposition _ as s)) -> s) 
+			   (List.filter (fun x -> (match x with | Not(Proposition _) -> true | _ -> false)) o)) in
+    let () = IFDEF DEBUG THEN 
+      output_hum stdout (sexp_of_list sexp_of_logic !neg_props);
+      ELSE () ENDIF in
+    let nn_props = ref [] in
+    let () = List.iter (fun x ->  nn_props := !nn_props @ List.filter (fun y -> x=y) !neg_props) propositions in
+    let neg_props = (List.sort_unique compare) !nn_props in
+    (* let neg_props = (List.sort_unique compare) (List.flatten (List.map neg_props o)) in *)
+    let () = IFDEF DEBUG THEN 
        let () = print_endline ("Node name: " ^n^ "\n") in
        let () = print_endline "Negative propositions:\n" in
        let () = output_hum stdout (sexp_of_list sexp_of_logic neg_props) in 
@@ -153,7 +174,7 @@ let state_label powerset = function
     let pp = ref powerset in
     let () = List.iter (fun x -> pp := (List.remove_all !pp x)) rfd in
     let powerset = !pp in
-    let () = IFDEF SDEBUG THEN
+    let () = IFDEF DEBUG THEN
        let () = print_endline ("Node name: " ^n^ "\n") in
        let () = print_endline "Resultant labels after neg remove :\n" in
        let () = output_hum stdout (sexp_of_list (sexp_of_list sexp_of_logic) powerset) in 
@@ -170,27 +191,40 @@ let state_label powerset = function
        print_endline "\n***********\n" ELSE () ENDIF in
     {node=s;labels=powerset}
 
-
-
 let add_labels formula nodes_set =
   (* Get all the propositions used in the formula *)
   let propositions = props formula in
   (* Remove the duplicates *)
   let propositions = List.sort_unique compare propositions in
+  let () = IFDEF DEBUG THEN print_string "1: "; output_hum stdout (sexp_of_list sexp_of_logic propositions); print_endline "" ELSE () ENDIF in
   (* The powerset of the proposition => domain of accepting alphabets of
      the Buchi automata *)
   let prop_powerset = powerset propositions in
-  let lba = List.map (state_label prop_powerset) nodes_set in
+  let lba = List.map (state_label propositions prop_powerset) nodes_set in
   let torem = List.map (fun {node=n;labels=l} -> (if (l=[] && (not (List.exists (fun x -> x = n.name) n.incoming)))
     then n.name else "")) lba in
   let lba = List.filter (fun {node=n;labels=l} -> 
     (not ((List.flatten l)=[])) || (List.exists (fun x -> x = n.name) n.incoming)) lba in
-  let () = IFDEF SDEBUG THEN output_hum stdout (sexp_of_list sexp_of_labeled_graph_node lba) ELSE () ENDIF in
+  let acceptance_set = List.filter(fun {node=n;labels=l} -> (List.exists (fun x -> x = n.name) n.incoming)) lba in
+  let () = IFDEF DEBUG THEN output_hum stdout (sexp_of_list sexp_of_labeled_graph_node lba) ELSE () ENDIF in
   (* Now remove from incoming all the names that are the to be
      removed!! *)
-  List.map (fun ({node=n} as s)  ->
+  let lba = List.map (fun ({node=n} as s)  ->
     let () = List.iter (fun y -> 
       let (_,h) = (List.partition (fun x -> x = y) n.incoming) in 
       n.incoming <- h) torem in
-    if n.incoming = [] then n.incoming <- ["Init"] else ();s) 
-    lba
+    if n.incoming = [] then n.incoming <- ["Init"] else ();s) lba in
+  (* lba *)
+
+  (* New addition *)
+  (* Now remove the extra dangling nodes without a path to the acceptance state *)
+  let to_not_remove = List.flatten (List.map (fun ({node=n})-> n.incoming) acceptance_set) in
+  let to_rem = List.sort_unique (List.flatten (List.map (fun y -> List.filter (fun x -> x <> y) lba )to_not_remove)) in
+  let lba = ref lba in
+  let () = List.iter (fun x -> lba := List.remove_all !lba x) to_rem in
+  List.map (fun ({node=n} as s)  ->
+    let () = List.iter (fun y ->
+      let (_,h) = (List.partition (fun x -> x = y) n.incoming) in
+      n.incoming <- h) torem in
+    if n.incoming = [] then n.incoming <- ["Init"] else ();s) !lba
+  

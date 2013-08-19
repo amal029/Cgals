@@ -37,7 +37,7 @@ let rec add_labels_and_rewrite cnt = function
   | Systemj.Pause (_,x) as s -> cnt := !cnt + 1; Systemj.Pause(Some ("L" ^ (string_of_int !cnt)), x)
   | Systemj.Present (e,t,Some el,x) -> Systemj.Present(e,add_labels_and_rewrite cnt t, Some (add_labels_and_rewrite cnt el),x)
   | Systemj.Present (e,t,None,x) -> Systemj.Present(e,add_labels_and_rewrite cnt t, None ,x)
-  | Systemj.Block (sl,x) -> Systemj.Block(List.rev (List.map (add_labels_and_rewrite cnt) sl), x)
+  | Systemj.Block (sl,x) -> Systemj.Block(List.map (add_labels_and_rewrite cnt) (List.rev sl), x)
   | Systemj.Spar (sl,x) -> Systemj.Spar(List.rev (List.map (add_labels_and_rewrite cnt) sl), x)
   | Systemj.While (ex,s,x) -> Systemj.While(ex,add_labels_and_rewrite cnt s, x)
   | Systemj.Suspend (e,s,x) -> Systemj.Suspend(e,add_labels_and_rewrite cnt s,x)
@@ -206,7 +206,7 @@ let rec enter = function
 					       And (enter el, Not (expr_to_logic e))))
   | Systemj.Present (e,t,None,_) -> And (enter t, expr_to_logic e)
   | Systemj.Block (sl,t) as s -> 
-    let () = IFDEF DEBUG THEN let () = output_hum stdout (Systemj.sexp_of_stmt s) in print_endline "" ELSE () ENDIF in
+    let () = IFDEF SDEBUG THEN let () = output_hum stdout (Systemj.sexp_of_stmt s) in print_endline "" ELSE () ENDIF in
     enter_seq t sl
   | Systemj.Spar (sl,t) -> enter_spar t sl
   | Systemj.While (_,s,_)
@@ -286,9 +286,14 @@ let rec move = function
   | Systemj.Suspend (e,s,lc) -> raise (Internal_error ("Suspend current not supported: " ^ (Reporting.get_line_and_column lc)))
   | _ -> raise (Internal_error "Inst: Cannot get send/receive after rewriting!!")
 and move_seq r = function
-  | h::t -> Or(Or(And(move h, And(Not(solve_logic(collect_labels (Systemj.Block(t,r)))),NextTime(Not(solve_logic(collect_labels (Systemj.Block(t,r))))))),
-		  And(And(Not(solve_logic(collect_labels h)),NextTime(Not(solve_logic(collect_labels h)))),move (Systemj.Block(t,r)))),
-	       And(term h,And(NextTime(Not(solve_logic(collect_labels h))),And(Not(solve_logic(collect_labels (Systemj.Block(t,r)))),enter(Systemj.Block(t,r))))))
+  | h::t -> 
+    let fdis = And(move h, And(Not(solve_logic(collect_labels (Systemj.Block(t,r)))),NextTime(Not(solve_logic(collect_labels (Systemj.Block(t,r))))))) in
+    let () = IFDEF PDEBUG THEN output_hum stdout (sexp_of_logic (solve_logic fdis)); print_endline"TUTU" ELSE () ENDIF in
+    let sdis = And(And(Not(solve_logic(collect_labels h)),NextTime(Not(solve_logic(collect_labels h)))),move (Systemj.Block(t,r))) in
+    let () = IFDEF PDEBUG THEN output_hum stdout (sexp_of_logic (solve_logic sdis)); print_endline"TUTU1" ELSE () ENDIF in
+    Or(Or(And(move h, And(Not(solve_logic(collect_labels (Systemj.Block(t,r)))),NextTime(Not(solve_logic(collect_labels (Systemj.Block(t,r))))))),
+	  And(And(Not(solve_logic(collect_labels h)),NextTime(Not(solve_logic(collect_labels h)))),move (Systemj.Block(t,r)))),
+       And(term h,And(NextTime(Not(solve_logic(collect_labels h))),And(Not(solve_logic(collect_labels (Systemj.Block(t,r)))),enter(Systemj.Block(t,r))))))
   | [] -> False
 and move_spar r = function
   | h::t -> Or (Or(Or(And(move h,And(Not(solve_logic(collect_labels (Systemj.Spar(t,r)))),NextTime(Not(solve_logic(collect_labels (Systemj.Spar(t,r))))))),
@@ -298,7 +303,26 @@ and move_spar r = function
 		And(move (Systemj.Spar(t,r)),And(term h, NextTime(Not (solve_logic (collect_labels h))))))
   | [] -> False
 
+let dltl stmt = 
+  let shared = Or(Not(solve_logic (collect_labels stmt)),term stmt) in
+  let fdis = And(And(inst stmt, shared),NextTime(Not(solve_logic(collect_labels stmt)))) in
+  let sdis = And(shared, enter stmt) in
+  let tdis = And(shared, NextTime(Not(solve_logic (collect_labels stmt)))) in
+  let fodis = move stmt in
+  let () = IFDEF PDEBUG THEN output_hum stdout (sexp_of_logic (solve_logic fodis)); print_endline "<-- FOURTH" ELSE () ENDIF in
+  (shared,fdis,sdis,tdis,fodis)
+
 let build_ltl stmt = 
+  let shared = Or(Not(solve_logic (collect_labels stmt)),term stmt) in
+  let fdis = And(And(inst stmt, shared),NextTime(Not(solve_logic(collect_labels stmt)))) in
+  let () = IFDEF PDEBUG THEN output_hum stdout (sexp_of_logic (solve_logic fdis)); print_endline "<-- FIRST" ELSE () ENDIF in
+  let sdis = And(shared, enter stmt) in
+  let () = IFDEF PDEBUG THEN output_hum stdout (sexp_of_logic (solve_logic sdis)); print_endline "<-- SECOND" ELSE () ENDIF in
+  let tdis = And(shared, NextTime(Not(solve_logic (collect_labels stmt)))) in
+  let () = IFDEF PDEBUG THEN output_hum stdout (sexp_of_logic (solve_logic tdis)); print_endline "<-- THIRD" ELSE () ENDIF in
+  let fdis = move stmt in
+  let () = IFDEF PDEBUG THEN output_hum stdout (sexp_of_logic (solve_logic fdis)); print_endline "<-- FOURTH" ELSE () ENDIF in
+
   Or(Or(Or(And(And(Or(Not(solve_logic (collect_labels stmt)),term stmt),
 		   inst stmt),NextTime(Not(solve_logic(collect_labels stmt)))),
 	   And(Or(Not(solve_logic (collect_labels stmt)),term stmt),
