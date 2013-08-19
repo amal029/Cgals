@@ -214,17 +214,7 @@ let add_labels formula nodes_set =
       let (_,h) = (List.partition (fun x -> x = y) n.incoming) in 
       n.incoming <- h) torem in
     if n.incoming = [] then n.incoming <- ["Init"] else ();s) lba in
-  (* lba *)
+  lba
 
-  (* New addition *)
   (* Now remove the extra dangling nodes without a path to the acceptance state *)
-  let to_not_remove = List.flatten (List.map (fun ({node=n})-> n.incoming) acceptance_set) in
-  let to_rem = List.sort_unique (List.flatten (List.map (fun y -> List.filter (fun x -> x <> y) lba )to_not_remove)) in
-  let lba = ref lba in
-  let () = List.iter (fun x -> lba := List.remove_all !lba x) to_rem in
-  List.map (fun ({node=n} as s)  ->
-    let () = List.iter (fun y ->
-      let (_,h) = (List.partition (fun x -> x = y) n.incoming) in
-      n.incoming <- h) torem in
-    if n.incoming = [] then n.incoming <- ["Init"] else ();s) !lba
   
