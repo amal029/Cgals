@@ -10,7 +10,7 @@ type graph_node = {mutable name:string; mutable father:string; mutable incoming:
 		   mutable neew: logic list; mutable old:logic list; mutable next: logic list}
 with sexp
 
-type labeled_graph_node = {node: graph_node; labels : logic list list}
+type labeled_graph_node = {node: graph_node; labels : logic list list; tlabels: logic}
 with sexp
 
 let counter = ref 0
@@ -189,7 +189,10 @@ let state_label propositions powerset = function
        let () = print_endline "Resultant labels:\n" in
        let () = output_hum stdout (sexp_of_list (sexp_of_list sexp_of_logic) powerset) in 
        print_endline "\n***********\n" ELSE () ENDIF in
-    {node=s;labels=powerset}
+    let neg_props = List.filter (fun x -> (match x with | Not(Proposition _) -> true | _ -> false)) o in
+    let props = (pos_props @ neg_props) in
+    let tls = if props <> [] then List.reduce (fun x y -> And(x,y)) (pos_props @ neg_props) else True in
+    {node=s;labels=powerset;tlabels=tls}
 
 let add_labels formula nodes_set =
   (* Get all the propositions used in the formula *)
@@ -201,24 +204,4 @@ let add_labels formula nodes_set =
      the Buchi automata *)
   let prop_powerset = powerset propositions in
   let lba = List.map (state_label propositions prop_powerset) nodes_set in
-  let torem = List.map (fun {node=n;labels=l} -> (if (l=[] && (not (List.exists (fun x -> x = n.name) n.incoming)))
-    then n.name else "")) lba in
-  let lba = List.filter (fun {node=n;labels=l} -> 
-    (not ((List.flatten l)=[])) || (List.exists (fun x -> x = n.name) n.incoming)) lba in
-  let acceptance_set = List.filter(fun {node=n;labels=l} -> (List.exists (fun x -> x = n.name) n.incoming)) lba in
-  let () = IFDEF DEBUG THEN output_hum stdout (sexp_of_list sexp_of_labeled_graph_node lba) ELSE () ENDIF in
-  (* Now remove from incoming all the names that are the to be
-     removed!! *)
-  let lba = List.map (fun ({node=n} as s)  ->
-    let () = List.iter (fun y -> 
-      let (_,h) = (List.partition (fun x -> x = y) n.incoming) in 
-      n.incoming <- h) torem in
-    if n.incoming = [] then n.incoming <- ["Init"] else ();s) lba in
-
-  (* Now remove the extra dangling nodes without a path to the acceptance state *)
-  let all_incoming_nodes = List.sort_unique (compare) (List.flatten (List.map (fun {node=n} -> n.incoming)lba)) in
-  let () = IFDEF ZDEBUG THEN output_hum stdout (sexp_of_list sexp_of_string all_incoming_nodes) ELSE () ENDIF in
-  let ret = ref [] in
-  let () = List.iter(fun x -> ret := (List.filter (fun {node=n} -> n.name=x)lba) @ !ret) all_incoming_nodes in
- !ret
-  
+  lba

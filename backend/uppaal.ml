@@ -19,14 +19,25 @@ open TableauBuchiAutomataGeneration
 
 exception Internal_error of string
 
+let rec label = function
+  | And (x,y) -> (label x) ^ "&amp;&amp;" ^ (label y)
+  | Not (Proposition x) -> "!"^x 
+  | Proposition x -> x
+  | True -> "true"
+  | _ as s -> 
+    let () = output_hum stdout (sexp_of_logic s) in
+    raise (Internal_error ("Got a non And proposition type when building transition labels" ))
 (* Make transitions *)
-(* TODO: The updates and the guards need to be added *)
 let make_transitions ob = function
-  | {name=n;incoming=i} -> 
+  | ({name=n;incoming=i},tlabel) -> 
     let () = List.iter (fun x -> 
       let () = B.add_string ob "<transition>\n" in
       let () = B.add_string ob ("<source ref=\"" ^ x ^"\"/>\n") in
       let () = B.add_string ob ("<target ref=\"" ^ n ^ "\"/>\n") in
+      (* This is where the labels go! *)
+      let () = B.add_string ob "<label kind=\"guard\">" in
+      let () = B.add_string ob (label tlabel) in
+      let () = B.add_string ob "\n</label>\n" in
       let () = B.add_string ob "</transition>\n" in () )i in ()
 
 (* Uppaal locations for the networked automata system*)
@@ -61,7 +72,7 @@ let make_xml lgn =
   let () = List.iter (make_locations ob) (List.map (fun x -> x.node) lgn) in
   let () = B.add_string ob "<init ref=\"Init\"/>\n" in
   (* Make transitions *)
-  let () = List.iter (make_transitions ob) (List.map (fun x -> x.node) lgn) in
+  let () = List.iter (make_transitions ob) (List.map (fun x -> (x.node,x.tlabels)) lgn) in
   (* Add the system declaration *)
   let () = B.add_string ob "</template>\n" in 
   ob
