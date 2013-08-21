@@ -315,20 +315,17 @@ let dltl stmt =
 let build_ltl stmt = 
   let shared = Or(Not(solve_logic (collect_labels stmt)),term stmt) in
   let fdis = And(And(inst stmt, shared),NextTime(Not(solve_logic(collect_labels stmt)))) in
-  let () = IFDEF PDEBUG THEN output_hum stdout (sexp_of_logic (solve_logic fdis)); print_endline "<-- FIRST" ELSE () ENDIF in
+  let () = IFDEF PDEBUG THEN output_hum stdout (sexp_of_logic (solve_logic (push_not fdis))); print_endline "<-- FIRST" ELSE () ENDIF in
   let sdis = And(shared, enter stmt) in
-  let () = IFDEF PDEBUG THEN output_hum stdout (sexp_of_logic (solve_logic sdis)); print_endline "<-- SECOND" ELSE () ENDIF in
+  let () = IFDEF PDEBUG THEN output_hum stdout (sexp_of_logic (solve_logic (push_not sdis))); print_endline "<-- SECOND" ELSE () ENDIF in
   let tdis = And(shared, NextTime(Not(solve_logic (collect_labels stmt)))) in
-  let () = IFDEF PDEBUG THEN output_hum stdout (sexp_of_logic (solve_logic tdis)); print_endline "<-- THIRD" ELSE () ENDIF in
+  let () = IFDEF PDEBUG THEN output_hum stdout (sexp_of_logic (solve_logic (push_not tdis))); print_endline "<-- THIRD" ELSE () ENDIF in
   let fdis = move stmt in
-  let () = IFDEF PDEBUG THEN output_hum stdout (sexp_of_logic (solve_logic fdis)); print_endline "<-- FOURTH" ELSE () ENDIF in
+  let () = IFDEF PDEBUG THEN output_hum stdout (sexp_of_logic (solve_logic (push_not fdis))); print_endline "<-- FOURTH" ELSE () ENDIF in
 
-  Or(Or(Or(And(And(Or(Not(solve_logic (collect_labels stmt)),term stmt),
-		   inst stmt),NextTime(Not(solve_logic(collect_labels stmt)))),
-	   And(Or(Not(solve_logic (collect_labels stmt)),term stmt),
-	       enter stmt)),
-	And(Or(Not(solve_logic (collect_labels stmt)),term stmt),
-	    NextTime(Not(solve_logic (collect_labels stmt))))),
+  Or(Or(Or(And(shared,And(inst stmt,NextTime(Not(solve_logic(collect_labels stmt))))),
+	   And(shared,enter stmt)),
+	And(shared,NextTime(Not(solve_logic (collect_labels stmt))))),
      move stmt)
 
 let build_propositional_tree_logic = function

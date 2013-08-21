@@ -55,7 +55,7 @@ let () = List.iter (fun (Systemj.Apar(stmt,_)) ->
   List.iter (fun stmt -> 
     let (s,f,se,t,fo) = PropositionalLogic.dltl stmt in
     (* let fo = PL.Or(PL.NextTime(PL.Not (PL.Proposition "L2")), PL.NextTime(PL.Proposition "L1")) in *)
-    let fo = PL.Or(PL.Proposition "A", PL.Proposition "B") in
+    let fo = PL.And(PL.Proposition "l", PL.NextTime(PL.Proposition "l")) in
     let () = print_endline "The partial formulas and their BAs" in
     let () = SS.output_hum stdout (PropositionalLogic.sexp_of_logic (PropositionalLogic.solve_logic (PropositionalLogic.push_not (fo)))) in
     let () = print_endline "\n\n\n" in
