@@ -7,20 +7,20 @@ REPORTDIR=../error
 TYPECONV=`ocamlfind query type_conv`
 SEXPLIB=`ocamlfind query sexplib`
 BATDIR=`ocamlfind query batteries`
-SRC=propositionalLogic.ml tableauBuchiAutomataGeneration.ml
+SRC=propositionalLogic.ml tableauBuchiAutomataGeneration.ml modelSystem.ml
 all: logic.cmxa
 
 
 logic.cmxa: logic.cmx
 	$(CC) $(OCAMLOPTS) -I $(REPORTDIR) -I $(LANGUAGEDIR) propositionalLogic.cmx \
-	tableauBuchiAutomataGeneration.cmx -o $@
+	tableauBuchiAutomataGeneration.cmx modelSystem.cmx -o $@
 
 logic.cmx:
 	@echo $(BATDIR)
 	@echo $(SEXPLIB)
 	$(CC) -pp "camlp4o -I $(TYPECONV) -I $(SEXPLIB)			\
 	pa_type_conv.cma pa_sexp_conv.cma pa_macro.cmo -UDEBUG -USDEBUG	\
-	-DPDEBUG -UZDEBUG" -I $(REPORTDIR) -I $(LANGUAGEDIR) -I		\
+	-UPDEBUG -UZDEBUG" -I $(REPORTDIR) -I $(LANGUAGEDIR) -I		\
 	$(BATDIR) -I $(SEXPLIB) -c $(SRC)
 
 clean:

@@ -35,16 +35,16 @@ let make_transitions ob = function
       let () = B.add_string ob ("<source ref=\"" ^ x ^"\"/>\n") in
       let () = B.add_string ob ("<target ref=\"" ^ n ^ "\"/>\n") in
       (* This is where the labels go! *)
-      let () = B.add_string ob "<label kind=\"guard\">" in
-      let () = B.add_string ob (label tlabel) in
-      let () = B.add_string ob "\n</label>\n" in
+      (* let () = B.add_string ob "<label kind=\"guard\">" in *)
+      (* let () = B.add_string ob (label tlabel) in *)
+      (* let () = B.add_string ob "\n</label>\n" in *)
       let () = B.add_string ob "</transition>\n" in () )i in ()
 
 (* Uppaal locations for the networked automata system*)
 let make_locations ob = function
-  | {name=n} -> 
+  | ({name=n},tlabel) -> 
     let () = B.add_string ob ("<location id=\"" ^ n ^"\">\n") in
-    let () = B.add_string ob ("<name>" ^ n ^"</name>\n") in
+    let () = B.add_string ob ("<name>" ^ (string_of_logic tlabel) ^"</name>\n") in
     let () = B.add_string ob ("<committed/>\n</location>\n") in
     ()
 
@@ -69,7 +69,7 @@ let make_xml lgn =
   ss1 := ("Process" ^ (string_of_int !counter)) :: !ss1;
   (* make the nodes *)
   let () = make_init ob in
-  let () = List.iter (make_locations ob) (List.map (fun x -> x.node) lgn) in
+  let () = List.iter (make_locations ob) (List.map (fun x -> (x.node,x.tlabels)) lgn) in
   let () = B.add_string ob "<init ref=\"Init\"/>\n" in
   (* Make transitions *)
   let () = List.iter (make_transitions ob) (List.map (fun x -> (x.node,x.tlabels)) lgn) in

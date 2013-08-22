@@ -18,7 +18,7 @@ let replace = function
   | {node=n} -> n.incoming <- List.map (fun x -> (match (Hashtbl.find_option replaced x) with | None -> x | Some x -> x)) n.incoming
     
 
-let make lba = function
+let make = function
   | {node=n;tlabels=t} as s -> 
     try
       (* Some node with same tlabel already exists in the hashtbl *)
@@ -26,9 +26,8 @@ let make lba = function
       (* add to replaced *)
       let () = Hashtbl.add replaced n.name nn.name in
       (* replace this current node s with the new_node *)
-      nn.incoming <- nn.incoming @ n.incoming
+      nn.incoming <- List.sort_unique compare (nn.incoming @ n.incoming)
     with
     | Not_found -> 
       (* Add to tbl if not there already *)
       Hashtbl.add tbl t s
-	

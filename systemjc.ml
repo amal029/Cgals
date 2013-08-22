@@ -1,4 +1,5 @@
 module List = Batteries.List
+module Hashtbl = Batteries.Hashtbl
 
 module SS = Sexplib.Sexp
 module SSL = Sexplib.Std
@@ -33,6 +34,15 @@ try
   let () = IFDEF DEBUG THEN List.iter (fun x -> 
     let () = SS.output_hum Pervasives.stdout (SSL.sexp_of_list TableauBuchiAutomataGeneration.sexp_of_labeled_graph_node x) in
     print_endline "\n\n\n\n\n\n-----------------------------------------------------\n\n\n\n") labeled_buchi_automatas ELSE () ENDIF in
+  let labeled_buchi_automatas = 
+    List.map (fun x -> 
+      let () = List.iter ModelSystem.make x in
+      let () = List.iter ModelSystem.replace (List.of_enum (Hashtbl.values ModelSystem.tbl)) in 
+      let () = Hashtbl.clear ModelSystem.replaced in 
+      let ret = List.of_enum (Hashtbl.values ModelSystem.tbl) in
+      let () = Hashtbl.clear ModelSystem.tbl in
+      List.filter (fun {TableauBuchiAutomataGeneration.node=n} -> n.TableauBuchiAutomataGeneration.old <> []) ret
+    ) labeled_buchi_automatas in
   (* This map is for each clock-domain *)
   let uppaal_automatas = List.map Uppaal.make_xml labeled_buchi_automatas in
   let strings = Buffer.create(10000) in

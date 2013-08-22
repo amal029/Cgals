@@ -331,3 +331,14 @@ let build_ltl stmt =
 let build_propositional_tree_logic = function
   | Systemj.Apar (x,_) -> 
     List.map solve_logic ((List.map push_not) (List.map build_ltl x))
+
+
+let rec string_of_logic = function
+  | Or (x,y) -> (string_of_logic x) ^ "_or_" ^ (string_of_logic y)
+  | Not x -> "_not_" ^ (string_of_logic x)
+  | And (x,y) -> (string_of_logic x) ^ "_and_" ^ (string_of_logic y)
+  | Proposition x -> x
+  | Brackets x -> (string_of_logic x)
+  | _ as s -> 
+    output_hum stdout (sexp_of_logic s);
+    raise (Internal_error "This logic type cannot happen at Uppaal generation stage")
