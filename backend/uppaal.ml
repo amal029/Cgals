@@ -48,11 +48,11 @@ let make_locations ob = function
     let () = B.add_string ob ("<committed/>\n</location>\n") in
     ()
 
-let make_init ob = 
-  let () = B.add_string ob "<location id=\"Init\">\n" in
-  let () = B.add_string ob "<name>Init</name>\n" in
-  let () = B.add_string ob "<committed/></location>\n" in
-  ()
+(* let make_init ob =  *)
+(*   let () = B.add_string ob "<location id=\"Init\">\n" in *)
+(*   let () = B.add_string ob "<name>Init</name>\n" in *)
+(*   let () = B.add_string ob "<committed/></location>\n" in *)
+(*   () *)
 
 let counter = ref 0
 let ss = ref "" 
@@ -60,7 +60,7 @@ let ss1 = ref []
 
 (* Outputs the XML file for Uppaal model-checker *)
 (* This is for each clock-domain *)
-let make_xml lgn = 
+let make_xml init lgn = 
   let ob = B.create(10000) in
   let () = B.add_string ob "<template>\n" in
   counter := !counter + 1;
@@ -68,9 +68,9 @@ let make_xml lgn =
   ss := !ss ^ "Process" ^ (string_of_int !counter) ^ " = Template" ^ (string_of_int !counter) ^ "();\n";
   ss1 := ("Process" ^ (string_of_int !counter)) :: !ss1;
   (* make the nodes *)
-  let () = make_init ob in
+  (* let () = make_init ob in *)
   let () = List.iter (make_locations ob) (List.map (fun x -> (x.node,x.tlabels)) lgn) in
-  let () = B.add_string ob "<init ref=\"Init\"/>\n" in
+  let () = B.add_string ob ("<init ref=\"" ^ init ^ "\"/>\n") in
   (* Make transitions *)
   let () = List.iter (make_transitions ob) (List.map (fun x -> (x.node,x.tlabels)) lgn) in
   (* Add the system declaration *)

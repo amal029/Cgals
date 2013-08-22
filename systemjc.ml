@@ -5,6 +5,7 @@ module SS = Sexplib.Sexp
 module SSL = Sexplib.Std
 
 module PL = PropositionalLogic
+open TableauBuchiAutomataGeneration
 
 let usage_msg = "Usage: systemjc [options] <filename>\nsee -help for more options" in
 try
@@ -34,6 +35,7 @@ try
   let () = IFDEF DEBUG THEN List.iter (fun x -> 
     let () = SS.output_hum Pervasives.stdout (SSL.sexp_of_list TableauBuchiAutomataGeneration.sexp_of_labeled_graph_node x) in
     print_endline "\n\n\n\n\n\n-----------------------------------------------------\n\n\n\n") labeled_buchi_automatas ELSE () ENDIF in
+  let init = ref [] in
   let labeled_buchi_automatas = 
     List.map (fun x -> 
       let () = List.iter ModelSystem.make x in
@@ -41,10 +43,14 @@ try
       let () = Hashtbl.clear ModelSystem.replaced in 
       let ret = List.of_enum (Hashtbl.values ModelSystem.tbl) in
       let () = Hashtbl.clear ModelSystem.tbl in
-      List.filter (fun {TableauBuchiAutomataGeneration.node=n} -> n.TableauBuchiAutomataGeneration.old <> []) ret
-    ) labeled_buchi_automatas in
+      let ret = List.filter (fun {node=n} -> n.old <> []) ret in
+      let st_node = List.find (fun {tlabels=t} -> (match t with | PL.Proposition x -> x = "st" | _ -> false)) ret in
+      init := st_node.node.name :: !init;
+      let () = List.iter (fun {node=n} -> n.incoming <- List.remove_all n.incoming "Init") ret in
+      let (_,ret) = List.partition (fun {node=n} -> n.incoming = [] && n.name <> st_node.node.name) ret in
+      ret) labeled_buchi_automatas in
   (* This map is for each clock-domain *)
-  let uppaal_automatas = List.map Uppaal.make_xml labeled_buchi_automatas in
+  let uppaal_automatas = List.map2 Uppaal.make_xml !init labeled_buchi_automatas in
   let strings = Buffer.create(10000) in
   let () = List.iter (fun x -> Buffer.add_buffer strings x) uppaal_automatas in
   let uppaal_automata = Uppaal.make_uppaal strings in
@@ -60,23 +66,6 @@ try
       with
       | Sys_error _ as s -> raise s
   in
-  let () = IFDEF SDEBUG THEN
-let () = List.iter (fun (Systemj.Apar(stmt,_)) ->
-  List.iter (fun stmt -> 
-    let (s,f,se,t,fo) = PropositionalLogic.dltl stmt in
-    (* let fo = PL.Or(PL.NextTime(PL.Not (PL.Proposition "L2")), PL.NextTime(PL.Proposition "L1")) in *)
-    let fo = PL.And(PL.Proposition "l", PL.NextTime(PL.Proposition "l")) in
-    let () = print_endline "The partial formulas and their BAs" in
-    let () = SS.output_hum stdout (PropositionalLogic.sexp_of_logic (PropositionalLogic.solve_logic (PropositionalLogic.push_not (fo)))) in
-    let () = print_endline "\n\n\n" in
-    let ba = TableauBuchiAutomataGeneration.create_graph (PropositionalLogic.solve_logic (PropositionalLogic.push_not (fo))) in
-    let () = print_endline "Nodes in the nodes set" in
-    let () = List.iter (fun x -> SS.output_hum stdout (TableauBuchiAutomataGeneration.sexp_of_graph_node x); print_endline"\n") ba in
-    let lba = TableauBuchiAutomataGeneration.add_labels (PropositionalLogic.solve_logic (PropositionalLogic.push_not (fo))) ba in
-    List.iter (fun x -> SS.output_hum Pervasives.stdout (SSL.sexp_of_list TableauBuchiAutomataGeneration.sexp_of_labeled_graph_node x))[lba])stmt) [ast] in
-    let () = print_endline "\n\n\n" in
-    ()
-ELSE() ENDIF in
   ()
     
 with
