@@ -52,14 +52,20 @@ try
 	let () = SS.output_hum Pervasives.stdout (SSL.sexp_of_list TableauBuchiAutomataGeneration.sexp_of_labeled_graph_node x) in
 	print_endline "\n\n\n\n\n\n-----------------------------------------------------\n\n\n\n") labeled_buchi_automatas ELSE () ENDIF in
       let () = List.iter (fun ({node=n} as ln) -> 
-	let is = List.mapi(fun i x -> if x = "Init" then (i+1) else -1) n.incoming in
-	let is = List.filter (fun x -> x <> -1) is in
-	SS.output_hum stdout (SSL.sexp_of_list SSL.sexp_of_int is);
+	let gg = ref [] in
+	let ig = ref [] in
+	for c = 0 to (List.length ln.guards)-1 do
+	  if (List.nth n.incoming c) <> "Init" then
+	    gg := !gg @ [(List.nth ln.guards c)]
+	  else
+	    ig := !ig @ [(List.nth ln.guards c)]
+	done;
+	if !ig <> [] then
+	  let ig = List.reduce (fun x y -> PL.And(x,y)) !ig in
+	  gg := List.map (fun x -> PL.solve_logic (PL.And (x,ig))) !gg
+	else ();
+	ln.guards <- !gg;
 	n.incoming <- List.remove_all n.incoming "Init";
-	(* assuming that Init will always happen before!! *)
-	let maxx = ref 0 in
-	let () = List.iter (fun x -> maxx := (max !maxx x)) is in
-	ln.guards <- List.drop !maxx ln.guards;
       ) ret in
       let (_,ret) = List.partition (fun {node=n} -> n.incoming = [] && n.name <> st_node.node.name) ret in
       ret) labeled_buchi_automatas in
