@@ -21,24 +21,25 @@ exception Internal_error of string
 
 let rec label = function
   | And (x,y) -> (label x) ^ "&amp;&amp;" ^ (label y)
-  | Not (Proposition x) -> "!"^x 
-  | Proposition x -> x
+  | Not (Proposition x) -> "!"^(match x with | Label x -> x | Expr x -> x)
+  | Proposition x -> (match x with | Label x -> x | Expr x -> x)
   | True -> "true"
   | _ as s -> 
     let () = output_hum stdout (sexp_of_logic s) in
     raise (Internal_error ("Got a non And proposition type when building transition labels" ))
 (* Make transitions *)
 let make_transitions ob = function
-  | ({name=n;incoming=i},tlabel) -> 
-    let () = List.iter (fun x -> 
-      let () = B.add_string ob "<transition>\n" in
-      let () = B.add_string ob ("<source ref=\"" ^ x ^"\"/>\n") in
-      let () = B.add_string ob ("<target ref=\"" ^ n ^ "\"/>\n") in
-      (* This is where the labels go! *)
-      (* let () = B.add_string ob "<label kind=\"guard\">" in *)
-      (* let () = B.add_string ob (label tlabel) in *)
-      (* let () = B.add_string ob "\n</label>\n" in *)
-      let () = B.add_string ob "</transition>\n" in () )i in ()
+  | (({name=n;incoming=i}),tlabel,guards) -> 
+    if i <> [] then
+      let () = List.iter2 (fun x g -> 
+	let () = B.add_string ob "<transition>\n" in
+	let () = B.add_string ob ("<source ref=\"" ^ x ^"\"/>\n") in
+	let () = B.add_string ob ("<target ref=\"" ^ n ^ "\"/>\n") in
+	(* This is where the labels go! *)
+	let () = B.add_string ob "<label kind=\"guard\">" in
+	let () = B.add_string ob (label g) in
+	let () = B.add_string ob "\n</label>\n" in
+	let () = B.add_string ob "</transition>\n" in ()) i guards in ()
 
 (* Uppaal locations for the networked automata system*)
 let make_locations ob = function
@@ -47,12 +48,6 @@ let make_locations ob = function
     let () = B.add_string ob ("<name>" ^ (string_of_logic tlabel) ^"</name>\n") in
     let () = B.add_string ob ("<committed/>\n</location>\n") in
     ()
-
-(* let make_init ob =  *)
-(*   let () = B.add_string ob "<location id=\"Init\">\n" in *)
-(*   let () = B.add_string ob "<name>Init</name>\n" in *)
-(*   let () = B.add_string ob "<committed/></location>\n" in *)
-(*   () *)
 
 let counter = ref 0
 let ss = ref "" 
@@ -72,7 +67,7 @@ let make_xml init lgn =
   let () = List.iter (make_locations ob) (List.map (fun x -> (x.node,x.tlabels)) lgn) in
   let () = B.add_string ob ("<init ref=\"" ^ init ^ "\"/>\n") in
   (* Make transitions *)
-  let () = List.iter (make_transitions ob) (List.map (fun x -> (x.node,x.tlabels)) lgn) in
+  let () = List.iter (make_transitions ob) (List.map (fun x -> (x.node,x.tlabels,x.guards)) lgn) in
   (* Add the system declaration *)
   let () = B.add_string ob "</template>\n" in 
   ob

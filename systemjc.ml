@@ -41,16 +41,34 @@ try
       let () = List.iter ModelSystem.make x in
       let () = List.iter ModelSystem.replace (List.of_enum (Hashtbl.values ModelSystem.tbl)) in 
       let () = Hashtbl.clear ModelSystem.replaced in 
+      let () = Hashtbl.clear ModelSystem.guards in 
       let ret = List.of_enum (Hashtbl.values ModelSystem.tbl) in
       let () = Hashtbl.clear ModelSystem.tbl in
       let ret = List.filter (fun {node=n} -> n.old <> []) ret in
-      let st_node = List.find (fun {tlabels=t} -> (match t with | PL.Proposition x -> x = "st" | _ -> false)) ret in
+      let st_node = List.find (fun {tlabels=t} -> (match t with | PL.Proposition (PL.Label x) -> x = "st" | _ -> false)) ret in
       init := st_node.node.name :: !init;
-      let () = List.iter (fun {node=n} -> n.incoming <- List.remove_all n.incoming "Init") ret in
+      let () = IFDEF DEBUG THEN List.iter (fun x -> 
+	let () = print_endline "....Building SystemJ model......" in
+	let () = SS.output_hum Pervasives.stdout (SSL.sexp_of_list TableauBuchiAutomataGeneration.sexp_of_labeled_graph_node x) in
+	print_endline "\n\n\n\n\n\n-----------------------------------------------------\n\n\n\n") labeled_buchi_automatas ELSE () ENDIF in
+      let () = List.iter (fun ({node=n} as ln) -> 
+	let is = List.mapi(fun i x -> if x = "Init" then (i+1) else -1) n.incoming in
+	let is = List.filter (fun x -> x <> -1) is in
+	SS.output_hum stdout (SSL.sexp_of_list SSL.sexp_of_int is);
+	n.incoming <- List.remove_all n.incoming "Init";
+	(* assuming that Init will always happen before!! *)
+	let maxx = ref 0 in
+	let () = List.iter (fun x -> maxx := (max !maxx x)) is in
+	ln.guards <- List.drop !maxx ln.guards;
+      ) ret in
       let (_,ret) = List.partition (fun {node=n} -> n.incoming = [] && n.name <> st_node.node.name) ret in
       ret) labeled_buchi_automatas in
   (* This map is for each clock-domain *)
-  let uppaal_automatas = List.map2 Uppaal.make_xml !init labeled_buchi_automatas in
+  let () = IFDEF DEBUG THEN List.iter (fun x -> 
+    let () = print_endline "....Building SystemJ model......" in
+    let () = SS.output_hum Pervasives.stdout (SSL.sexp_of_list TableauBuchiAutomataGeneration.sexp_of_labeled_graph_node x) in
+    print_endline "\n\n\n\n\n\n-----------------------------------------------------\n\n\n\n") labeled_buchi_automatas ELSE () ENDIF in
+  let uppaal_automatas = List.map2 Uppaal.make_xml (List.rev !init) labeled_buchi_automatas in
   let strings = Buffer.create(10000) in
   let () = List.iter (fun x -> Buffer.add_buffer strings x) uppaal_automatas in
   let uppaal_automata = Uppaal.make_uppaal strings in

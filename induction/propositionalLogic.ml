@@ -52,7 +52,9 @@ let rec add_labels_and_rewrite cnt = function
 let rewrite_ast = function
   | Systemj.Apar (x,s) -> Systemj.Apar (List.map (add_labels_and_rewrite (ref 0)) (List.rev x),s)
 
-type proposition = string
+type proposition = 
+| Label of string
+| Expr of string
 with sexp
 
 type logic = 
@@ -116,7 +118,7 @@ and invert_not = function
 let rec collect_labels = function
   | Systemj.Noop | Systemj.Emit _ | Systemj.Signal _ 
   | Systemj.Channel _ | Systemj.Exit _ -> False
-  | Systemj.Pause (Some x,_) -> Proposition x
+  | Systemj.Pause (Some x,_) -> Proposition (Label x)
   | Systemj.Block (x,_)  
   | Systemj.Spar (x,_) -> 
     if x = [] then False
@@ -132,7 +134,7 @@ let rec expr_to_logic = function
   | Systemj.And (x,y,_) -> And(expr_to_logic x, expr_to_logic y)
   | Systemj.Or (x,y,_) -> Or(expr_to_logic x, expr_to_logic y)
   | Systemj.Brackets (x,_) -> Brackets (expr_to_logic x)
-  | Systemj.Esymbol (Systemj.Symbol(x,_),_) -> Proposition x
+  | Systemj.Esymbol (Systemj.Symbol(x,_),_) -> Proposition (Expr x)
 
 let rec solve_logic = function
   | And (x,y) -> 
@@ -141,6 +143,7 @@ let rec solve_logic = function
     | (True,True) -> True
     | (x,True) -> x
     | (True,x) -> x
+    | ((Proposition a), Proposition b) when a = b -> Proposition a
     | (Not (Proposition a), Proposition b) when a = b -> False
     | (Proposition a, Not(Proposition b)) when a = b -> False
     | (NextTime (Not (Proposition a)), NextTime(Proposition b)) when a = b -> False
@@ -152,6 +155,7 @@ let rec solve_logic = function
     | (False,False) -> False
     | (x,False) -> x
     | (False,x) -> x
+    | ((Proposition a), Proposition b) when a = b -> Proposition a
     | (Not (Proposition a), Proposition b) when a = b -> True
     | (Proposition a, Not(Proposition b)) when a = b -> True
     | (NextTime (Not (Proposition a)), NextTime(Proposition b)) when a = b -> True
@@ -199,7 +203,7 @@ let rec inst = function
 let rec enter = function
   | Systemj.Noop -> False
   | Systemj.Emit _ -> False
-  | Systemj.Pause (Some x,_) -> NextTime (Proposition x)
+  | Systemj.Pause (Some x,_) -> NextTime (Proposition (Label x))
   | Systemj.Present (e,t,Some el,_) -> Or(And (NextTime (Not (solve_logic(collect_labels el))), 
 					       And (enter t, expr_to_logic e)), 
 					  And (NextTime (Not (solve_logic(collect_labels t))),
@@ -241,7 +245,7 @@ and enter_spar r = function
 let rec term = function
   | Systemj.Noop -> False
   | Systemj.Emit (s,_) -> False
-  | Systemj.Pause (Some x,_) -> Proposition x
+  | Systemj.Pause (Some x,_) -> Proposition (Label x)
   | Systemj.Pause (None,lc) -> raise (Internal_error ("Pause without a label: " ^ (Reporting.get_line_and_column lc)))
   | Systemj.Present (e,t,Some el,_) -> And(term t, Not(solve_logic(collect_labels el)))
   | Systemj.Present (e,t,None,_) -> term t
@@ -313,18 +317,18 @@ let dltl stmt =
 
 let build_ltl stmt = 
   let shared = Or(Not(solve_logic (collect_labels stmt)),term stmt) in
-  let fdis = And(And(inst stmt, Proposition "st"),NextTime(Not(solve_logic(collect_labels stmt)))) in
+  let fdis = And(And(inst stmt, Proposition (Label "st")),NextTime(Not(solve_logic(collect_labels stmt)))) in
   let () = IFDEF PDEBUG THEN output_hum stdout (sexp_of_logic (solve_logic (push_not fdis))); print_endline "<-- FIRST" ELSE () ENDIF in
-  let sdis = And(Proposition "st", enter stmt) in
+  let sdis = And(Proposition (Label "st"), enter stmt) in
   let () = IFDEF PDEBUG THEN output_hum stdout (sexp_of_logic (solve_logic (push_not sdis))); print_endline "<-- SECOND" ELSE () ENDIF in
-  let tdis = And(Proposition "st", NextTime(Not(solve_logic (collect_labels stmt)))) in
+  let tdis = And(Proposition (Label "st"), NextTime(Not(solve_logic (collect_labels stmt)))) in
   let () = IFDEF PDEBUG THEN output_hum stdout (sexp_of_logic (solve_logic (push_not tdis))); print_endline "<-- THIRD" ELSE () ENDIF in
   let fdis = move stmt in
   let () = IFDEF PDEBUG THEN output_hum stdout (sexp_of_logic (solve_logic (push_not fdis))); print_endline "<-- FOURTH" ELSE () ENDIF in
 
-  Or(Or(Or(And(Proposition "st",And(inst stmt,NextTime(Not(solve_logic(collect_labels stmt))))),
-	   And(Proposition "st",enter stmt)),
-	And(Proposition "st",NextTime(Not(solve_logic (collect_labels stmt))))),
+  Or(Or(Or(And(Proposition (Label "st"),And(inst stmt,NextTime(Not(solve_logic(collect_labels stmt))))),
+	   And(Proposition (Label "st"),enter stmt)),
+	And(Proposition (Label "st"),NextTime(Not(solve_logic (collect_labels stmt))))),
      move stmt)
 
 let build_propositional_tree_logic = function
@@ -336,8 +340,9 @@ let rec string_of_logic = function
   | Or (x,y) -> (string_of_logic x) ^ "_or_" ^ (string_of_logic y)
   | Not x -> "_not_" ^ (string_of_logic x)
   | And (x,y) -> (string_of_logic x) ^ "_and_" ^ (string_of_logic y)
-  | Proposition x -> x
+  | Proposition x -> (match x with | Label x -> x | Expr x -> x)
   | Brackets x -> (string_of_logic x)
+  | True -> "True"
   | _ as s -> 
     output_hum stdout (sexp_of_logic s);
     raise (Internal_error "This logic type cannot happen at Uppaal generation stage")
