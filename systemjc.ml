@@ -47,8 +47,8 @@ try
       let ret = List.filter (fun {node=n} -> n.old <> []) ret in
       let st_node = List.find (fun {tlabels=t} -> (match t with | PL.Proposition (PL.Label x) -> x = "st" | _ -> false)) ret in
       init := st_node.node.name :: !init;
+      let () = print_endline "....Building SystemJ model......" in
       let () = IFDEF DEBUG THEN List.iter (fun x -> 
-	let () = print_endline "....Building SystemJ model......" in
 	let () = SS.output_hum Pervasives.stdout (SSL.sexp_of_list TableauBuchiAutomataGeneration.sexp_of_labeled_graph_node x) in
 	print_endline "\n\n\n\n\n\n-----------------------------------------------------\n\n\n\n") labeled_buchi_automatas ELSE () ENDIF in
       let () = List.iter (fun ({node=n} as ln) -> 

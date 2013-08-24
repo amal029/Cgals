@@ -209,9 +209,7 @@ let rec enter = function
 					  And (NextTime (Not (solve_logic(collect_labels t))),
 					       And (enter el, Not (expr_to_logic e))))
   | Systemj.Present (e,t,None,_) -> And (enter t, expr_to_logic e)
-  | Systemj.Block (sl,t) as s -> 
-    let () = IFDEF SDEBUG THEN let () = output_hum stdout (Systemj.sexp_of_stmt s) in print_endline "" ELSE () ENDIF in
-    enter_seq t sl
+  | Systemj.Block (sl,t) as s -> enter_seq t sl
   | Systemj.Spar (sl,t) -> enter_spar t sl
   | Systemj.While (_,s,_)
   | Systemj.Suspend (_,s,_) 
@@ -292,9 +290,7 @@ let rec move = function
 and move_seq r = function
   | h::t -> 
     let fdis = And(move h, And(Not(solve_logic(collect_labels (Systemj.Block(t,r)))),NextTime(Not(solve_logic(collect_labels (Systemj.Block(t,r))))))) in
-    let () = IFDEF DDEBUG THEN output_hum stdout (sexp_of_logic (solve_logic fdis)); print_endline"TUTU" ELSE () ENDIF in
     let sdis = And(And(Not(solve_logic(collect_labels h)),NextTime(Not(solve_logic(collect_labels h)))),move (Systemj.Block(t,r))) in
-    let () = IFDEF DDEBUG THEN output_hum stdout (sexp_of_logic (solve_logic sdis)); print_endline"TUTU1" ELSE () ENDIF in
     Or(Or(And(move h, And(Not(solve_logic(collect_labels (Systemj.Block(t,r)))),NextTime(Not(solve_logic(collect_labels (Systemj.Block(t,r))))))),
 	  And(And(Not(solve_logic(collect_labels h)),NextTime(Not(solve_logic(collect_labels h)))),move (Systemj.Block(t,r)))),
        And(term h,And(NextTime(Not(solve_logic(collect_labels h))),And(Not(solve_logic(collect_labels (Systemj.Block(t,r)))),enter(Systemj.Block(t,r))))))
