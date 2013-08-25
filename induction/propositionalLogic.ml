@@ -35,7 +35,10 @@ let rewrite_receive cnt = function
 
 let rec add_labels_and_rewrite cnt = function
   | Systemj.Pause (_,x) as s -> cnt := !cnt + 1; Systemj.Pause(Some ("L" ^ (string_of_int !cnt)), x)
-  | Systemj.Present (e,t,Some el,x) -> Systemj.Present(e,add_labels_and_rewrite cnt t, Some (add_labels_and_rewrite cnt el),x)
+  | Systemj.Present (e,t,Some el,x) -> 
+    let a = add_labels_and_rewrite cnt t in
+    let b = add_labels_and_rewrite cnt el in
+    Systemj.Present(e,a,Some b,x)
   | Systemj.Present (e,t,None,x) -> Systemj.Present(e,add_labels_and_rewrite cnt t, None ,x)
   | Systemj.Block (sl,x) -> Systemj.Block(List.map (add_labels_and_rewrite cnt) (List.rev sl), x)
   | Systemj.Spar (sl,x) -> Systemj.Spar(List.rev (List.map (add_labels_and_rewrite cnt) sl), x)
@@ -55,6 +58,7 @@ let rewrite_ast = function
 type proposition = 
 | Label of string
 | Expr of string
+| Update of string
 with sexp
 
 type logic = 
@@ -245,7 +249,8 @@ let rec term = function
   | Systemj.Emit (s,_) -> False
   | Systemj.Pause (Some x,_) -> Proposition (Label x)
   | Systemj.Pause (None,lc) -> raise (Internal_error ("Pause without a label: " ^ (Reporting.get_line_and_column lc)))
-  | Systemj.Present (e,t,Some el,_) -> And(term t, Not(solve_logic(collect_labels el)))
+  | Systemj.Present (e,t,Some el,_) -> Or(And(And(term t, Not(solve_logic(collect_labels el))),expr_to_logic e),
+					  And(term el, Not(solve_logic (collect_labels t))))
   | Systemj.Present (e,t,None,_) -> term t
   | Systemj.Block (sl,r) -> term_seq r sl
   | Systemj.Spar (sl,r) -> term_spar r sl
@@ -274,8 +279,8 @@ let rec move = function
   | Systemj.Emit (s,_) -> False
   | Systemj.Pause _ -> False
   | Systemj.Present (e,t,Some el,_) -> 
-    Or(And(And(move t,Not(solve_logic(collect_labels el))),NextTime(Not(solve_logic(collect_labels el)))),
-       And(And(move el,Not(solve_logic(collect_labels t))),NextTime(Not(solve_logic(collect_labels t)))))
+    Or(And(And(And(move t,Not(solve_logic(collect_labels el))),NextTime(Not(solve_logic(collect_labels el)))), expr_to_logic e),
+       And(And(And(move el,Not(solve_logic(collect_labels t))),NextTime(Not(solve_logic(collect_labels t)))),Not(expr_to_logic e)))
   | Systemj.Present (e,t,None,_) -> False
   | Systemj.Block (sl,r) -> move_seq r sl
   | Systemj.Spar (sl,r) -> move_spar r sl
@@ -324,7 +329,7 @@ let build_ltl stmt =
 
   Or(Or(Or(And(Proposition (Label "st"),And(inst stmt,NextTime(Not(solve_logic(collect_labels stmt))))),
 	   And(Proposition (Label "st"),enter stmt)),
-	And(Proposition (Label "st"),NextTime(Not(solve_logic (collect_labels stmt))))),
+	And(Not(Proposition (Label "st")),NextTime(Not(solve_logic (collect_labels stmt))))),
      move stmt)
 
 let build_propositional_tree_logic = function

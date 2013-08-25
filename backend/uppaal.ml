@@ -9,7 +9,7 @@
 
 *)
 module List = Batteries.List
-module B = Buffer
+module B = Batteries.Buffer
 
 open Sexplib
 open Std
@@ -19,16 +19,19 @@ open TableauBuchiAutomataGeneration
 
 exception Internal_error of string
 
+(* let decls = ref [] *)
+
 let rec label = function
   | And (x,y) -> (label x) ^ "&amp;&amp;" ^ (label y)
-  | Not (Proposition x) -> "!"^(match x with | Label x -> x | Expr x -> x)
-  | Proposition x -> (match x with | Label x -> x | Expr x -> x)
+  | Not (Proposition x) -> "!"^(match x with | Label x -> x | Expr x -> x | Update x -> x^"=true")
+  | Proposition x -> (match x with | Label x -> x | Expr x -> x | Update x -> x ^"=true")
   | True -> "true"
+  | False -> "false"
   | _ as s -> 
     let () = output_hum stdout (sexp_of_logic s) in
     raise (Internal_error ("Got a non And proposition type when building transition labels" ))
 (* Make transitions *)
-let make_transitions ob = function
+let make_transitions init guard ob = function
   | (({name=n;incoming=i}),tlabel,guards) -> 
     if i <> [] then
       let () = List.iter2 (fun x g -> 
@@ -37,7 +40,10 @@ let make_transitions ob = function
 	let () = B.add_string ob ("<target ref=\"" ^ n ^ "\"/>\n") in
 	(* This is where the labels go! *)
 	let () = B.add_string ob "<label kind=\"guard\">" in
-	let () = B.add_string ob (label g) in
+	if x = init then
+	  B.add_string ob (label (solve_logic (And(guard,g))))
+	else
+	  B.add_string ob (label g);
 	let () = B.add_string ob "\n</label>\n" in
 	let () = B.add_string ob "</transition>\n" in ()) i guards in ()
 
@@ -55,7 +61,7 @@ let ss1 = ref []
 
 (* Outputs the XML file for Uppaal model-checker *)
 (* This is for each clock-domain *)
-let make_xml init lgn = 
+let make_xml stnode init lgn = 
   let ob = B.create(10000) in
   let () = B.add_string ob "<template>\n" in
   counter := !counter + 1;
@@ -67,7 +73,7 @@ let make_xml init lgn =
   let () = List.iter (make_locations ob) (List.map (fun x -> (x.node,x.tlabels)) lgn) in
   let () = B.add_string ob ("<init ref=\"" ^ init ^ "\"/>\n") in
   (* Make transitions *)
-  let () = List.iter (make_transitions ob) (List.map (fun x -> (x.node,x.tlabels,x.guards)) lgn) in
+  let () = List.iter (make_transitions init (List.hd stnode.guards) ob) (List.map (fun x -> (x.node,x.tlabels,x.guards)) lgn) in
   (* Add the system declaration *)
   let () = B.add_string ob "</template>\n" in 
   ob

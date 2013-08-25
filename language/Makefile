@@ -14,7 +14,7 @@ check:
 	@echo $(TYPECONV)
 	$(CC) -pp "camlp4o -I $(TYPECONV) -I $(SEXPLIB)			\
 	pa_type_conv.cma pa_sexp_conv.cma pa_macro.cmo	\
-	-DDEBUG" -I $(SEXPLIB) -I ../error -c $(SRC)
+	-UDEBUG" -I $(SEXPLIB) -I ../error -c $(SRC)
 	cp systemj.cmi ../parser/systemj.cmi
 clean:
 	rm -rf *cm* *o *a *mli
