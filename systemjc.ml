@@ -41,19 +41,21 @@ try
   let () = IFDEF DEBUG THEN List.iter (fun x -> 
     let () = SS.output_hum Pervasives.stdout (SSL.sexp_of_list TableauBuchiAutomataGeneration.sexp_of_labeled_graph_node x) in
     print_endline "\n\n\n\n\n\n-----------------------------------------------------\n\n\n\n") labeled_buchi_automatas ELSE () ENDIF in
+  let () = List.iter ModelSystem.propagate_guards_from_st labeled_buchi_automatas in
+  let () = IFDEF DEBUG THEN List.iter (fun x -> 
+    let () = SS.output_hum Pervasives.stdout (SSL.sexp_of_list TableauBuchiAutomataGeneration.sexp_of_labeled_graph_node x) in
+    print_endline "\n\n\n\n\n\n-----------------------------------------------------\n\n\n\n") labeled_buchi_automatas ELSE () ENDIF in
   let init = ref [] in
-  let sts = ref [] in
   let labeled_buchi_automatas = 
     List.map (fun x -> 
       let () = List.iter ModelSystem.make x in
       let () = List.iter ModelSystem.replace (List.of_enum (Hashtbl.values ModelSystem.tbl)) in 
       let () = Hashtbl.clear ModelSystem.replaced in 
-      let () = Hashtbl.clear ModelSystem.guards in 
+      (* let () = Hashtbl.clear ModelSystem.guards in  *)
       let ret = List.of_enum (Hashtbl.values ModelSystem.tbl) in
       let () = Hashtbl.clear ModelSystem.tbl in
       let ret = List.filter (fun {node=n} -> n.old <> []) ret in
       let st_node = List.find (fun {tlabels=t} -> (match t with | PL.Proposition (PL.Label x) -> x = "st" | _ -> false)) ret in
-      sts := !sts @[st_node]; 
       init := st_node.node.name :: !init;
       let () = print_endline "....Building SystemJ model......" in
       let () = IFDEF DEBUG THEN List.iter (fun x -> 
@@ -69,13 +71,16 @@ try
 	    ig := !ig @ [(List.nth ln.guards c)]
 	done;
 	if !ig <> [] then
-	  let ig = List.reduce (fun x y -> PL.And(x,y)) !ig in
-	  if ln <> st_node then begin
-	    gg := List.map (fun x -> PL.solve_logic (PL.And (x,ig))) !gg;
-	    ln.guards <- !gg;
-	  end
-	  else ln.guards <- [PL.solve_logic ig];
-	  n.incoming <- List.remove_all n.incoming "Init";
+	  (* This is the only way this should be allowed: 1.) If there
+	     are multiple Init's then that means you could have run this
+	     thing with an || 2.) But, if there is a parent node, then
+	     that node needs to have been true for this node to have
+	     been executed. -- At least, that's the theory!
+	  *)
+	  let ig = List.reduce (fun x y -> PL.Or(x,y)) !ig in
+	  gg := List.map (fun x -> PL.solve_logic (PL.And (x,ig))) !gg;
+	  ln.guards <- !gg;
+	n.incoming <- List.remove_all n.incoming "Init";
       ) ret in
       let (_,ret) = List.partition (fun {node=n} -> n.incoming = [] && n.name <> st_node.node.name) ret in
       ret) labeled_buchi_automatas in
@@ -84,7 +89,7 @@ try
     let () = print_endline "....Building SystemJ model......" in
     let () = SS.output_hum Pervasives.stdout (SSL.sexp_of_list TableauBuchiAutomataGeneration.sexp_of_labeled_graph_node x) in
     print_endline "\n\n\n\n\n\n-----------------------------------------------------\n\n\n\n") labeled_buchi_automatas ELSE () ENDIF in
-  let uppaal_automatas = map3 Uppaal.make_xml !sts (List.rev !init) labeled_buchi_automatas in
+  let uppaal_automatas = List.map2 Uppaal.make_xml (List.rev !init) labeled_buchi_automatas in
   let strings = Buffer.create(10000) in
   let () = List.iter (fun x -> Buffer.add_buffer strings x) uppaal_automatas in
   let uppaal_automata = Uppaal.make_uppaal strings in

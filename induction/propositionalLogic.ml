@@ -41,7 +41,7 @@ let rec add_labels_and_rewrite cnt = function
     Systemj.Present(e,a,Some b,x)
   | Systemj.Present (e,t,None,x) -> Systemj.Present(e,add_labels_and_rewrite cnt t, None ,x)
   | Systemj.Block (sl,x) -> Systemj.Block(List.map (add_labels_and_rewrite cnt) (List.rev sl), x)
-  | Systemj.Spar (sl,x) -> Systemj.Spar(List.rev (List.map (add_labels_and_rewrite cnt) sl), x)
+  | Systemj.Spar (sl,x) -> Systemj.Spar((List.map (add_labels_and_rewrite cnt) (List.rev sl)), x)
   | Systemj.While (ex,s,x) -> Systemj.While(ex,add_labels_and_rewrite cnt s, x)
   | Systemj.Suspend (e,s,x) -> Systemj.Suspend(e,add_labels_and_rewrite cnt s,x)
   | Systemj.Abort(e,s,x) -> Systemj.Abort(e,add_labels_and_rewrite cnt s, x)
@@ -281,7 +281,7 @@ let rec move = function
   | Systemj.Present (e,t,Some el,_) -> 
     Or(And(And(And(move t,Not(solve_logic(collect_labels el))),NextTime(Not(solve_logic(collect_labels el)))), expr_to_logic e),
        And(And(And(move el,Not(solve_logic(collect_labels t))),NextTime(Not(solve_logic(collect_labels t)))),Not(expr_to_logic e)))
-  | Systemj.Present (e,t,None,_) -> False
+  | Systemj.Present (e,t,None,_) -> move t
   | Systemj.Block (sl,r) -> move_seq r sl
   | Systemj.Spar (sl,r) -> move_spar r sl
   | Systemj.While (_,s,_) -> Or(move s,And(term s, solve_logic (enter s)))

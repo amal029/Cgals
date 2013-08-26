@@ -135,7 +135,7 @@ let state_label propositions powerset = function
     let (labels,g) = List.partition (fun x -> (match x with | Proposition x | Not (Proposition x)
       -> (match x with | Label _ -> true | _ -> false) | _ -> false)) (pos_props @ neg_props) in
     let tls = if labels <> [] then List.reduce (fun x y -> And(x,y)) labels else True in
-    let g = if g <> [] then List.reduce (fun x y -> And(x,y)) g else True in
+    let g = if g <> [] then List.reduce (fun x y -> solve_logic (And(x,y))) g else True in
     let g = BatArray.to_list (BatArray.make (List.length s.incoming) g) in
     {node=s;labels=powerset;tlabels=solve_logic tls;guards=g}
 
