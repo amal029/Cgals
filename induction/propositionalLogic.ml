@@ -13,6 +13,8 @@
 *)
 
 module List = Batteries.List
+module Set = Batteries.Set
+module Enum = Batteries.Enum
 
 open Sexplib.Sexp
 open Sexplib.Std
@@ -72,36 +74,14 @@ type logic =
 | NextTime of logic
 with sexp
 
+type update_tuple = logic * proposition
+
 let rec props = function
   | True | False | Proposition _ as s -> [s]
   | And (x,y) | Or (x,y) -> (props x) @ (props y)
   | Brackets x -> props x
   | NextTime x -> props x
   | Not x -> props x
-
-let rec pos_props = function
-  | True | Proposition _ as s -> [s]
-  | And (x,y) | Or (x,y) -> (pos_props x) @ (pos_props y)
-  | Brackets x -> pos_props x
-  | NextTime x -> pos_props x
-  | Not (Proposition _) -> []
-  | False -> 
-    raise (Internal_error "False proposition should never have happened!")
-  | _ as s -> 
-    let () = output_hum stderr (sexp_of_logic s) in
-    raise (Internal_error "Pos_props: ^^^^^^^ cannot solve this formula type!")
-
-let rec neg_props = function
-  | True | Proposition _ as s -> []
-  | And (x,y) | Or (x,y) -> (neg_props x) @ (neg_props y)
-  | Brackets x -> neg_props x
-  | NextTime x -> neg_props x
-  | Not (Proposition _ as s) -> [s]
-  | False -> 
-    raise (Internal_error "False proposition should never have happened!")
-  | _ as s -> 
-    let () = output_hum stderr (sexp_of_logic s) in
-    raise (Internal_error "Neg_props: ^^^^^^^ cannot solve this logic formula type!")
 
 let rec push_not = function
   | Not x -> invert_not x
@@ -290,7 +270,7 @@ let rec move = function
   | Systemj.Exit (Systemj.Symbol (s,_),_) -> False
   | Systemj.Signal _ 
   | Systemj.Channel _ -> False
-  | Systemj.Suspend (e,s,lc) -> raise (Internal_error ("Suspend current not supported: " ^ (Reporting.get_line_and_column lc)))
+  | Systemj.Suspend (e,s,lc) -> raise (Internal_error ("Suspend currently not supported: " ^ (Reporting.get_line_and_column lc)))
   | _ -> raise (Internal_error "Inst: Cannot get send/receive after rewriting!!")
 and move_seq r = function
   | h::t -> 
@@ -308,13 +288,30 @@ and move_spar r = function
 		And(move (Systemj.Spar(t,r)),And(term h, NextTime(Not (solve_logic (collect_labels h))))))
   | [] -> False
 
-let dltl stmt = 
-  let shared = Or(Not(solve_logic (collect_labels stmt)),term stmt) in
-  let fdis = And(And(inst stmt, shared),NextTime(Not(solve_logic(collect_labels stmt)))) in
-  let sdis = And(shared, enter stmt) in
-  let tdis = And(shared, NextTime(Not(solve_logic (collect_labels stmt)))) in
-  let fodis = move stmt in
-  (shared,fdis,sdis,tdis,fodis)
+(* The functor argument for making the update set *)
+module OrderedGcmdTuple = 
+struct
+  type t = update_tuple
+  let compare = compare
+end
+
+module PTSet = Set.Make(OrderedGcmdTuple)
+
+let rec gcmd = function
+  | Systemj.Noop | Systemj.Pause _| Systemj.Channel _
+  | Systemj.Exit _ | Systemj.Signal _ -> PTSet.empty
+  | Systemj.Emit ((Systemj.Symbol (s,_)),_) -> PTSet.singleton (True, Update s)
+  | Systemj.Present (e,t,Some el,_) -> PTSet.union (PTSet.map (fun (l,x) -> (solve_logic (And(l,expr_to_logic e)),x)) (gcmd t)) 
+    (PTSet.map (fun (l,x) -> (solve_logic (And(l,push_not (Not (expr_to_logic e)))),x)) (gcmd el))
+  | Systemj.Present (e,t,None,_) -> PTSet.map (fun (l,x) -> (solve_logic (And(l,expr_to_logic e)),x)) (gcmd t)
+  | Systemj.Block (sl,r) -> PTSet.union (gcmd (List.hd sl)) (PTSet.map (fun (x,y) -> (solve_logic(And(Or(inst (List.hd sl), term (List.hd sl)),x))),y)
+							       (gcmd (Systemj.Block (List.tl sl,r))))
+  | Systemj.Spar (sl,r) -> PTSet.union (gcmd (List.hd sl)) (gcmd (Systemj.Spar (List.tl sl,r)))
+  | Systemj.While (_,s,_) -> PTSet.map (fun (x,y) -> ((solve_logic (And(x,term s))),y)) (gcmd s)
+  | Systemj.Abort(e,s,_) -> PTSet.map (fun (x,y) -> (solve_logic (push_not (And(Or(Not (collect_labels s),expr_to_logic e),x))),y)) (gcmd s)
+  | Systemj.Trap (e,s,_) -> gcmd s
+  | Systemj.Suspend (e,s,lc) -> raise (Internal_error ("Suspend currently not supported: " ^ (Reporting.get_line_and_column lc)))
+  | _ -> raise (Internal_error "Inst: Cannot get send/receive after rewriting!!")
 
 let build_ltl stmt = 
   let shared = Or(Not(solve_logic (collect_labels stmt)),term stmt) in
@@ -334,8 +331,16 @@ let build_ltl stmt =
 
 let build_propositional_tree_logic = function
   | Systemj.Apar (x,_) -> 
-    List.map solve_logic ((List.map push_not) (List.map build_ltl x))
-
+    let control_logic = List.map solve_logic ((List.map push_not) (List.map build_ltl x)) in
+    let data_logic_and_updates = (List.map PTSet.enum) (List.map gcmd x) in
+    let data_logic = List.map (fun x -> Enum.map (fun (x,_) -> x) x) data_logic_and_updates in
+    (* Orring the logic *)
+    let data_logic = List.map (fun x -> Enum.reduce (fun x y -> Or(NextTime x,NextTime y)) x) data_logic in
+    let data_logic = List.map solve_logic data_logic in
+    (* The conjunction of control and data-flow!! *)
+    (* FIXME: Need to hashmap from data_logic propositions to the
+       updates, and they need to be uniquely identified *)
+    List.map2 (fun x y -> And(x,y)) control_logic data_logic
 
 let rec string_of_logic = function
   | Or (x,y) -> (string_of_logic x) ^ "_or_" ^ (string_of_logic y)
