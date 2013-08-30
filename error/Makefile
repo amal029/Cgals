@@ -11,4 +11,4 @@ error:
 	cp reporting.cmi ../parser/error.cmi
 
 clean:
-	rm -rf *.cm* *.a *.o
+	rm -rf *.cm* *.a *.o *.annot

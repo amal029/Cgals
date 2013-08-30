@@ -23,4 +23,4 @@ uppaal.cmx:
 	$(BATDIR) -I $(SEXPLIB) -I $(LOGICLIB) -c $(SRC)
 
 clean:
-	rm -rf *cm* *o *a *mli
+	rm -rf *cm* *o *a *mli *.annot

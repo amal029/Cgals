@@ -27,4 +27,4 @@ clean:
 	$(MAKE) -e -C induction/ clean
 	$(MAKE) -e -C backend/ clean
 	rm -rf *.ll *.lle *.bc *.s *.dot *.grf *.part* gmon.out TAGS *.mli *.cm* *.o systemjc \
-	*.xml
+	*.xml *.annot
