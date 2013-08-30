@@ -1,4 +1,4 @@
-CC=ocamlopt
+CC=ocamlopt -annot
 OCAMLOPTS=-a
 LANGUAGELIB=systemj.cmxa
 REPORTLIB=error.cmxa
@@ -19,7 +19,7 @@ codegen.cmxa: uppaal.cmx
 uppaal.cmx:
 	$(CC) -pp "camlp4o -I $(TYPECONV) -I $(SEXPLIB)			\
 	pa_type_conv.cma pa_sexp_conv.cma pa_macro.cmo	\
-	-DDEBUG" -I $(REPORTDIR) -I $(LANGUAGEDIR) -I	\
+	-UDEBUG" -I $(REPORTDIR) -I $(LANGUAGEDIR) -I	\
 	$(BATDIR) -I $(SEXPLIB) -I $(LOGICLIB) -c $(SRC)
 
 clean:

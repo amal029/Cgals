@@ -89,10 +89,12 @@ try
     let () = print_endline "....Building SystemJ model......" in
     let () = SS.output_hum Pervasives.stdout (SSL.sexp_of_list TableauBuchiAutomataGeneration.sexp_of_labeled_graph_node x) in
     print_endline "\n\n\n\n\n\n-----------------------------------------------------\n\n\n\n") labeled_buchi_automatas ELSE () ENDIF in
-  let uppaal_automatas = List.map2 Uppaal.make_xml (List.rev !init) labeled_buchi_automatas in
+  let uppaal_automatas = map3 Uppaal.make_xml (List.init (List.length labeled_buchi_automatas) (fun x -> x)) (List.rev !init) labeled_buchi_automatas in
   let strings = Buffer.create(10000) in
-  let () = List.iter (fun x -> Buffer.add_buffer strings x) uppaal_automatas in
+  let () = List.iter (Buffer.add_buffer strings) uppaal_automatas in
   let uppaal_automata = Uppaal.make_uppaal strings in
+  (* Emptying the list, although a bit pointless!! *)
+  let () = PL.update_tuple_tbl_ll := [] in
   (* Write to output file if the -o argument is given, else write to stdout *)
   let () = 
     if !output = "" then

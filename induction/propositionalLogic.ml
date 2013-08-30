@@ -75,6 +75,7 @@ type logic =
 with sexp
 
 type update_tuple = logic * proposition
+with sexp
 
 let rec props = function
   | True | False | Proposition _ as s -> [s]
@@ -296,17 +297,28 @@ struct
 end
 
 module PTSet = Set.Make(OrderedGcmdTuple)
+let update_tuple_tbl = Hashtbl.create 1000
+let update_tuple_tbl_ll = ref []
 
 let rec gcmd = function
   | Systemj.Noop | Systemj.Pause _| Systemj.Channel _
   | Systemj.Exit _ | Systemj.Signal _ -> PTSet.empty
-  | Systemj.Emit ((Systemj.Symbol (s,_)),_) -> PTSet.singleton (True, Update s)
+  | Systemj.Emit ((Systemj.Symbol (s,_)),_) -> 
+    let p = Proposition (Expr ("$" ^ (string_of_int (BatPervasives.unique ())))) in
+    let () = Hashtbl.add update_tuple_tbl p (Update s) in
+    PTSet.singleton (p,Update s)
   | Systemj.Present (e,t,Some el,_) -> PTSet.union (PTSet.map (fun (l,x) -> (solve_logic (And(l,expr_to_logic e)),x)) (gcmd t)) 
     (PTSet.map (fun (l,x) -> (solve_logic (And(l,push_not (Not (expr_to_logic e)))),x)) (gcmd el))
   | Systemj.Present (e,t,None,_) -> PTSet.map (fun (l,x) -> (solve_logic (And(l,expr_to_logic e)),x)) (gcmd t)
-  | Systemj.Block (sl,r) -> PTSet.union (gcmd (List.hd sl)) (PTSet.map (fun (x,y) -> (solve_logic(And(Or(inst (List.hd sl), term (List.hd sl)),x))),y)
-							       (gcmd (Systemj.Block (List.tl sl,r))))
-  | Systemj.Spar (sl,r) -> PTSet.union (gcmd (List.hd sl)) (gcmd (Systemj.Spar (List.tl sl,r)))
+  | Systemj.Block (sl,r) -> 
+    let ret = PTSet.union (gcmd (List.hd sl)) 
+      (PTSet.map (fun (x,y) -> 
+	let sl = (solve_logic(And(Or(inst (List.hd sl), term (List.hd sl)),x))) in 
+	let () = IFDEF DEBUG THEN output_hum stdout (sexp_of_logic sl); print_endline "" ELSE () ENDIF in
+	(sl,y))
+	 (gcmd (if List.tl sl = [] then Systemj.Noop else(Systemj.Block (List.tl sl,r))))) in
+    ret
+  | Systemj.Spar (sl,r) -> PTSet.union (gcmd (List.hd sl)) (gcmd (if List.tl sl = [] then Systemj.Noop else (Systemj.Spar (List.tl sl,r))))
   | Systemj.While (_,s,_) -> PTSet.map (fun (x,y) -> ((solve_logic (And(x,term s))),y)) (gcmd s)
   | Systemj.Abort(e,s,_) -> PTSet.map (fun (x,y) -> (solve_logic (push_not (And(Or(Not (collect_labels s),expr_to_logic e),x))),y)) (gcmd s)
   | Systemj.Trap (e,s,_) -> gcmd s
@@ -329,18 +341,39 @@ let build_ltl stmt =
 	And(Not(Proposition (Label "st")),NextTime(Not(solve_logic (collect_labels stmt))))),
      move stmt)
 
+
 let build_propositional_tree_logic = function
   | Systemj.Apar (x,_) -> 
     let control_logic = List.map solve_logic ((List.map push_not) (List.map build_ltl x)) in
-    let data_logic_and_updates = (List.map PTSet.enum) (List.map gcmd x) in
-    let data_logic = List.map (fun x -> Enum.map (fun (x,_) -> x) x) data_logic_and_updates in
+    let data_logic_and_updates = (List.map PTSet.enum) 
+      (List.map (fun x -> 
+	let ret = gcmd x in 
+	(* Make a copy of the hashtbl into the update_tuple_tbl_ll *)
+	update_tuple_tbl_ll := !update_tuple_tbl_ll @ [Hashtbl.copy update_tuple_tbl];
+	Hashtbl.clear update_tuple_tbl; ret) x) in
+    let data_logic_and_updates = List.map List.of_enum data_logic_and_updates in
+    let () = IFDEF DEBUG THEN List.iter (fun x -> 
+      output_hum stdout (sexp_of_list sexp_of_update_tuple x); print_endline "---") data_logic_and_updates; 
+      ELSE () ENDIF in
+    let data_logic = List.map (fun x -> List.map (fun (x,_) -> x) x) data_logic_and_updates in
+    let () = IFDEF DEBUG THEN output_hum stdout (sexp_of_list (sexp_of_list sexp_of_logic) data_logic); print_endline "<-- DATA_LOGIC" ELSE () ENDIF in
+    let data_updates = List.map (fun x -> List.map (fun (_,x) -> x) x) data_logic_and_updates in
     (* Orring the logic *)
-    let data_logic = List.map (fun x -> Enum.reduce (fun x y -> Or(NextTime x,NextTime y)) x) data_logic in
-    let data_logic = List.map solve_logic data_logic in
+    let data_logic = List.map (fun x -> 
+      (match x with
+      | [] -> True
+      | h::[] -> NextTime h
+      | _ -> List.reduce (fun x y -> Or(NextTime x,NextTime y)) x)) data_logic in
+    let () = IFDEF DEBUG THEN output_hum stdout (sexp_of_list sexp_of_logic data_logic); print_endline "<-- DATA_LOGIC" ELSE () ENDIF in
+    let data_logic = List.map solve_logic (List.map push_not data_logic) in
+    let () = IFDEF PDEBUG THEN output_hum stdout (sexp_of_list sexp_of_logic data_logic); print_endline "<-- DATA_LOGIC" ELSE () ENDIF in
+    let () = IFDEF PDEBUG THEN output_hum stdout (sexp_of_list (sexp_of_list sexp_of_proposition) data_updates); 
+						  print_endline "<-- DATA_UPDATES" ELSE () ENDIF in
     (* The conjunction of control and data-flow!! *)
     (* FIXME: Need to hashmap from data_logic propositions to the
        updates, and they need to be uniquely identified *)
-    List.map2 (fun x y -> And(x,y)) control_logic data_logic
+    let ret = List.map2 (fun x y -> And(x,y)) control_logic data_logic in
+    List.map solve_logic ret
 
 let rec string_of_logic = function
   | Or (x,y) -> (string_of_logic x) ^ "_or_" ^ (string_of_logic y)

@@ -1,4 +1,4 @@
-CC=ocamlopt
+CC=ocamlopt -annot
 PARSERLIB=parser.cmxa
 LANGUAGELIB=systemj.cmxa
 LOGICLIB=logic.cmxa

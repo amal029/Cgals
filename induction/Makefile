@@ -1,4 +1,4 @@
-CC=ocamlopt
+CC=ocamlopt -annot
 OCAMLOPTS=-a
 LANGUAGELIB=systemj.cmxa
 REPORTLIB=error.cmxa
@@ -24,4 +24,4 @@ logic.cmx:
 	$(BATDIR) -I $(SEXPLIB) -c $(SRC)
 
 clean:
-	rm -rf *cm* *o *a *mli
+	rm -rf *cm* *o *a *mli *.annot
