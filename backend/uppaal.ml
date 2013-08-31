@@ -37,7 +37,7 @@ let rec label index updates = function
       if x.[0] = '$' then 
 	let () = IFDEF DEBUG THEN output_hum stdout (sexp_of_logic s) ELSE () ENDIF in
 	let () = IFDEF DEBUG THEN print_endline (string_of_int index) ELSE () ENDIF in
-	begin updates :=  (Hashtbl.find (List.nth !update_tuple_tbl_ll index) s) :: !updates; "" end
+	begin updates :=  (Hashtbl.find (List.nth !update_tuple_tbl_ll index) s) :: !updates; "true" end
       else x
     | Update x -> raise (Internal_error ("Tried to update " ^ x ^ " on a guard!!")))
   | True -> "true"
@@ -59,7 +59,7 @@ let make_transitions index init ob = function
 	let g = label index updates g in
 	let () = (if g <> "" then
 	    let () = B.add_string ob "<label kind=\"guard\">" in
-	    B.add_string ob ;
+	    B.add_string ob g;
 	    B.add_string ob "\n</label>\n") in
 	let to_false = ref (List.of_enum (BatHashtbl.values (List.nth !update_tuple_tbl_ll index))) in
 	let () = List.iter (fun x -> to_false := List.filter (fun y -> y <> x) !to_false) !updates in

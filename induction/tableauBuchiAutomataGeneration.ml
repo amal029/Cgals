@@ -26,6 +26,8 @@ let new_name () =
 let negate = function
   | Proposition x -> Not (Proposition x)
   | Not (Proposition x) -> Proposition x
+  | True -> False
+  | False -> True
   | _ as s -> 
     output_hum stdout (sexp_of_logic s); print_endline "";
     print_endline "^^^^^^^^^^";

@@ -23,16 +23,33 @@ exception Internal_error of string
 
 (* TODO: The two functions below need to be completed *)
 let rewrite_send cnt = function
-  | Systemj.Send (sym,lc) -> cnt := !cnt + 1; 
-    Systemj.Abort (Systemj.Esymbol (sym,lc),
-		   Systemj.While(Systemj.True,Systemj.Pause(Some ("L" ^ (string_of_int !cnt)),lc),lc),lc)
+  | Systemj.Send ((Systemj.Symbol (sym,lc1)),lc) -> 
+    let ack_sym = Systemj.Symbol ((sym ^ "_ack"),lc1) in
+    let req_sym = Systemj.Symbol ((sym ^ "_req"),lc1) in
+    cnt := !cnt + 1;
+    let a1 = Systemj.Abort (Systemj.Esymbol (ack_sym,lc),
+			    Systemj.While(Systemj.True,Systemj.Pause(Some ("L" ^ (string_of_int !cnt)),lc),lc),lc) in
+    cnt := !cnt + 1;
+    let a2 = Systemj.Abort (Systemj.Not(Systemj.Esymbol (ack_sym,lc),lc),
+			    Systemj.While(Systemj.True,
+					  Systemj.Block([Systemj.Pause(Some ("L" ^ (string_of_int !cnt)),lc);
+							 Systemj.Emit (req_sym,lc)],lc),lc),lc) in
+    Systemj.Block([a1;a2],lc)
   | _ -> raise (Internal_error "Tried to rewrite a non-send as send")
 
 let rewrite_receive cnt = function
-  | Systemj.Receive (sym,lc) -> 
+  | Systemj.Receive ((Systemj.Symbol (sym,lc1)),lc) -> 
+    let ack_sym = Systemj.Symbol ((sym ^ "_ack"),lc1) in
+    let req_sym = Systemj.Symbol ((sym ^ "_req"),lc1) in
     cnt := !cnt + 1;
-    Systemj.Abort (Systemj.Esymbol (sym,lc),
-		   Systemj.While(Systemj.True,Systemj.Pause(None,lc),lc),lc)
+    let a1 = Systemj.Abort (Systemj.Not(Systemj.Esymbol (req_sym,lc),lc),
+			    Systemj.While(Systemj.True,Systemj.Pause(Some ("L" ^ (string_of_int !cnt)),lc),lc),lc) in
+    cnt := !cnt + 1;
+    let a2 = Systemj.Abort (Systemj.Esymbol (req_sym,lc),
+			    Systemj.While(Systemj.True,
+					  Systemj.Block([Systemj.Pause(Some ("L" ^ (string_of_int !cnt)),lc);
+							 Systemj.Emit (ack_sym,lc)],lc),lc),lc) in
+    Systemj.Block([a1;a2],lc)
   | _ -> raise (Internal_error "Tried to rewrite a non-receive as receive")
 
 let rec add_labels_and_rewrite cnt = function
@@ -120,6 +137,7 @@ let rec expr_to_logic = function
   | Systemj.Or (x,y,_) -> Or(expr_to_logic x, expr_to_logic y)
   | Systemj.Brackets (x,_) -> Brackets (expr_to_logic x)
   | Systemj.Esymbol (Systemj.Symbol(x,_),_) -> Proposition (Expr x)
+  | Systemj.Not (x,_) -> Not(expr_to_logic x)
 
 let rec solve_logic = function
   | And (x,y) -> 
@@ -158,11 +176,7 @@ let rec solve_logic = function
     | _ as s -> Brackets s)
   | True | False as s -> s
   | Proposition _ as s -> s
-  | NextTime x -> 
-    (match x with
-    | True -> True
-    | False -> False
-    | _ as s-> NextTime (solve_logic x))
+  | NextTime x -> NextTime (solve_logic x)
 
 (* Function, which states if the statements are instantaneous with
    respect to the logical clock *)
@@ -320,7 +334,9 @@ let rec gcmd = function
     ret
   | Systemj.Spar (sl,r) -> PTSet.union (gcmd (List.hd sl)) (gcmd (if List.tl sl = [] then Systemj.Noop else (Systemj.Spar (List.tl sl,r))))
   | Systemj.While (_,s,_) -> PTSet.map (fun (x,y) -> ((solve_logic (And(x,term s))),y)) (gcmd s)
-  | Systemj.Abort(e,s,_) -> PTSet.map (fun (x,y) -> (solve_logic (push_not (And(Or(Not (collect_labels s),expr_to_logic e),x))),y)) (gcmd s)
+  (* I am changing this from the one given by schnieder, because of implication assumption!! *)
+  (* Check if this assumption is right in HOL *)
+  | Systemj.Abort(e,s,_) -> PTSet.map (fun (x,y) -> (solve_logic (push_not (And(collect_labels s,x))),y)) (gcmd s)
   | Systemj.Trap (e,s,_) -> gcmd s
   | Systemj.Suspend (e,s,lc) -> raise (Internal_error ("Suspend currently not supported: " ^ (Reporting.get_line_and_column lc)))
   | _ -> raise (Internal_error "Inst: Cannot get send/receive after rewriting!!")
@@ -379,7 +395,8 @@ let rec string_of_logic = function
   | Or (x,y) -> (string_of_logic x) ^ "_or_" ^ (string_of_logic y)
   | Not x -> "_not_" ^ (string_of_logic x)
   | And (x,y) -> (string_of_logic x) ^ "_and_" ^ (string_of_logic y)
-  | Proposition x -> (match x with | Label x -> x | Expr x -> x)
+  | Proposition x -> (match x with | Label x -> x | Expr x -> x 
+    | Update _ -> raise (Internal_error "string_og_logic: Update should not occur here!!"))
   | Brackets x -> (string_of_logic x)
   | True -> "True"
   | _ as s -> 

@@ -25,6 +25,7 @@ type expr =
 | Esymbol of symbol * (line * column)
 | And of expr * expr * (line * column)
 | Or of expr * expr * (line * column)
+| Not of expr * (line * column)
 | Brackets of expr * (line * column)
 with sexp
 
