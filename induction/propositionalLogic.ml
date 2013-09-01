@@ -347,7 +347,7 @@ let build_ltl stmt =
   let () = IFDEF PDEBUG THEN output_hum stdout (sexp_of_logic (solve_logic (push_not fdis))); print_endline "<-- FIRST" ELSE () ENDIF in
   let sdis = And(Proposition (Label "st"), enter stmt) in
   let () = IFDEF PDEBUG THEN output_hum stdout (sexp_of_logic (solve_logic (push_not sdis))); print_endline "<-- SECOND" ELSE () ENDIF in
-  let tdis = And(Proposition (Label "st"), NextTime(Not(solve_logic (collect_labels stmt)))) in
+  let tdis = And(Not(Proposition (Label "st")), NextTime(Not(solve_logic (collect_labels stmt)))) in
   let () = IFDEF PDEBUG THEN output_hum stdout (sexp_of_logic (solve_logic (push_not tdis))); print_endline "<-- THIRD" ELSE () ENDIF in
   let fdis = move stmt in
   let () = IFDEF PDEBUG THEN output_hum stdout (sexp_of_logic (solve_logic (push_not fdis))); print_endline "<-- FOURTH" ELSE () ENDIF in
@@ -384,7 +384,7 @@ let build_propositional_tree_logic = function
     let data_logic = List.map solve_logic (List.map push_not data_logic) in
     let () = IFDEF PDEBUG THEN output_hum stdout (sexp_of_list sexp_of_logic data_logic); print_endline "<-- DATA_LOGIC" ELSE () ENDIF in
     let () = IFDEF PDEBUG THEN output_hum stdout (sexp_of_list (sexp_of_list sexp_of_proposition) data_updates); 
-						  print_endline "<-- DATA_UPDATES" ELSE () ENDIF in
+      print_endline "<-- DATA_UPDATES" ELSE () ENDIF in
     (* The conjunction of control and data-flow!! *)
     (* FIXME: Need to hashmap from data_logic propositions to the
        updates, and they need to be uniquely identified *)

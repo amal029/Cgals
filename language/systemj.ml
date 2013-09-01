@@ -113,3 +113,18 @@ let print = function
   | Apar (x,ln) -> 
     let () = print_string ((Reporting.get_line_and_column ln) ^ " : ") in
     let () = List.iter print_stmt x in ()
+
+exception Internal_error of string
+let rec collect_signal_declarations = function
+  | Pause _ | Emit _ | Exit _ | Noop
+  | Channel _ -> []
+  | Signal _ as s -> [s]
+  | Present (_,s,None,_) -> collect_signal_declarations s
+  | Present (_,s,Some x,_) -> collect_signal_declarations s @ collect_signal_declarations x
+  | Trap (_,s,_) -> collect_signal_declarations s
+  | Block (s,_) 
+  | Spar (s,_) -> List.flatten (List.map collect_signal_declarations s)
+  | Abort (_,s,_) -> collect_signal_declarations s
+  | Suspend (_,s,_) -> collect_signal_declarations s
+  | While (_,s,_) -> collect_signal_declarations s
+  | Send _ | Receive _ -> raise (Internal_error "Collect signals: Cannot get send/receive after re-write!!")
