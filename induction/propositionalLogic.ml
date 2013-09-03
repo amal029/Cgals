@@ -13,8 +13,7 @@
 *)
 
 module List = Batteries.List
-module Set = Batteries.Set
-module Enum = Batteries.Enum
+module Hashtbl = Batteries.Hashtbl
 
 open Sexplib.Sexp
 open Sexplib.Std
@@ -33,7 +32,7 @@ let rewrite_send cnt = function
     let a2 = Systemj.Abort (Systemj.Not(Systemj.Esymbol (ack_sym,lc),lc),
 			    Systemj.While(Systemj.True,
 					  Systemj.Block([Systemj.Pause(Some ("L" ^ (string_of_int !cnt)),lc);
-							 Systemj.Emit (req_sym,lc)],lc),lc),lc) in
+							 Systemj.Emit (req_sym,None,lc)],lc),lc),lc) in
     Systemj.Block([a1;a2],lc)
   | _ -> raise (Internal_error "Tried to rewrite a non-send as send")
 
@@ -48,7 +47,7 @@ let rewrite_receive cnt = function
     let a2 = Systemj.Abort (Systemj.Esymbol (req_sym,lc),
 			    Systemj.While(Systemj.True,
 					  Systemj.Block([Systemj.Pause(Some ("L" ^ (string_of_int !cnt)),lc);
-							 Systemj.Emit (ack_sym,lc)],lc),lc),lc) in
+							 Systemj.Emit (ack_sym,None,lc)],lc),lc),lc) in
     Systemj.Block([a1;a2],lc)
   | _ -> raise (Internal_error "Tried to rewrite a non-receive as receive")
 
@@ -71,8 +70,27 @@ let rec add_labels_and_rewrite cnt = function
   | Systemj.Send _ as s -> rewrite_send cnt s
   | Systemj.Receive _ as s -> rewrite_receive cnt s
 
+let rec add_unique_identifier_to_emits = function
+  | Systemj.Pause _ | Systemj.Noop | Systemj.Signal _
+  | Systemj.Exit _ as s -> s
+  | Systemj.Present (e,t,Some el,x) -> Systemj.Present (e, add_unique_identifier_to_emits t, 
+							Some (add_unique_identifier_to_emits el), x)
+  | Systemj.Present(e,a,None,x) -> Systemj.Present (e, add_unique_identifier_to_emits a,None, x)
+  | Systemj.Block (sl,x) -> Systemj.Block(List.map add_unique_identifier_to_emits sl, x)
+  | Systemj.Spar (sl,x) -> Systemj.Spar(List.map add_unique_identifier_to_emits sl, x)
+  | Systemj.While (ex,s,x) -> Systemj.While(ex,add_unique_identifier_to_emits s, x)
+  | Systemj.Suspend (e,s,x) -> Systemj.Suspend(e,add_unique_identifier_to_emits s,x)
+  | Systemj.Abort(e,s,x) -> Systemj.Abort(e,add_unique_identifier_to_emits s, x)
+  | Systemj.Trap (e,s,x) -> Systemj.Trap(e,add_unique_identifier_to_emits s, x)
+  | Systemj.Emit (x,None,lc) -> Systemj.Emit (x,Some (string_of_int (BatPervasives.unique())),lc)
+  | _ as s -> 
+    let () = output_hum stdout (Systemj.sexp_of_stmt s) in
+    let () = print_endline "" in
+    raise (Internal_error ("^^^^^^^^^^^^^^^^^^" ^ " should not happen!!"))
+
+
 let rewrite_ast = function
-  | Systemj.Apar (x,s) -> Systemj.Apar (List.map (add_labels_and_rewrite (ref 0)) (List.rev x),s)
+  | Systemj.Apar (x,s) -> Systemj.Apar (List.map add_unique_identifier_to_emits (List.map (add_labels_and_rewrite (ref 0)) (List.rev x)),s)
 
 type proposition = 
 | Label of string
@@ -180,10 +198,19 @@ let rec solve_logic = function
 
 (* Function, which states if the statements are instantaneous with
    respect to the logical clock *)
+let update_tuple_tbl = Hashtbl.create 1000
+let update_tuple_tbl_ll = ref []
 
 let rec inst = function
   | Systemj.Noop -> True
-  | Systemj.Emit (s,_) -> True
+  (* Special change, adding data to the system!! *)
+  | Systemj.Emit (s,Some uniq,_) -> 
+    let key = Proposition (Expr ("$" ^ uniq)) in
+    let () = Hashtbl.add update_tuple_tbl key (Update (match s with | Systemj.Symbol (s,_) -> s)) in
+    NextTime key
+  | Systemj.Emit (s,None,_) as t -> 
+    let () = output_hum stdout (Systemj.sexp_of_stmt t) in
+    raise (Internal_error "Emit stmt without a unique identifier cannot be initialized for data propositions")
   | Systemj.Pause _ -> False
   | Systemj.Present (e,t,Some el,_) -> Or(And(expr_to_logic e, inst t), And(Not (expr_to_logic e), inst el))
   | Systemj.Present (e,t,None,_) -> Or(And(expr_to_logic e, inst t), And(Not (expr_to_logic e), True))
@@ -216,10 +243,10 @@ let rec enter = function
   | Systemj.Trap (_,s,_) -> enter s
   | Systemj.Signal _ | Systemj.Exit _ | Systemj.Channel _ -> False
   | Systemj.Pause (None,_) as s -> 
-    let () = Systemj.print_stmt s in
+    let () = output_hum stdout (Systemj.sexp_of_stmt s) in
     raise (Internal_error "Pause without a label found!!")
   | _ as s -> 
-    let () = Systemj.print_stmt s in
+    let () = output_hum stdout (Systemj.sexp_of_stmt s) in
     raise (Internal_error "Enter: Cannot get send/receive after rewriting!!")
 and enter_seq r = function
   | h::t -> Or (And(NextTime(Not (solve_logic(collect_labels (Systemj.Block(t,r))))),enter h), 
@@ -241,7 +268,7 @@ and enter_spar r = function
 
 let rec term = function
   | Systemj.Noop -> False
-  | Systemj.Emit (s,_) -> False
+  | Systemj.Emit _ -> False
   | Systemj.Pause (Some x,_) -> Proposition (Label x)
   | Systemj.Pause (None,lc) -> raise (Internal_error ("Pause without a label: " ^ (Reporting.get_line_and_column lc)))
   | Systemj.Present (e,t,Some el,_) -> Or(And(And(term t, Not(solve_logic(collect_labels el))),expr_to_logic e),
@@ -271,7 +298,7 @@ and term_spar r = function
 (* This defines the transitions within a statement *)
 let rec move = function
   | Systemj.Noop -> False
-  | Systemj.Emit (s,_) -> False
+  | Systemj.Emit _ -> False
   | Systemj.Pause _ -> False
   | Systemj.Present (e,t,Some el,_) -> 
     Or(And(And(And(move t,Not(solve_logic(collect_labels el))),NextTime(Not(solve_logic(collect_labels el)))), expr_to_logic e),
@@ -303,44 +330,6 @@ and move_spar r = function
 		And(move (Systemj.Spar(t,r)),And(term h, NextTime(Not (solve_logic (collect_labels h))))))
   | [] -> False
 
-(* The functor argument for making the update set *)
-module OrderedGcmdTuple = 
-struct
-  type t = update_tuple
-  let compare = compare
-end
-
-module PTSet = Set.Make(OrderedGcmdTuple)
-let update_tuple_tbl = Hashtbl.create 1000
-let update_tuple_tbl_ll = ref []
-
-let rec gcmd = function
-  | Systemj.Noop | Systemj.Pause _| Systemj.Channel _
-  | Systemj.Exit _ | Systemj.Signal _ -> PTSet.empty
-  | Systemj.Emit ((Systemj.Symbol (s,_)),_) -> 
-    let p = Proposition (Expr ("$" ^ (string_of_int (BatPervasives.unique ())))) in
-    let () = Hashtbl.add update_tuple_tbl p (Update s) in
-    PTSet.singleton (p,Update s)
-  | Systemj.Present (e,t,Some el,_) -> PTSet.union (PTSet.map (fun (l,x) -> (solve_logic (And(l,expr_to_logic e)),x)) (gcmd t)) 
-    (PTSet.map (fun (l,x) -> (solve_logic (And(l,push_not (Not (expr_to_logic e)))),x)) (gcmd el))
-  | Systemj.Present (e,t,None,_) -> PTSet.map (fun (l,x) -> (solve_logic (And(l,expr_to_logic e)),x)) (gcmd t)
-  | Systemj.Block (sl,r) -> 
-    let ret = PTSet.union (gcmd (List.hd sl)) 
-      (PTSet.map (fun (x,y) -> 
-	let sl = (solve_logic(And(Or(inst (List.hd sl), term (List.hd sl)),x))) in 
-	let () = IFDEF DEBUG THEN output_hum stdout (sexp_of_logic sl); print_endline "" ELSE () ENDIF in
-	(sl,y))
-	 (gcmd (if List.tl sl = [] then Systemj.Noop else(Systemj.Block (List.tl sl,r))))) in
-    ret
-  | Systemj.Spar (sl,r) -> PTSet.union (gcmd (List.hd sl)) (gcmd (if List.tl sl = [] then Systemj.Noop else (Systemj.Spar (List.tl sl,r))))
-  | Systemj.While (_,s,_) -> PTSet.map (fun (x,y) -> ((solve_logic (And(x,term s))),y)) (gcmd s)
-  (* I am changing this from the one given by schnieder, because of implication assumption!! *)
-  (* Check if this assumption is right in HOL *)
-  | Systemj.Abort(e,s,_) -> PTSet.map (fun (x,y) -> (solve_logic (push_not (And(collect_labels s,x))),y)) (gcmd s)
-  | Systemj.Trap (e,s,_) -> gcmd s
-  | Systemj.Suspend (e,s,lc) -> raise (Internal_error ("Suspend currently not supported: " ^ (Reporting.get_line_and_column lc)))
-  | _ -> raise (Internal_error "Inst: Cannot get send/receive after rewriting!!")
-
 let build_ltl stmt = 
   let shared = Or(Not(solve_logic (collect_labels stmt)),term stmt) in
   let fdis = And(And(inst stmt, Proposition (Label "st")),NextTime(Not(solve_logic(collect_labels stmt)))) in
@@ -360,43 +349,19 @@ let build_ltl stmt =
 
 let build_propositional_tree_logic = function
   | Systemj.Apar (x,_) -> 
-    let control_logic = List.map solve_logic ((List.map push_not) (List.map build_ltl x)) in
-    let data_logic_and_updates = (List.map PTSet.enum) 
-      (List.map (fun x -> 
-	let ret = gcmd x in 
-	(* Make a copy of the hashtbl into the update_tuple_tbl_ll *)
-	update_tuple_tbl_ll := !update_tuple_tbl_ll @ [Hashtbl.copy update_tuple_tbl];
-	Hashtbl.clear update_tuple_tbl; ret) x) in
-    let data_logic_and_updates = List.map List.of_enum data_logic_and_updates in
-    let () = IFDEF DEBUG THEN List.iter (fun x -> 
-      output_hum stdout (sexp_of_list sexp_of_update_tuple x); print_endline "---") data_logic_and_updates; 
-      ELSE () ENDIF in
-    let data_logic = List.map (fun x -> List.map (fun (x,_) -> x) x) data_logic_and_updates in
-    let () = IFDEF DEBUG THEN output_hum stdout (sexp_of_list (sexp_of_list sexp_of_logic) data_logic); print_endline "<-- DATA_LOGIC" ELSE () ENDIF in
-    let data_updates = List.map (fun x -> List.map (fun (_,x) -> x) x) data_logic_and_updates in
-    (* Orring the logic *)
-    let data_logic = List.map (fun x -> 
-      (match x with
-      | [] -> True
-      | h::[] -> NextTime h
-      | _ -> List.reduce (fun x y -> Or(NextTime x,NextTime y)) x)) data_logic in
-    let () = IFDEF DEBUG THEN output_hum stdout (sexp_of_list sexp_of_logic data_logic); print_endline "<-- DATA_LOGIC" ELSE () ENDIF in
-    let data_logic = List.map solve_logic (List.map push_not data_logic) in
-    let () = IFDEF PDEBUG THEN output_hum stdout (sexp_of_list sexp_of_logic data_logic); print_endline "<-- DATA_LOGIC" ELSE () ENDIF in
-    let () = IFDEF PDEBUG THEN output_hum stdout (sexp_of_list (sexp_of_list sexp_of_proposition) data_updates); 
-      print_endline "<-- DATA_UPDATES" ELSE () ENDIF in
-    (* The conjunction of control and data-flow!! *)
-    (* FIXME: Need to hashmap from data_logic propositions to the
-       updates, and they need to be uniquely identified *)
-    let ret = List.map2 (fun x y -> And(x,y)) control_logic data_logic in
-    List.map solve_logic ret
+    List.map (fun x -> 
+      let control_logic = solve_logic (push_not (build_ltl x)) in
+      update_tuple_tbl_ll := !update_tuple_tbl_ll @ [Hashtbl.copy update_tuple_tbl];
+      let () = IFDEF PDEBUG THEN print_int (List.length !update_tuple_tbl_ll); print_endline "-- LEN" ELSE () ENDIF in
+      let () = Hashtbl.clear update_tuple_tbl in
+      control_logic) x
 
 let rec string_of_logic = function
   | Or (x,y) -> (string_of_logic x) ^ "_or_" ^ (string_of_logic y)
   | Not x -> "_not_" ^ (string_of_logic x)
   | And (x,y) -> (string_of_logic x) ^ "_and_" ^ (string_of_logic y)
   | Proposition x -> (match x with | Label x -> x | Expr x -> x 
-    | Update _ -> raise (Internal_error "string_og_logic: Update should not occur here!!"))
+    | Update _ -> raise (Internal_error "string_of_logic: Update should not occur here!!"))
   | Brackets x -> (string_of_logic x)
   | True -> "True"
   | _ as s -> 

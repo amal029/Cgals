@@ -61,7 +61,9 @@ let make_transitions index init ob = function
 	    let () = B.add_string ob "<label kind=\"guard\">" in
 	    B.add_string ob g;
 	    B.add_string ob "\n</label>\n") in
-	let to_false = ref (List.of_enum (BatHashtbl.values (List.nth !update_tuple_tbl_ll index))) in
+	let to_false = ref (List.unique (List.of_enum (Hashtbl.values (List.nth !update_tuple_tbl_ll index)))) in
+	let () = IFDEF DEBUG THEN print_int index; print_endline "INDEX" ELSE () ENDIF in
+	let () = IFDEF DEBUG THEN print_int (List.length !to_false); print_endline "LENGTH" ELSE () ENDIF in
 	let () = List.iter (fun x -> to_false := List.filter (fun y -> y <> x) !to_false) !updates in
 	let () = B.add_string ob "<label kind=\"assignment\">" in
 	let () = List.iteri (fun i (Update x) -> 
@@ -72,7 +74,7 @@ let make_transitions index init ob = function
 	    B.add_string ob ","
 	) !updates in
 	let () = List.iteri (fun i (Update x) -> 
-	  let () = B.add_string ob (x ^ "=true") in
+	  let () = B.add_string ob (x ^ "=false") in
 	  if i < (List.length !to_false)-1 then 
 	    B.add_string ob ", ") !to_false in
 	let () = B.add_string ob "</label>\n" in

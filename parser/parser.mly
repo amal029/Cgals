@@ -75,7 +75,7 @@ stmt:
     | abort {$1}
     | suspend {$1}
     | TExit TOP symbol TCP {Systemj.Exit($3,ln())}
-    | TEmit symbol {Systemj.Emit($2,ln())}
+    | TEmit symbol {Systemj.Emit($2,None,ln())}
     | TPause {Systemj.Pause(None,ln())}
     | TSplit TOP stmtlist TCP {Systemj.Spar($3,ln())}
     | send {$1}
