@@ -7,10 +7,10 @@ module SSL = Sexplib.Std
 module PL = PropositionalLogic
 open TableauBuchiAutomataGeneration
 
-let rec map3 f a b c = 
-  match (a,b,c) with
-  | ([],[],[]) -> []
-  | ((h1::t1),(h2::t2),(h3::t3)) -> (f h1 h2 h3) :: map3 f t1 t2 t3
+let rec map4 f a b c d = 
+  match (a,b,c,d) with
+  | ([],[],[],[]) -> []
+  | ((h1::t1),(h2::t2),(h3::t3),(h4::t4)) -> (f h1 h2 h3 h4) :: map4 f t1 t2 t3 t4
   | _ -> failwith "Lists not of equal length"
 
 let usage_msg = "Usage: systemjc [options] <filename>\nsee -help for more options" in
@@ -89,7 +89,8 @@ try
     let () = print_endline "....Building SystemJ model......" in
     let () = SS.output_hum Pervasives.stdout (SSL.sexp_of_list TableauBuchiAutomataGeneration.sexp_of_labeled_graph_node x) in
     print_endline "\n\n\n\n\n\n-----------------------------------------------------\n\n\n\n") labeled_buchi_automatas ELSE () ENDIF in
-  let uppaal_automatas = map3 Uppaal.make_xml (List.init (List.length labeled_buchi_automatas) (fun x -> x)) (List.rev !init) labeled_buchi_automatas in
+  let uppaal_automatas = map4 Uppaal.make_xml (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_signal_declarations x)
+    (List.init (List.length labeled_buchi_automatas) (fun x -> x)) (List.rev !init) labeled_buchi_automatas in
   let strings = Buffer.create(10000) in
   let () = List.iter (Buffer.add_buffer strings) uppaal_automatas in
   let uppaal_automata = Uppaal.make_uppaal strings in

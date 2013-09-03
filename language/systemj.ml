@@ -71,7 +71,7 @@ exception Internal_error of string
 let rec collect_signal_declarations = function
   | Pause _ | Emit _ | Exit _ | Noop
   | Channel _ -> []
-  | Signal _ as s -> [s]
+  | Signal (_,Symbol (s,_),_) -> [s]
   | Present (_,s,None,_) -> collect_signal_declarations s
   | Present (_,s,Some x,_) -> collect_signal_declarations s @ collect_signal_declarations x
   | Trap (_,s,_) -> collect_signal_declarations s

@@ -94,11 +94,26 @@ let ss1 = ref []
 
 (* Outputs the XML file for Uppaal model-checker *)
 (* This is for each clock-domain *)
-let make_xml index init lgn = 
+let make_xml signals index init lgn = 
   let ob = B.create(10000) in
   let () = B.add_string ob "<template>\n" in
   counter := !counter + 1;
   let () = B.add_string ob ("<name>Template" ^ (string_of_int !counter) ^"</name>\n") in
+  (* Add all the boolean signal declarations!! *)
+  if signals <> [] then
+    begin
+      let () = Buffer.add_string ob "<declaration>" in
+      let () = Buffer.add_string ob "bool " in
+      let () = List.iteri(fun i x -> 
+	let () = Buffer.add_string ob x in
+	if i = ((List.length signals)-1) then
+	  Buffer.add_string ob ";\n"
+	else
+	  Buffer.add_string ob ", "
+      ) signals in
+      let () = Buffer.add_string ob "</declaration>\n" in
+      ()
+    end;
   ss := !ss ^ "Process" ^ (string_of_int !counter) ^ " = Template" ^ (string_of_int !counter) ^ "();\n";
   ss1 := ("Process" ^ (string_of_int !counter)) :: !ss1;
   (* make the nodes *)
