@@ -60,12 +60,6 @@ type ast =
 | Apar of stmt list * (line * column)
 with sexp
 
-
-let print_symbol = function
-  | Symbol (x,ln) -> x
-
-let print_expr x = "EXPR HERE"
-
 exception Internal_error of string
 
 let rec collect_signal_declarations = function
