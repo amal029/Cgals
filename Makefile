@@ -14,11 +14,11 @@ compile:
 	$(MAKE) -e -C parser/ all
 	$(MAKE) -e -C induction/ all
 	$(MAKE) -e -C backend/ all
-	ocamlfind $(CC) -pp "camlp4o pa_macro.cmo -DDEBUG -USDEBUG" -o systemjc	\
-	-linkpkg -package batteries -package sexplib -I ./language -I	\
-	./error -I ./parser -I ./induction -I ./backend $(ERRORLIB)	\
-	$(LANGUAGELIB) $(PARSERLIB) $(LOGICLIB) $(CODEGENLIB)		\
-	systemjc.ml
+	ocamlfind $(CC) -pp "camlp4o pa_macro.cmo -DDEBUG -USDEBUG" -o	\
+	systemjc -linkpkg -package batteries -package sexplib -package	\
+	pretty -I ./language -I ./error -I ./parser -I ./induction -I	\
+	./backend $(ERRORLIB) $(LANGUAGELIB) $(PARSERLIB) $(LOGICLIB)	\
+	$(CODEGENLIB) systemjc.ml
 
 clean:
 	$(MAKE) -e -C language/ clean
@@ -27,4 +27,4 @@ clean:
 	$(MAKE) -e -C induction/ clean
 	$(MAKE) -e -C backend/ clean
 	rm -rf *.ll *.lle *.bc *.s *.dot *.grf *.part* gmon.out TAGS *.mli *.cm* *.o systemjc \
-	*.xml *.annot
+	*.xml *.annot *.pml

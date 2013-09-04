@@ -16,9 +16,11 @@ let rec map4 f a b c d =
 let usage_msg = "Usage: systemjc [options] <filename>\nsee -help for more options" in
 try
   let file_name = ref "" in
-  let output = ref "" in
+  let uppaal = ref "" in
+  let promela = ref "" in
   let () = Arg.parse [
-    ("-uppaal", Arg.Set_string output, " The name of the uppaal xml output file");] 
+    ("-uppaal", Arg.Set_string uppaal, " The name of the uppaal xml output file");
+    ("-promela", Arg.Set_string promela, " The name of the promela output file")] 
     (fun x -> file_name := x) usage_msg in
 
   (* Initialize the error reporting structures *)
@@ -80,7 +82,7 @@ try
 	  let ig = List.reduce (fun x y -> PL.Or(x,y)) !ig in
 	  gg := List.map (fun x -> PL.solve_logic (PL.And (x,ig))) !gg;
 	  ln.guards <- !gg;
-	n.incoming <- List.remove_all n.incoming "Init";
+	  n.incoming <- List.remove_all n.incoming "Init";
       ) ret in
       let (_,ret) = List.partition (fun {node=n} -> n.incoming = [] && n.name <> st_node.node.name) ret in
       ret) labeled_buchi_automatas in
@@ -98,33 +100,30 @@ try
   let () = PL.update_tuple_tbl_ll := [] in
   (* Write to output file if the -o argument is given, else write to stdout *)
   let () = 
-    if !output = "" then
+    if !uppaal = "" then
       Buffer.output_buffer stdout uppaal_automata
     else 
       try
-	let fd = open_out !output in
+	let fd = open_out !uppaal in
 	let () = Buffer.output_buffer fd uppaal_automata in
 	close_out fd
       with
       | Sys_error _ as s -> raise s
   in
-  let () = IFDEF SDEBUG THEN
-let () = List.iter (fun (Systemj.Apar(stmt,_)) ->
-  List.iter (fun stmt -> 
-    let _ = PropositionalLogic.dltl stmt in
-    (* let fo = PL.Or(PL.NextTime(PL.Not (PL.Proposition "L2")), PL.NextTime(PL.Proposition "L1")) in *)
-    let fo = PL.Or(PL.And(PL.And(PL.Proposition(PL.Label "st"),PL.Proposition(PL.Label "l")),PL.NextTime(PL.Proposition(PL.Label "l"))),
-		   PL.And(PL.Proposition(PL.Label "l"),PL.And(PL.NextTime(PL.Proposition(PL.Label "l")),PL.Proposition(PL.Label "l")))) in
-    let () = print_endline "The partial formulas and their BAs" in
-    let () = SS.output_hum stdout (PropositionalLogic.sexp_of_logic (PropositionalLogic.solve_logic (PropositionalLogic.push_not (fo)))) in
-    let () = print_endline "\n\n\n" in
-    let ba = TableauBuchiAutomataGeneration.create_graph (PropositionalLogic.solve_logic (PropositionalLogic.push_not (fo))) in
-    (* let () = print_endline "Nodes in the nodes set" in *)
-    (* let () = List.iter (fun x -> SS.output_hum stdout (TableauBuchiAutomataGeneration.sexp_of_graph_node x); print_endline"\n") ba in *)
-    let lba = TableauBuchiAutomataGeneration.add_labels (PropositionalLogic.solve_logic (PropositionalLogic.push_not (fo))) ba in
-    List.iter (fun x -> SS.output_hum Pervasives.stdout (SSL.sexp_of_list TableauBuchiAutomataGeneration.sexp_of_labeled_graph_node x))[lba])stmt) [ast] in
-let () = print_endline "\n\n\n" in () ELSE() ENDIF in 
-  ()
+  let () = 
+    if !promela = "" then
+      ()
+    else 
+      try
+	let write = (fun x -> 
+	  let fd = open_out !promela in
+	  let () = output_string fd x in
+	  close_out fd) in
+	let promela_model = map4 Promela.make_promela (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_signal_declarations x)
+	  (List.init (List.length labeled_buchi_automatas) (fun x -> x)) (List.rev !init) labeled_buchi_automatas in
+	Pretty.print ~width:56 ~output:write (List.reduce Pretty.append promela_model)
+      with
+      | Sys_error _ as s -> raise s in ()
 with
 | End_of_file -> exit 0
 | Sys_error  _ -> print_endline usage_msg
