@@ -20,7 +20,7 @@ codegen.cmxa: uppaal.cmx
 
 uppaal.cmx:
 	$(CC) -pp "camlp4o -I $(TYPECONV) -I $(SEXPLIB) -I $(PRETTYLIB)	\
-	pa_type_conv.cma pa_sexp_conv.cma pa_macro.cmo -UDEBUG" -I	\
+	pa_type_conv.cma pa_sexp_conv.cma pa_macro.cmo -DDEBUG" -I	\
 	$(REPORTDIR) -I $(LANGUAGEDIR) -I $(BATDIR) -I $(SEXPLIB) -I	\
 	$(LOGICLIB) -I $(PRETTYLIB) -c $(SRC)
 

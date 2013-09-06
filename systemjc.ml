@@ -96,8 +96,6 @@ try
   let strings = Buffer.create(10000) in
   let () = List.iter (Buffer.add_buffer strings) uppaal_automatas in
   let uppaal_automata = Uppaal.make_uppaal strings in
-  (* Emptying the list, although a bit pointless!! *)
-  let () = PL.update_tuple_tbl_ll := [] in
   (* Write to output file if the -o argument is given, else write to stdout *)
   let () = 
     if !uppaal = "" then
@@ -115,13 +113,11 @@ try
       ()
     else 
       try
-	let write = (fun x -> 
-	  let fd = open_out !promela in
-	  let () = output_string fd x in
-	  close_out fd) in
+	let fd = open_out !promela in
 	let promela_model = map4 Promela.make_promela (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_signal_declarations x)
 	  (List.init (List.length labeled_buchi_automatas) (fun x -> x)) (List.rev !init) labeled_buchi_automatas in
-	Pretty.print ~width:56 ~output:write (List.reduce Pretty.append promela_model)
+	let () = Pretty.print ~output:(output_string fd) (List.reduce Pretty.append promela_model) in
+	close_out fd;
       with
       | Sys_error _ as s -> raise s in ()
 with
