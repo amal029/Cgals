@@ -46,7 +46,7 @@ let rec label index updates = function
     let () = output_hum stdout (sexp_of_logic s) in
     raise (Internal_error ("Got a non And proposition type when building transition labels" ))
 (* Make transitions *)
-let make_transitions index init ob = function
+let make_transitions index init ob signals = function
   | (({name=n;incoming=i}),tlabel,guards) -> 
     let () = IFDEF DEBUG THEN print_endline (string_of_int index) ELSE () ENDIF in
     if i <> [] then
@@ -57,23 +57,25 @@ let make_transitions index init ob = function
 	(* This is where the labels go! *)
 	let updates = ref [] in
 	let g = label index updates g in
+	let updates = List.unique (List.map (fun (Update x) ->x) !updates) in
 	let () = (if g <> "" then
 	    let () = B.add_string ob "<label kind=\"guard\">" in
 	    B.add_string ob g;
 	    B.add_string ob "\n</label>\n") in
-	let to_false = ref (List.unique (List.of_enum (Hashtbl.values (List.nth !update_tuple_tbl_ll index)))) in
+	let to_false = ref signals in
+	let () = IFDEF DEBUG THEN print_endline ("FALSE: " ^ (string_of_int (List.length !to_false))) ELSE () ENDIF in
 	let () = IFDEF DEBUG THEN print_int index; print_endline "INDEX" ELSE () ENDIF in
 	let () = IFDEF DEBUG THEN print_int (List.length !to_false); print_endline "LENGTH" ELSE () ENDIF in
-	let () = List.iter (fun x -> to_false := List.filter (fun y -> y <> x) !to_false) !updates in
+	let () = List.iter (fun x -> to_false := List.filter (fun y -> y <> x) !to_false) updates in
 	let () = B.add_string ob "<label kind=\"assignment\">" in
-	let () = List.iteri (fun i (Update x) -> 
+	let () = List.iteri (fun i x -> 
 	  let () = B.add_string ob (x ^ "=true") in
-	  if ((i == (List.length !updates)-1) && (!to_false <> [])) then
+	  if ((i == (List.length updates)-1) && (!to_false <> [])) then
 	    B.add_string ob ","
-	  else if (i < (List.length !updates)-1) then
+	  else if (i < (List.length updates)-1) then
 	    B.add_string ob ","
-	) !updates in
-	let () = List.iteri (fun i (Update x) -> 
+	) updates in
+	let () = List.iteri (fun i x -> 
 	  let () = B.add_string ob (x ^ "=false") in
 	  if i < (List.length !to_false)-1 then 
 	    B.add_string ob ", ") !to_false in
@@ -120,7 +122,7 @@ let make_xml signals index init lgn =
   let () = List.iter (make_locations ob) (List.map (fun x -> (x.node,x.tlabels)) lgn) in
   let () = B.add_string ob ("<init ref=\"" ^ init ^ "\"/>\n") in
   (* Make transitions *)
-  let () = List.iter (make_transitions index init ob) (List.map (fun x -> (x.node,x.tlabels,x.guards)) lgn) in
+  let () = List.iter (make_transitions index init ob signals) (List.map (fun x -> (x.node,x.tlabels,x.guards)) lgn) in
   (* Add the system declaration *)
   let () = B.add_string ob "</template>\n" in 
   ob
