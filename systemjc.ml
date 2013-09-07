@@ -99,7 +99,8 @@ try
   (* Write to output file if the -o argument is given, else write to stdout *)
   let () = 
     if !uppaal = "" then
-      Buffer.output_buffer stdout uppaal_automata
+      (* Buffer.output_buffer stdout uppaal_automata *)
+      ()
     else 
       try
 	let fd = open_out !uppaal in
