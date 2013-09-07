@@ -56,7 +56,8 @@ let make_body o index signals = function
     let o = (match Hashtbl.find_option o n with Some x -> x | None -> []) in
     let (o,guards) = L.split o in
     (* First add the location label *)
-    ((n ^ ":\n") >> text)
+    ((n ^ "/*" ^ (string_of_logic tlabel) ^ "*/" ^ ":\n") >> text)
+    
     (* Now add the transitions *)
     ++ (indent 4 (L.reduce (++) (
       if o <> [] then

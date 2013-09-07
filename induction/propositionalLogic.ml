@@ -301,8 +301,8 @@ let rec move = function
   | Systemj.Emit _ -> False
   | Systemj.Pause _ -> False
   | Systemj.Present (e,t,Some el,_) -> 
-    Or(And(And(And(move t,Not(solve_logic(collect_labels el))),NextTime(Not(solve_logic(collect_labels el)))), expr_to_logic e),
-       And(And(And(move el,Not(solve_logic(collect_labels t))),NextTime(Not(solve_logic(collect_labels t)))),Not(expr_to_logic e)))
+    Or(And(And(move t,Not(solve_logic(collect_labels el))),NextTime(Not(solve_logic(collect_labels el)))),
+       And(And(move el,Not(solve_logic(collect_labels t))),NextTime(Not(solve_logic(collect_labels t)))))
   | Systemj.Present (e,t,None,_) -> move t
   | Systemj.Block (sl,r) -> move_seq r sl
   | Systemj.Spar (sl,r) -> move_spar r sl
