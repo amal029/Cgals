@@ -278,7 +278,7 @@ let rec term = function
   | Systemj.Spar (sl,r) -> term_spar r sl
   | Systemj.While (_,s,_) -> False
   | Systemj.Suspend (e,s,_) -> And(Not (expr_to_logic e), term s)
-  | Systemj.Abort(e,s,_)  -> And(solve_logic(collect_labels s),Or(expr_to_logic e, term s))
+  | Systemj.Abort(e,s,_)  -> And(solve_logic(collect_labels s),Or(NextTime (expr_to_logic e), term s))
   | Systemj.Trap (e,s,_) -> And(solve_logic(collect_labels s), term s) 	(* You can exit it if the body exits it! *)
   | Systemj.Exit (Systemj.Symbol (s,_),_) -> False
   | Systemj.Signal _ 
@@ -307,7 +307,7 @@ let rec move = function
   | Systemj.Block (sl,r) -> move_seq r sl
   | Systemj.Spar (sl,r) -> move_spar r sl
   | Systemj.While (_,s,_) -> Or(move s,And(term s, solve_logic (enter s)))
-  | Systemj.Abort(e,s,_)  -> And(Not(expr_to_logic e),move s)
+  | Systemj.Abort(e,s,_)  -> And(NextTime (Not(expr_to_logic e)),move s)
   | Systemj.Trap (e,s,_) -> move s
   | Systemj.Exit (Systemj.Symbol (s,_),_) -> False
   | Systemj.Signal _ 
@@ -324,7 +324,7 @@ and move_seq r = function
   | [] -> False
 and move_spar r = function
   | h::t -> Or (Or(Or(And(move h,And(Not(solve_logic(collect_labels (Systemj.Spar(t,r)))),NextTime(Not(solve_logic(collect_labels (Systemj.Spar(t,r))))))),
-		      And(move (Systemj.Spar(t,r)),And(Not(solve_logic (solve_logic(collect_labels h))),NextTime(Not (solve_logic(collect_labels h)))))),
+		      And(move (Systemj.Spar(t,r)),And(Not(solve_logic(collect_labels h)),NextTime(Not (solve_logic(collect_labels h)))))),
 		   Or(And(move (Systemj.Spar(t,r)), move h),
 		      And(move h, And(term (Systemj.Spar(t,r)),NextTime(Not(solve_logic (collect_labels (Systemj.Spar(t,r))))))))),
 		And(move (Systemj.Spar(t,r)),And(term h, NextTime(Not (solve_logic (collect_labels h))))))
