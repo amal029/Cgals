@@ -33,7 +33,7 @@ let rewrite_send cnt = function
 			    Systemj.While(Systemj.True,
 					  Systemj.Block([Systemj.Pause(Some ("L" ^ (string_of_int !cnt)),lc);
 							 Systemj.Emit (req_sym,None,lc)],lc),lc),lc) in
-    Systemj.Block([a1;a2],lc)
+    Systemj.Block([Systemj.Signal(None,ack_sym,lc);Systemj.Signal(None,req_sym,lc);a1;a2],lc)
   | _ -> raise (Internal_error "Tried to rewrite a non-send as send")
 
 let rewrite_receive cnt = function
@@ -48,7 +48,7 @@ let rewrite_receive cnt = function
 			    Systemj.While(Systemj.True,
 					  Systemj.Block([Systemj.Pause(Some ("L" ^ (string_of_int !cnt)),lc);
 							 Systemj.Emit (ack_sym,None,lc)],lc),lc),lc) in
-    Systemj.Block([a1;a2],lc)
+    Systemj.Block([Systemj.Signal(None,ack_sym,lc);Systemj.Signal(None,req_sym,lc);a1;a2],lc)
   | _ -> raise (Internal_error "Tried to rewrite a non-receive as receive")
 
 let rec add_labels_and_rewrite cnt = function
@@ -72,7 +72,7 @@ let rec add_labels_and_rewrite cnt = function
 
 let rec add_unique_identifier_to_emits = function
   | Systemj.Pause _ | Systemj.Noop | Systemj.Signal _
-  | Systemj.Exit _ as s -> s
+  | Systemj.Channel _ | Systemj.Exit _ as s -> s
   | Systemj.Present (e,t,Some el,x) -> Systemj.Present (e, add_unique_identifier_to_emits t, 
 							Some (add_unique_identifier_to_emits el), x)
   | Systemj.Present(e,a,None,x) -> Systemj.Present (e, add_unique_identifier_to_emits a,None, x)
