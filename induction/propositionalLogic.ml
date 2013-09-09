@@ -33,7 +33,8 @@ let rewrite_send cnt = function
 			    Systemj.While(Systemj.True,
 					  Systemj.Block([Systemj.Pause(Some ("L" ^ (string_of_int !cnt)),lc);
 							 Systemj.Emit (req_sym,None,lc)],lc),lc),lc) in
-    Systemj.Block([Systemj.Signal(None,ack_sym,lc);Systemj.Signal(None,req_sym,lc);a1;a2],lc)
+    (* Systemj.Block([Systemj.Signal(None,ack_sym,lc);Systemj.Signal(None,req_sym,lc);a1;a2],lc) *)
+    Systemj.Block([a1;a2],lc)
   | _ -> raise (Internal_error "Tried to rewrite a non-send as send")
 
 let rewrite_receive cnt = function
@@ -48,7 +49,8 @@ let rewrite_receive cnt = function
 			    Systemj.While(Systemj.True,
 					  Systemj.Block([Systemj.Pause(Some ("L" ^ (string_of_int !cnt)),lc);
 							 Systemj.Emit (ack_sym,None,lc)],lc),lc),lc) in
-    Systemj.Block([Systemj.Signal(None,ack_sym,lc);Systemj.Signal(None,req_sym,lc);a1;a2],lc)
+    (* Systemj.Block([Systemj.Signal(None,ack_sym,lc);Systemj.Signal(None,req_sym,lc);a1;a2],lc) *)
+    Systemj.Block([a1;a2],lc)
   | _ -> raise (Internal_error "Tried to rewrite a non-receive as receive")
 
 let rec add_labels_and_rewrite cnt = function
@@ -90,7 +92,8 @@ let rec add_unique_identifier_to_emits = function
 
 
 let rewrite_ast = function
-  | Systemj.Apar (x,s) -> Systemj.Apar (List.map add_unique_identifier_to_emits (List.map (add_labels_and_rewrite (ref 0)) (List.rev x)),s)
+  | Systemj.Apar (x,s) -> 
+    Systemj.Apar (List.map add_unique_identifier_to_emits (List.map (add_labels_and_rewrite (ref 0)) (List.rev x)),s)
 
 type proposition = 
 | Label of string

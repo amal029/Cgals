@@ -127,11 +127,20 @@ let make_xml signals index init lgn =
   let () = B.add_string ob "</template>\n" in 
   ob
 
-let make_uppaal strings = 
+let make_uppaal channels strings = 
   let ob = B.create(10000) in
   (* Start the automata *)
   let () = B.add_string ob "<nta>\n" in
-  let () = B.add_string ob "<declaration>//Global declarations\n</declaration>\n" in
+  let () = B.add_string ob "<declaration>//Global declarations\n" in
+  (* Do the channel declarations here!! *)
+  let () = B.add_string ob "bool " in
+  let () = List.iteri (fun i x -> 
+    let () = B.add_string ob x in
+    if (i < (List.length channels)-1) then
+      B.add_string ob ","
+    else B.add_string ob ";\n"
+  ) channels in
+  let () = B.add_string ob "</declaration>\n" in
   let () = B.add_buffer ob strings in
   let () = B.add_string ob "<system>\n" in
   let () = B.add_string ob !ss in

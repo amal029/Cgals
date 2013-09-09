@@ -62,6 +62,20 @@ with sexp
 
 exception Internal_error of string
 
+let rec collect_channels = function
+  | Pause _ | Emit _ | Exit _ | Noop
+  | Send _ | Receive _
+  | Signal _ -> []
+  | Channel (_,(Symbol (x,_)),_) -> [(x^"_req");(x^"_ack")]
+  | Present (_,s,None,_) -> collect_channels s
+  | Present (_,s,Some x,_) -> collect_channels s @ collect_channels x
+  | Trap (_,s,_) -> collect_channels s
+  | Block (s,_) 
+  | Spar (s,_) -> List.flatten (List.map collect_channels s)
+  | Abort (_,s,_) -> collect_channels s
+  | Suspend (_,s,_) -> collect_channels s
+  | While (_,s,_) -> collect_channels s
+
 let rec collect_signal_declarations = function
   | Pause _ | Emit _ | Exit _ | Noop
   | Channel _ -> []

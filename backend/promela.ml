@@ -81,7 +81,7 @@ let make_body o index signals = function
       
 let make_process o index signals init lgn = 
   (("active proctype CD" ^ (string_of_int index) ^ "(") >> text) 
-  ++ (L.reduce (++)) (L.mapi (make_args (L.length signals)) signals)
+  ++ (L.fold_left (++) empty) (L.mapi (make_args (L.length signals)) signals)
   ++ ("){\n" >> text)
   ++ (("goto " ^ init ^ ";\n") >> text)
   ++ ((L.reduce (++) (L.map (fun x -> make_body o index signals (x.node,x.tlabels,x.guards)) lgn)) >> (4 >> indent))

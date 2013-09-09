@@ -31,6 +31,8 @@ try
   (* Close the input channel *)
   let () = close_in in_chan in 
   let () = print_endline "....Rewriting the ast ..." in
+  let channels = List.sort_unique compare (List.flatten (List.map Systemj.collect_channels 
+							   (match ast with |Systemj.Apar(x,_)->x))) in
   let ast = PropositionalLogic.rewrite_ast ast in
   let () = print_endline "....Building Propositional logic trees ..." in
   let ltls = PropositionalLogic.build_propositional_tree_logic ast in
@@ -95,7 +97,8 @@ try
     (List.init (List.length labeled_buchi_automatas) (fun x -> x)) (List.rev !init) labeled_buchi_automatas in
   let strings = Buffer.create(10000) in
   let () = List.iter (Buffer.add_buffer strings) uppaal_automatas in
-  let uppaal_automata = Uppaal.make_uppaal strings in
+  let () = IFDEF DEBUG THEN print_endline (string_of_int (List.length channels)) ELSE () ENDIF in
+  let uppaal_automata = Uppaal.make_uppaal channels strings in
   (* Write to output file if the -o argument is given, else write to stdout *)
   let () = 
     if !uppaal = "" then
@@ -117,7 +120,9 @@ try
 	let fd = open_out !promela in
 	let promela_model = map4 Promela.make_promela (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_signal_declarations x)
 	  (List.init (List.length labeled_buchi_automatas) (fun x -> x)) (List.rev !init) labeled_buchi_automatas in
-	let () = Pretty.print ~output:(output_string fd) (List.reduce Pretty.append promela_model) in
+	(* make the channel declarations in the global space!! *)
+	let promela_channels = List.fold_left Pretty.append Pretty.empty (List.map (fun x -> Pretty.text ("bool "^x^";\n"))channels) in
+	let () = Pretty.print ~output:(output_string fd) (Pretty.append promela_channels (List.reduce Pretty.append promela_model)) in
 	close_out fd;
       with
       | Sys_error _ as s -> raise s in ()
