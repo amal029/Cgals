@@ -57,9 +57,9 @@ let make_body o index signals = function
     let (o,guards) = L.split o in
     (* First add the location label *)
     ((n ^ "/*" ^ (string_of_logic tlabel) ^ "*/" ^ ":\n") >> text)
-    
+    ++ ("if\n" >> text)
     (* Now add the transitions *)
-    ++ (indent 4 (L.reduce (++) (
+    ++ (L.reduce (++) (
       if o <> [] then
 	L.map2 (fun x g ->
 	  let updates = ref [] in
@@ -67,16 +67,15 @@ let make_body o index signals = function
 	  let updates = List.unique (List.map (fun (Update x) ->x) !updates) in
 	  let to_false = ref signals in
 	  let () = L.iter (fun x -> to_false := L.filter (fun y -> y <> x) !to_false) updates in
-	  ("if\n" >> text)
-	  ++ ((if g <> "" then (":: (" ^ g ^ ") -> ") else (":: true -> ")) >> text)
+	  ((if g <> "" then (":: (" ^ g ^ ") -> ") else (":: true -> ")) >> text)
 	  (* These are the updates to be made here!! *)
 	  ++ L.fold_left (++) empty (L.mapi (fun i x -> ((x ^ "=true;\t") >> text)) updates)
 	  ++ L.fold_left (++) empty (L.mapi (fun i x -> ((x ^ "=false;\t") >> text)) !to_false)
 	  ++ (("goto " ^ x ^ ";\n") >> text)
-	  ++ ("fi;\n" >> text)
 	) o guards
-      else [("skip;\n" >> text)]
-    ))) 
+      else [("::skip;\n" >> text)]
+    )) 
+    ++ ("fi;\n" >> text)
       
       
 let make_process o index signals init lgn = 
