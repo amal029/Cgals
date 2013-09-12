@@ -59,6 +59,7 @@ try
       let ret = List.of_enum (Hashtbl.values ModelSystem.tbl) in
       let () = Hashtbl.clear ModelSystem.tbl in
       let ret = List.filter (fun {node=n} -> n.old <> []) ret in
+      let () = flush_all () in
       let st_node = List.find (fun {tlabels=t} -> (match t with | PL.Proposition (PL.Label x) -> x = "st" | _ -> false)) ret in
       init := st_node.node.name :: !init;
       let () = print_endline "....Building SystemJ model......" in

@@ -59,30 +59,37 @@ topstmtlist:
 ;
 
 stmtlist:
-    | stmtlist TSEMICOLON stmt {$3::$1}
+    | stmtlist stmt {$2::$1}
     | stmt {[$1]}
 ;
 
 stmt:
-    | TIn TSignal symbol {Systemj.Signal(Some Systemj.Input, $3, ln())}
-    | TOut TSignal symbol {Systemj.Signal(Some Systemj.Output, $3, ln())}
-    | TSignal symbol {Systemj.Signal(None, $2, ln())}
-    | TIn TChannel symbol {Systemj.Channel(Systemj.Input, $3, ln())}
-    | TOut TChannel symbol {Systemj.Channel(Systemj.Output, $3, ln())}
-    | TOB stmtlist TCB {Systemj.Block ($2, ln())}
+    | TIn TSignal symbol TSEMICOLON {Systemj.Signal(Some Systemj.Input, $3, ln())}
+    | TOut TSignal symbol TSEMICOLON {Systemj.Signal(Some Systemj.Output, $3, ln())}
+    | TSignal symbol TSEMICOLON {Systemj.Signal(None, $2, ln())}
+    | TIn TChannel symbol TSEMICOLON {Systemj.Channel(Systemj.Input, $3, ln())}
+    | TOut TChannel symbol TSEMICOLON {Systemj.Channel(Systemj.Output, $3, ln())}
     | TOB TCB {Systemj.Noop}
+    | TSEMICOLON {Systemj.Noop}
+    | TOB stmtlist TCB {Systemj.Block ($2, ln())}
+    | par {$1}
     | present {$1}
     | abort {$1}
     | suspend {$1}
-    | TExit TOP symbol TCP {Systemj.Exit($3,ln())}
-    | TEmit symbol {Systemj.Emit($2,None,ln())}
-    | TPause {Systemj.Pause(None,ln())}
-    | TSplit TOP stmtlist TCP {Systemj.Spar($3,ln())}
-    | send {$1}
-    | receive {$1}
+    | TExit TOP symbol TCP TSEMICOLON {Systemj.Exit($3,ln())}
+    | TEmit symbol TSEMICOLON {Systemj.Emit($2,None,ln())}
+    | TPause TSEMICOLON {Systemj.Pause(None,ln())}
+    /*| TSplit TOP stmtlist TCP {Systemj.Spar($3,ln())}*/
+    | send TSEMICOLON {$1}
+    | receive TSEMICOLON {$1}
     | twhile {$1}
     | trap {$1}
 ;
+
+par:
+    | stmt Or stmt {Systemj.Spar([$3;$1],ln())}
+;
+
 
 send:
     | symbol TXCL {Systemj.Send($1,ln())}

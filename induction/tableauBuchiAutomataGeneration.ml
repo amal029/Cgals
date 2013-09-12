@@ -116,33 +116,13 @@ let state_label propositions powerset = function
       pos_props := !pos_props @ List.filter (fun y -> x=y) o;
     ) propositions in
     let pos_props = (List.sort_unique compare) !pos_props in
-    (* let pos_props = (List.sort_unique compare) (List.flatten (List.map pos_props o)) in *)
-    let neg_props = ref (List.map (fun (Not (Proposition _ as s)) -> s) 
-			   (List.filter (fun x -> (match x with | Not(Proposition _) -> true | _ -> false)) o)) in
-    let nn_props = ref [] in
-    let () = List.iter (fun x ->  nn_props := !nn_props @ List.filter (fun y -> x=y) !neg_props) propositions in
-    let neg_props = (List.sort_unique compare) !nn_props in
-    (* let neg_props = (List.sort_unique compare) (List.flatten (List.map neg_props o)) in *)
-    (* Remove all the propositions from the powerset that are in the neg_props list *)
-    let rfd = List.filter (fun z -> 
-      try 
-	List.reduce (||) (List.map (fun y -> (List.exists (fun x -> x=y)z)) neg_props) 
-      with | _ -> z=[]) powerset in
-    let pp = ref powerset in
-    let () = List.iter (fun x -> pp := (List.remove_all !pp x)) rfd in
-    let powerset = !pp in
-    (* Need to make sure that the resultant powerset is a superset of
-       the positive propositions in this state *)
-    let powerset = List.filter (fun z -> 
-      try List.reduce (&&) (List.map (fun y -> (List.exists (fun x -> x=y)z)) pos_props) 
-      with | _ -> z=[]) powerset in
     let neg_props = List.filter (fun x -> (match x with | Not(Proposition _) -> true | _ -> false)) o in
     let (labels,g) = List.partition (fun x -> (match x with | Proposition x | Not (Proposition x)
       -> (match x with | Label _ -> true | _ -> false) | _ -> false)) (pos_props @ neg_props) in
     let tls = if labels <> [] then List.reduce (fun x y -> And(x,y)) labels else True in
     let g = if g <> [] then List.reduce (fun x y -> solve_logic (And(x,y))) g else True in
     let g = BatArray.to_list (BatArray.make (List.length s.incoming) g) in
-    {node=s;labels=powerset;tlabels=solve_logic tls;guards=g}
+    {node=s;labels=[];tlabels=solve_logic tls;guards=g}
 
 let add_labels formula nodes_set =
   (* Get all the propositions used in the formula *)
