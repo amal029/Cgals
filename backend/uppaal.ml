@@ -133,13 +133,16 @@ let make_uppaal channels strings =
   let () = B.add_string ob "<nta>\n" in
   let () = B.add_string ob "<declaration>//Global declarations\n" in
   (* Do the channel declarations here!! *)
-  let () = B.add_string ob "bool " in
-  let () = List.iteri (fun i x -> 
-    let () = B.add_string ob x in
-    if (i < (List.length channels)-1) then
-      B.add_string ob ","
-    else B.add_string ob ";\n"
-  ) channels in
+  if channels <> [] then
+    begin
+    let () = B.add_string ob "bool " in
+    let () = List.iteri (fun i x -> 
+      let () = B.add_string ob x in
+      if (i < (List.length channels)-1) then
+	B.add_string ob ","
+      else B.add_string ob ";\n"
+    ) channels in ()
+    end;
   let () = B.add_string ob "</declaration>\n" in
   let () = B.add_buffer ob strings in
   let () = B.add_string ob "<system>\n" in
