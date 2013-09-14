@@ -1,7 +1,7 @@
-(* This is the pure kernel language of SystemJ:
+(* This is the pure kernel Cgals (seagulls):
    1.) There is no data => 
    a.) There are no valued signals and 
-   b.) There are no Java stmts
+   b.) There are no C/Java stmts
    Wed Jul 31 09:26:33 NZST 2013
    Avinash Malik
    

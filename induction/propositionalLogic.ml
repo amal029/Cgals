@@ -2,10 +2,9 @@
 
 
    Embedding imperative synchronous languages in interactive theorem
-   provers -- Schnieder, ACSD, 2001
+   provers -- Schnieder, ACSD, 2001 and solves a number of logic errors
+   in that paper!
    
-   The asynchronous inductive rules are our own -- this is the main
-   contribution of this indutive semantics
    
    Thu Aug  1 09:49:37 NZST 2013
    Avinash Malik
