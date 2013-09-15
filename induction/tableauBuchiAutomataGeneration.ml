@@ -10,7 +10,8 @@ type graph_node = {mutable name:string; mutable father:string; mutable incoming:
 		   mutable neew: logic list; mutable old:logic list; mutable next: logic list}
 with sexp
 
-type labeled_graph_node = {node: graph_node; labels : logic list list; mutable tlabels: logic; mutable guards: logic list}
+type labeled_graph_node = {node: graph_node; labels : logic list list; mutable tlabels: logic; 
+			   mutable guards: logic list; tls : logic list}
 with sexp
 
 let counter = ref 0
@@ -122,7 +123,7 @@ let state_label propositions powerset = function
     let tls = if labels <> [] then List.reduce (fun x y -> And(x,y)) labels else True in
     let g = if g <> [] then List.reduce (fun x y -> solve_logic (And(x,y))) g else True in
     let g = BatArray.to_list (BatArray.make (List.length s.incoming) g) in
-    {node=s;labels=[];tlabels=solve_logic tls;guards=g}
+    {node=s;labels=[];tlabels=solve_logic tls;guards=g; tls=labels}
 
 let add_labels formula nodes_set =
   (* Get all the propositions used in the formula *)

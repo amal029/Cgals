@@ -85,9 +85,20 @@ try
 	  let ig = List.reduce (fun x y -> PL.Or(x,y)) !ig in
 	  gg := List.map (fun x -> PL.solve_logic (PL.And (x,ig))) !gg;
 	  ln.guards <- !gg;
-	  n.incoming <- List.remove_all n.incoming "Init";
+	  (* This is deleting the rest of the nodes with incoming as Init *)
+	  (* n.incoming <- List.remove_all n.incoming "Init"; *)
       ) ret in
+      (* There are other nodes without "st", these can be logic formulas, in that case 
+	 we need to find the nodes, which these nodes are a subformula of!
+	 Note: 
+	 1.) I only look at Init nodes in this case.
+	 2.) Replace the nodes with the new set of incoming nodes
+      *)
+      let torep = (List.filter(fun {tlabels=t} -> (match t with | PL.Proposition (PL.Label x) -> x <> "st" | _ -> true))
+      		     (List.filter (fun{node=n} -> n.incoming=["Init"])ret)) in
+      let () = List.iter(fun {node=n} -> n.incoming <- List.remove_all n.incoming "Init";) ret in
       let (_,ret) = List.partition (fun {node=n} -> n.incoming = [] && n.name <> st_node.node.name) ret in
+      let () = List.iter (ModelSystem.find_subformula_equivalents ret) torep in
       ret) labeled_buchi_automatas in
   (* This map is for each clock-domain *)
   let () = IFDEF DEBUG THEN List.iter (fun x -> 

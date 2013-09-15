@@ -7,6 +7,7 @@ open Sexp
 module List = Batteries.List
 module Array = Batteries.Array
 module Hashtbl = Batteries.Hashtbl
+module Set = BatSet
 
 exception Internal_error of string
 
@@ -63,3 +64,33 @@ let propagate_guards_from_st nodeset =
     ) n.incoming
   ) nodeset in 
   List.iter (fun x -> x.guards <- []; x.node.incoming <- []) sts
+
+(* The set functor *)
+module PropType = struct
+  type t = logic
+  let compare = compare
+end
+module PropSet = Set.Make(PropType)
+
+let find_subformula_equivalents model = function
+  | {node=n;tls=llabels} as s -> 
+    let labels = PropSet.of_enum (List.enum llabels) in
+    let new_nodes = List.filter (fun ({node=nn;tls=nllabels}) -> 
+      let nlabels = PropSet.of_enum (List.enum nllabels) in
+      PropSet.subset labels nlabels) model in 
+    (* Now we have all the nodes that need to be replaced!! *)
+    (* In place mutbale replacement *)
+    let new_nodes = List.map (fun {node=n} -> n.name) new_nodes in
+    let () = List.iter (fun {node=nn} -> 
+      let torep = ref [] in
+      let () = List.iter (fun x -> 
+	if x = n.name then 
+	  torep := !torep @ new_nodes
+	else 
+	  torep := !torep @ [x]
+      ) nn.incoming in
+      nn.incoming <- !torep;
+    ) model in
+    ()
+    
+    
