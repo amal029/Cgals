@@ -63,7 +63,18 @@ let rec expand node nodes_set =
       | True
       | False -> 
 	(* Contradiction, abondon! *)
-	if n = False || List.exists (fun x -> x = (negate n)) node.old then ()
+	if n = False || List.exists (fun x -> x = (negate n)) node.old then 
+	  (* Raise an error stating that there is a contradiction in the formula!! *)
+	  if n <> False then
+	    (* let () = output_hum stdout (sexp_of_list sexp_of_logic node.old) in *)
+	    let () = output_hum stdout (sexp_of_logic (negate n)) in
+	    let () = print_string " && " in
+	    let () = output_hum stdout (sexp_of_logic n) in
+	    let () = print_endline "" in
+	    failwith "Contradiction"
+	  else
+	    failwith "False proposition"
+	  ()
 	else 
 	  let () = node.old <- node.old @ [n] in expand node nodes_set
       | And (x,y) -> 

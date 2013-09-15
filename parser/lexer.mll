@@ -34,7 +34,6 @@ rule lexer = parse
   | "exit" {Parser.TExit}
   | "emit" {Parser.TEmit}
   | ['0'-'9']+ {Parser.TInt (lexeme lexbuf)} (* an integer *)
-  | "<!--"_*"-->"  {Parser.TEscapedCode (lexeme lexbuf)} (* start of escape code, does not work *)
   | ['0'-'9']+'.'['0'-'9']+ {Parser.TFloat (lexeme lexbuf)} (* a floating number *)
   | ['A'-'Z' 'a'-'z']['A'-'Z' 'a'-'z' '0'-'9' '_']* {Parser.TSymbol (lexeme lexbuf)} (* any identifier a letter followed by anything, except a '$' sign*)
   | "/*" {comment 1 lexbuf} (* start of a comment *)

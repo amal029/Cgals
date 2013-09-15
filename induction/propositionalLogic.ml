@@ -209,13 +209,17 @@ let rec inst = function
   | Systemj.Emit (s,Some uniq,_) -> 
     let key = Proposition (Expr ("$" ^ uniq)) in
     let () = Hashtbl.add update_tuple_tbl key (Update (match s with | Systemj.Symbol (s,_) -> s)) in
-    NextTime key
+    (* FIXME: Just trying out automatic causality analysis *)
+    And (NextTime key, Proposition (Expr (match s with Systemj.Symbol (s,_)->s)))
+    (* NextTime key *)
   | Systemj.Emit (s,None,_) as t -> 
     let () = output_hum stdout (Systemj.sexp_of_stmt t) in
     raise (Internal_error "Emit stmt without a unique identifier cannot be initialized for data propositions")
   | Systemj.Pause _ -> False
   | Systemj.Present (e,t,Some el,_) -> Or(And(expr_to_logic e, inst t), And(Not (expr_to_logic e), inst el))
-  | Systemj.Present (e,t,None,_) -> Or(And(expr_to_logic e, inst t), And(Not (expr_to_logic e), True))
+  (* FIXME: Check if this is correct logic? *)
+  (* | Systemj.Present (e,t,None,_) -> Or(And(expr_to_logic e, inst t), And(Not (expr_to_logic e), True)) *)
+  | Systemj.Present (e,t,None,_) -> Or(And(expr_to_logic e, inst t), And(Not (expr_to_logic e), False))
   | Systemj.Block (sl,_) 
   | Systemj.Spar (sl,_) -> 
     if sl = [] then True 

@@ -120,7 +120,9 @@ twhile:
 
 expr:
     | symbol {Systemj.Esymbol($1,ln())}
+    | TXCL expr {Systemj.Not($2,ln())}
     | expr Or expr {Systemj.Or($1,$3,ln())}
+    | expr And expr {Systemj.And($1,$3,ln())}
     | expr And expr {Systemj.And($1,$3,ln())}
     | TOP expr TCP {Systemj.Brackets($2,ln())}
 ;
