@@ -14,7 +14,7 @@ compile:
 	$(MAKE) -e -C parser/ all
 	$(MAKE) -e -C induction/ all
 	$(MAKE) -e -C backend/ all
-	ocamlfind $(CC) -pp "camlp4o pa_macro.cmo -DDEBUG -USDEBUG" -o	\
+	ocamlfind $(CC) -pp "camlp4o pa_macro.cmo -UDEBUG -USDEBUG" -o	\
 	systemjc -linkpkg -package batteries -package sexplib -package	\
 	pretty -I ./language -I ./error -I ./parser -I ./induction -I	\
 	./backend $(ERRORLIB) $(LANGUAGELIB) $(PARSERLIB) $(LOGICLIB)	\
