@@ -71,10 +71,10 @@ let rec expand node nodes_set =
 	    let () = print_string " && " in
 	    let () = output_hum stdout (sexp_of_logic n) in
 	    let () = print_endline "" in
-	    failwith "Contradiction"
+	    print_endline "Warning : Contradiction";
 	  else
-	    failwith "False proposition"
-	  ()
+	    let () =  print_endline "Warning: False proposition" in
+	    ()
 	else 
 	  let () = node.old <- node.old @ [n] in expand node nodes_set
       | And (x,y) -> 

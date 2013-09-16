@@ -1,0 +1,35 @@
+{
+  input signal AS;
+  input signal VS;
+  output signal AP;
+  input signal TLRITAVI;
+  output signal resetTimer;
+  input channel VP;
+  output channel AP;
+  output signal oAP;
+  signal sVP;
+  emit resetTimer;
+  while(true){
+    abort(sVP || VS){
+      while(true){
+	abort(TLRITAVI){
+	  while(true){
+	    abort(AS) while(true) pause;
+	    abort(sVP||VS) while(true) pause;
+	    emit resetTimer;
+	  }
+	}
+	AP!;
+	emit oAP;
+      }
+    }
+    emit resetTimer;
+  }
+  ||
+  while(true){
+   VP?;
+   emit sVP;
+   pause;
+  }
+}
+
