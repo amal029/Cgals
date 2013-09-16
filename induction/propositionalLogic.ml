@@ -321,8 +321,8 @@ let rec move = function
   | _ -> raise (Internal_error "Inst: Cannot get send/receive after rewriting!!")
 and move_seq r = function
   | h::t -> 
-    let fdis = And(move h, And(Not(solve_logic(collect_labels (Systemj.Block(t,r)))),NextTime(Not(solve_logic(collect_labels (Systemj.Block(t,r))))))) in
-    let sdis = And(And(Not(solve_logic(collect_labels h)),NextTime(Not(solve_logic(collect_labels h)))),move (Systemj.Block(t,r))) in
+    (* let fdis = And(move h, And(Not(solve_logic(collect_labels (Systemj.Block(t,r)))),NextTime(Not(solve_logic(collect_labels (Systemj.Block(t,r))))))) in *)
+    (* let sdis = And(And(Not(solve_logic(collect_labels h)),NextTime(Not(solve_logic(collect_labels h)))),move (Systemj.Block(t,r))) in *)
     Or(Or(And(move h, And(Not(solve_logic(collect_labels (Systemj.Block(t,r)))),NextTime(Not(solve_logic(collect_labels (Systemj.Block(t,r))))))),
 	  And(And(Not(solve_logic(collect_labels h)),NextTime(Not(solve_logic(collect_labels h)))),move (Systemj.Block(t,r)))),
        And(term h,And(NextTime(Not(solve_logic(collect_labels h))),And(Not(solve_logic(collect_labels (Systemj.Block(t,r)))),enter(Systemj.Block(t,r))))))
@@ -336,15 +336,15 @@ and move_spar r = function
   | [] -> False
 
 let build_ltl stmt = 
-  let shared = Or(Not(solve_logic (collect_labels stmt)),term stmt) in
-  let fdis = And(And(inst stmt, Proposition (Label "st")),NextTime(Not(solve_logic(collect_labels stmt)))) in
-  let () = IFDEF PDEBUG THEN output_hum stdout (sexp_of_logic (solve_logic (push_not fdis))); print_endline "<-- FIRST" ELSE () ENDIF in
-  let sdis = And(Proposition (Label "st"), enter stmt) in
-  let () = IFDEF PDEBUG THEN output_hum stdout (sexp_of_logic (solve_logic (push_not sdis))); print_endline "<-- SECOND" ELSE () ENDIF in
-  let tdis = And(Not(Proposition (Label "st")), NextTime(Not(solve_logic (collect_labels stmt)))) in
-  let () = IFDEF PDEBUG THEN output_hum stdout (sexp_of_logic (solve_logic (push_not tdis))); print_endline "<-- THIRD" ELSE () ENDIF in
-  let fdis = move stmt in
-  let () = IFDEF PDEBUG THEN output_hum stdout (sexp_of_logic (solve_logic (push_not fdis))); print_endline "<-- FOURTH" ELSE () ENDIF in
+  (* let shared = Or(Not(solve_logic (collect_labels stmt)),term stmt) in *)
+  (* let fdis = And(And(inst stmt, Proposition (Label "st")),NextTime(Not(solve_logic(collect_labels stmt)))) in *)
+  (* let () = IFDEF PDEBUG THEN output_hum stdout (sexp_of_logic (solve_logic (push_not fdis))); print_endline "<-- FIRST" ELSE () ENDIF in *)
+  (* let sdis = And(Proposition (Label "st"), enter stmt) in *)
+  (* let () = IFDEF PDEBUG THEN output_hum stdout (sexp_of_logic (solve_logic (push_not sdis))); print_endline "<-- SECOND" ELSE () ENDIF in *)
+  (* let tdis = And(Not(Proposition (Label "st")), NextTime(Not(solve_logic (collect_labels stmt)))) in *)
+  (* let () = IFDEF PDEBUG THEN output_hum stdout (sexp_of_logic (solve_logic (push_not tdis))); print_endline "<-- THIRD" ELSE () ENDIF in *)
+  (* let fdis = move stmt in *)
+  (* let () = IFDEF PDEBUG THEN output_hum stdout (sexp_of_logic (solve_logic (push_not fdis))); print_endline "<-- FOURTH" ELSE () ENDIF in *)
 
   Or(Or(Or(And(Proposition (Label "st"),And(inst stmt,NextTime(Not(solve_logic(collect_labels stmt))))),
 	   And(Proposition (Label "st"),enter stmt)),
