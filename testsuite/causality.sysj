@@ -52,5 +52,6 @@
 	pause;
     emit S1;
   }
+  ||
   pause;
 }

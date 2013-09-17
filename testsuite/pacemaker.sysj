@@ -1,35 +1,46 @@
 {
   input signal AS;
   input signal VS;
-  output signal AP;
   input signal TLRITAVI;
-  output signal resetTimer;
   input channel VP;
+
+  output signal AP;
+  output signal resetTimer;
   output channel AP;
   output signal oAP;
   signal sVP;
+
   emit resetTimer;
-  while(true){
-    abort(sVP || VS){
-      while(true){
-	abort(TLRITAVI){
-	  while(true){
-	    abort(AS) while(true) pause;
-	    abort(sVP||VS) while(true) pause;
-	    emit resetTimer;
+  { /* Remove this block to avoid an error */
+    while(true){
+      abort(sVP || VS){
+	while(true){
+	  abort(TRLITAVI){
+	    while(true){
+	      abort(AS){
+		while(true){pause;}
+	      }
+	      abort(sVP||VS){
+		while(true){pause;}
+	      }
+	      emit resetTimer;
+	    }
 	  }
+	  AP!;
+	  emit oAP;
 	}
-	AP!;
-	emit oAP;
       }
+      emit resetTimer;
     }
-    emit resetTimer;
-  }
+  } /* Remove this block to avoid an error */
   ||
-  while(true){
-   VP?;
-   emit sVP;
-   pause;
-  }
+    { /* Remove this block to avoid an error */
+      while(true){
+	VP?;
+	emit sVP;
+	pause;
+      }
+    } /* Remove this block to avoid an error */
+    || pause;
 }
 

@@ -33,6 +33,9 @@ try
   let () = print_endline "....Rewriting the ast ..." in
   let channels = List.sort_unique compare (List.flatten (List.map Systemj.collect_channels 
 							   (match ast with |Systemj.Apar(x,_)->x))) in
+  (* let (x,ln) = (match ast with |Systemj.Apar(x,ln)->(x,ln)) in *)
+  (* let ast = Systemj.Apar (List.map Systemj.rewrite_spar x,ln) in *)
+  let () = IFDEF DEBUG THEN SS.output_hum Pervasives.stdout (Systemj.sexp_of_ast ast); print_endline "" ELSE () ENDIF in
   let ast = PropositionalLogic.rewrite_ast ast in
   let () = print_endline "....Building Propositional logic trees ..." in
   let ltls = PropositionalLogic.build_propositional_tree_logic ast in
@@ -88,12 +91,13 @@ try
 	  (* This is deleting the rest of the nodes with incoming as Init *)
 	  (* n.incoming <- List.remove_all n.incoming "Init"; *)
       ) ret in
-      (* There are other nodes without "st", these can be logic formulas, in that case 
-	 we need to find the nodes, which these nodes are a subformula of!
-	 Note: 
-	 1.) I only look at Init nodes in this case.
-	 2.) Replace the nodes with the new set of incoming nodes
-      *)
+      (* There are other nodes without "st", these can be logic
+	 formulas, in that case we need to find the nodes, which these
+	 nodes are a subformula of!  Note: 1.) I only look at Init nodes
+	 in this case.  2.) Replace the nodes with the new set of
+	 incoming nodes 3.) FIXME (IMP): If no replacements are possible
+	 then these nodes and their corresponding guards should be
+	 delted!  *)
       let torep = (List.filter(fun {tlabels=t} -> (match t with | PL.Proposition (PL.Label x) -> x <> "st" | _ -> true))
       		     (List.filter (fun{node=n} -> n.incoming=["Init"])ret)) in
       let () = List.iter(fun {node=n} -> n.incoming <- List.remove_all n.incoming "Init";) ret in
@@ -105,19 +109,19 @@ try
     let () = print_endline "....Building SystemJ model......" in
     let () = SS.output_hum Pervasives.stdout (SSL.sexp_of_list TableauBuchiAutomataGeneration.sexp_of_labeled_graph_node x) in
     print_endline "\n\n\n\n\n\n-----------------------------------------------------\n\n\n\n") labeled_buchi_automatas ELSE () ENDIF in
-  let uppaal_automatas = map4 Uppaal.make_xml (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_signal_declarations x)
-    (List.init (List.length labeled_buchi_automatas) (fun x -> x)) (List.rev !init) labeled_buchi_automatas in
-  let strings = Buffer.create(10000) in
-  let () = List.iter (Buffer.add_buffer strings) uppaal_automatas in
-  let () = IFDEF DEBUG THEN print_endline (string_of_int (List.length channels)) ELSE () ENDIF in
-  let uppaal_automata = Uppaal.make_uppaal channels strings in
-  (* Write to output file if the -o argument is given, else write to stdout *)
   let () = 
     if !uppaal = "" then
       (* Buffer.output_buffer stdout uppaal_automata *)
       ()
     else 
       try
+	let uppaal_automatas = map4 Uppaal.make_xml (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_signal_declarations x)
+	  (List.init (List.length labeled_buchi_automatas) (fun x -> x)) (List.rev !init) labeled_buchi_automatas in
+	let strings = Buffer.create(10000) in
+	let () = List.iter (Buffer.add_buffer strings) uppaal_automatas in
+	let () = IFDEF DEBUG THEN print_endline (string_of_int (List.length channels)) ELSE () ENDIF in
+	let uppaal_automata = Uppaal.make_uppaal channels strings in
+	(* Write to output file if the -o argument is given, else write to stdout *)
 	let fd = open_out !uppaal in
 	let () = Buffer.output_buffer fd uppaal_automata in
 	close_out fd

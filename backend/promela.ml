@@ -20,11 +20,19 @@ let make_args length index signal =
 
 let get_outgoings o = function
   | ({name=n;incoming=i},guards) ->
-    List.iter2 (fun x g -> 
-      match Hashtbl.find_option o x with
-      | Some ll -> Hashtbl.replace o x ((n,g) :: ll)
-      | None -> Hashtbl.add o x [(n,g)]
-    ) i guards
+    try
+      List.iter2 (fun x g -> 
+	match Hashtbl.find_option o x with
+	| Some ll -> Hashtbl.replace o x ((n,g) :: ll)
+	| None -> Hashtbl.add o x [(n,g)]
+      ) i guards
+    with
+    | _ as s -> 
+      output_hum stdout (sexp_of_list sexp_of_string i);
+      output_hum stdout (sexp_of_list sexp_of_logic guards);
+      print_endline ("Node: " ^ n);
+      raise s
+
 
 let rec label index updates = function
   | And (x,y) -> (label index updates x) ^ "&&" ^ (label index updates y)

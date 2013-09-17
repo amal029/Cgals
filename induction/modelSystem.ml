@@ -73,24 +73,43 @@ end
 module PropSet = Set.Make(PropType)
 
 let find_subformula_equivalents model = function
-  | {node=n;tls=llabels} as s -> 
+  | {node=n;tls=llabels;tlabels=labs} as s -> 
     let labels = PropSet.of_enum (List.enum llabels) in
     let new_nodes = List.filter (fun ({node=nn;tls=nllabels}) -> 
       let nlabels = PropSet.of_enum (List.enum nllabels) in
       PropSet.subset labels nlabels) model in 
     (* Now we have all the nodes that need to be replaced!! *)
-    (* In place mutbale replacement *)
+    (* In place mutable replacement *)
     let new_nodes = List.map (fun {node=n} -> n.name) new_nodes in
-    let () = List.iter (fun {node=nn} -> 
-      let torep = ref [] in
-      let () = List.iter (fun x -> 
-	if x = n.name then 
-	  torep := !torep @ new_nodes
-	else 
-	  torep := !torep @ [x]
-      ) nn.incoming in
-      nn.incoming <- !torep;
-    ) model in
-    ()
+    if new_nodes = [] then
+      begin
+	print_endline ("Warning: No replacement for this sub-formula attached to node: " ^ n.name
+		       ^ " removing the node form the graph, since it can never happen!");
+	let () = List.iter (fun ({node=nn;guards=gg} as sss) ->
+	  let indices = List.mapi (fun i x -> if x = n.name then i else -1) nn.incoming in 
+	  let left = ref [] in
+	  for c = 0 to (List.length sss.guards) - 1 do
+	    if not (List.exists (fun x -> x = c) indices) then
+	      left := !left @ [List.at sss.guards c];
+	  done;
+	  sss.guards <- !left;
+	  nn.incoming <- List.remove_all nn.incoming n.name;
+	) model in ()
+      end 
+    else
+      let () = List.iter (fun ({node=nn} as t) -> 
+	let torep = ref [] in
+	let gtorep = ref [] in
+	let () = List.iter2 (fun x y -> 
+	  let glist = List.init (List.length new_nodes) (fun _ -> y) in
+	  if x = n.name then
+	    (torep := !torep @ new_nodes; gtorep := !gtorep @ glist)
+	  else 
+	    (torep := !torep @ [x]; gtorep := !gtorep @ [y])
+	) nn.incoming t.guards in
+	nn.incoming <- !torep;
+	t.guards <- !gtorep;
+      ) model in
+      ()
     
     
