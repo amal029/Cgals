@@ -146,7 +146,7 @@ let rec collect_labels = function
     if x = [] then False
     else
       List.reduce (fun x y -> Or (x,y)) (List.map collect_labels x)
-  | Systemj.Abort (_,s,_) | Systemj.Suspend (_,s,_)
+  | Systemj.Abort (_,s,_) | Systemj.Suspend (_,s,_) | Systemj.Trap(_,s,_)
   | Systemj.While (_,s,_) -> collect_labels s
   | Systemj.Present (_,s,Some el,_) -> Or(collect_labels s, collect_labels el)
   | Systemj.Present (_,s,None,_) -> collect_labels s
