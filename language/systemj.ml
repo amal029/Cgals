@@ -90,21 +90,3 @@ let rec collect_signal_declarations = function
   | While (_,s,_) -> collect_signal_declarations s
   | Send _ | Receive _ -> raise (Internal_error "Collect signals: Cannot get send/receive after re-write!!")
 
-(* let rec rewrite_spar = function *)
-(*   | Pause _ | Emit _ | Exit _ | Noop *)
-(*   | Send _ | Receive _ *)
-(*   | Signal _  *)
-(*   | Channel _ as s -> s *)
-(*   | Present (x,s,None,ln) -> Present(x,(rewrite_spar s),None,ln) *)
-(*   | Present (z,s,Some x,ln) -> Present (z, rewrite_spar s, Some (rewrite_spar x), ln) *)
-(*   | Trap (x,s,ln) -> Trap (x,rewrite_spar s, ln) *)
-(*   | Block (s,ln) -> Block (List.map rewrite_spar s, ln) *)
-(*   | Spar (s,ln) -> Spar (List.map rewrite_spar (List.flatten (List.map flatten_spar s)),ln) *)
-(*   | Abort (x,s,ln) -> Abort (x,rewrite_spar s, ln) *)
-(*   | Suspend (x,s,ln) -> Suspend (x,rewrite_spar s, ln) *)
-(*   | While (x,s,ln) -> While (x, rewrite_spar s, ln) *)
-
-(* and flatten_spar = function *)
-(*   | Spar (s,ln) -> List.flatten (List.map flatten_spar s) *)
-(*   | _ as s -> [s] *)
-

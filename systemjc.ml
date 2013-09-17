@@ -33,8 +33,6 @@ try
   let () = print_endline "....Rewriting the ast ..." in
   let channels = List.sort_unique compare (List.flatten (List.map Systemj.collect_channels 
 							   (match ast with |Systemj.Apar(x,_)->x))) in
-  (* let (x,ln) = (match ast with |Systemj.Apar(x,ln)->(x,ln)) in *)
-  (* let ast = Systemj.Apar (List.map Systemj.rewrite_spar x,ln) in *)
   let () = IFDEF DEBUG THEN SS.output_hum Pervasives.stdout (Systemj.sexp_of_ast ast); print_endline "" ELSE () ENDIF in
   let ast = PropositionalLogic.rewrite_ast ast in
   let () = print_endline "....Building Propositional logic trees ..." in

@@ -284,7 +284,8 @@ let rec term = function
   | Systemj.While (_,s,_) -> False
   | Systemj.Suspend (e,s,_) -> And(Not (expr_to_logic e), term s)
   | Systemj.Abort(e,s,_)  -> And(solve_logic(collect_labels s),Or(NextTime (expr_to_logic e), term s))
-  | Systemj.Trap (e,s,_) -> And(solve_logic(collect_labels s), term s) 	(* You can exit it if the body exits it! *)
+  | Systemj.Trap (Systemj.Symbol(e,_),s,_) -> 
+    And(solve_logic(collect_labels s), Or (term s, Proposition (Expr e))) 	(* You can exit it if the body exits it! *)
   | Systemj.Exit (Systemj.Symbol (s,_),_) -> False
   | Systemj.Signal _ 
   | Systemj.Channel _ -> False

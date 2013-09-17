@@ -83,7 +83,8 @@ let find_subformula_equivalents model = function
     let new_nodes = List.map (fun {node=n} -> n.name) new_nodes in
     if new_nodes = [] then
       begin
-	print_endline ("Warning: No replacement for this sub-formula attached to node: " ^ n.name
+	output_hum stdout (sexp_of_logic labs);
+	print_endline ("\nWarning: No replacement for this sub-formula attached to node: " ^ n.name
 		       ^ " removing the node form the graph, since it can never happen!");
 	let () = List.iter (fun ({node=nn;guards=gg} as sss) ->
 	  let indices = List.mapi (fun i x -> if x = n.name then i else -1) nn.incoming in 
