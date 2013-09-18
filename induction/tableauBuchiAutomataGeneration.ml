@@ -106,7 +106,10 @@ let rec expand node nodes_set =
 		    next=node.next@[x]} in
 	expand node nodes_set
       | Brackets x -> expand node nodes_set
-      | _ -> raise (Internal_error "Don't know how to handle the formula!")
+      | _ as s -> 
+	output_hum stdout (sexp_of_logic s); print_endline "";
+	print_endline "^^^^^^^^^^";
+	raise (Internal_error "Don't know how to handle the formula!")
     ) in
     ()
 

@@ -301,6 +301,25 @@ and term_spar r = function
 	       And(term h, term (Systemj.Spar(t,r))))
   | [] -> False
 
+(* Use (a&&b) || (!b&&!a) version of the <-> law, because it will result
+   in smaller graph *)
+let rec stutters = function
+  | Systemj.Noop | Systemj.Emit _ | Systemj.Signal _ 
+  | Systemj.Channel _ | Systemj.Exit _ -> True
+  | Systemj.Pause (Some x,_) -> Or(And(Proposition (Label x), NextTime (Proposition (Label x))), 
+				   And(Not (Proposition (Label x)), NextTime (Not(Proposition (Label x)))))
+  | Systemj.Block (x,_)  
+  | Systemj.Spar (x,_) -> 
+    if x = [] then True
+    else
+      List.reduce (fun x y -> And (x,y)) (List.map stutters x)
+  | Systemj.Abort (_,s,_) | Systemj.Suspend (_,s,_) | Systemj.Trap(_,s,_)
+  | Systemj.While (_,s,_) -> stutters s
+  | Systemj.Present (_,s,Some el,_) -> And(stutters s, stutters el)
+  | Systemj.Present (_,s,None,_) -> stutters s
+  | _ -> raise (Internal_error "Send/Receive after re-writing!")
+
+
 (* This defines the transitions within a statement *)
 let rec move = function
   | Systemj.Noop -> False
@@ -318,7 +337,12 @@ let rec move = function
   | Systemj.Exit (Systemj.Symbol (s,_),_) -> False
   | Systemj.Signal _ 
   | Systemj.Channel _ -> False
-  | Systemj.Suspend (e,s,lc) -> raise (Internal_error ("Suspend currently not supported: " ^ (Reporting.get_line_and_column lc)))
+  | Systemj.Suspend (e,s,lc) -> 
+    let sigma = solve_logic (expr_to_logic e) in
+    let inS = (solve_logic (collect_labels s)) in
+    let mS = (solve_logic (move s)) in
+    let stutterS = solve_logic (stutters s) in
+    solve_logic (Or(And(And(NextTime sigma,inS),stutterS),And(NextTime (Not sigma), mS)))
   | _ -> raise (Internal_error "Inst: Cannot get send/receive after rewriting!!")
 and move_seq r = function
   | h::t -> 

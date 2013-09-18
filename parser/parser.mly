@@ -83,7 +83,7 @@ stmt:
     | send TSEMICOLON {$1}
     | receive TSEMICOLON {$1}
     | twhile {$1}
-    | trap {$1}
+    /*| trap {$1}*/
 ;
 
 par:
