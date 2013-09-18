@@ -211,15 +211,15 @@ let rec inst = function
     let key = Proposition (Expr ("$" ^ uniq)) in
     let () = Hashtbl.add update_tuple_tbl key (Update (match s with | Systemj.Symbol (s,_) -> s)) in
     (* FIXME: Just trying out automatic causality analysis *)
-    (* And (NextTime key, Proposition (Expr (match s with Systemj.Symbol (s,_)->s))) *)
-    NextTime key
+    And (NextTime key, NextTime (Proposition (Expr (match s with Systemj.Symbol (s,_)->s))))
+    (* NextTime key *)
   | Systemj.Emit (s,None,_) as t -> 
     let () = output_hum stdout (Systemj.sexp_of_stmt t) in
     raise (Internal_error "Emit stmt without a unique identifier cannot be initialized for data propositions")
   | Systemj.Pause _ -> False
-  | Systemj.Present (e,t,Some el,_) -> Or(And(expr_to_logic e, inst t), And(Not (expr_to_logic e), inst el))
+  | Systemj.Present (e,t,Some el,_) -> Or(And(NextTime (expr_to_logic e), inst t), And(NextTime (Not (expr_to_logic e)), inst el))
   (* FIXME: Check if this is correct logic? *)
-  | Systemj.Present (e,t,None,_) -> Or(And(expr_to_logic e, inst t), And(Not (expr_to_logic e), True))
+  | Systemj.Present (e,t,None,_) -> Or(And(NextTime (expr_to_logic e), inst t), And(NextTime (Not (expr_to_logic e)), True))
   | Systemj.Block (sl,_) 
   | Systemj.Spar (sl,_) -> 
     if sl = [] then True 
@@ -237,10 +237,10 @@ let rec enter = function
   | Systemj.Emit _ -> False
   | Systemj.Pause (Some x,_) -> NextTime (Proposition (Label x))
   | Systemj.Present (e,t,Some el,_) -> Or(And (NextTime (Not (solve_logic(collect_labels el))), 
-					       And (enter t, expr_to_logic e)), 
+					       And (enter t, NextTime (expr_to_logic e))), 
 					  And (NextTime (Not (solve_logic(collect_labels t))),
-					       And (enter el, Not (expr_to_logic e))))
-  | Systemj.Present (e,t,None,_) -> And (enter t, expr_to_logic e)
+					       And (enter el, NextTime (Not (expr_to_logic e)))))
+  | Systemj.Present (e,t,None,_) -> And (enter t, NextTime (expr_to_logic e))
   | Systemj.Block (sl,t) as s -> enter_seq t sl
   | Systemj.Spar (sl,t) -> enter_spar t sl
   | Systemj.While (_,s,_)
@@ -277,7 +277,7 @@ let rec term = function
   | Systemj.Emit _ -> False
   | Systemj.Pause (Some x,_) -> Proposition (Label x)
   | Systemj.Pause (None,lc) -> raise (Internal_error ("Pause without a label: " ^ (Reporting.get_line_and_column lc)))
-  | Systemj.Present (e,t,Some el,_) -> Or(And(And(term t, Not(solve_logic(collect_labels el))),expr_to_logic e),
+  | Systemj.Present (e,t,Some el,_) -> Or(And(And(term t, Not(solve_logic(collect_labels el))),NextTime(expr_to_logic e)),
 					  And(term el, Not(solve_logic (collect_labels t))))
   | Systemj.Present (e,t,None,_) -> term t
   | Systemj.Block (sl,r) -> term_seq r sl
