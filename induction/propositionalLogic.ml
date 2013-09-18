@@ -26,11 +26,11 @@ let rewrite_send cnt = function
     let req_sym = Systemj.Symbol ((sym ^ "_req"),lc1) in
     cnt := !cnt + 1;
     let a1 = Systemj.Abort (Systemj.Esymbol (ack_sym,lc),
-			    Systemj.While(Systemj.True,Systemj.Pause(Some ("L" ^ (string_of_int !cnt)),lc),lc),lc) in
+			    Systemj.While(Systemj.True,Systemj.Pause(Some ("$" ^ (string_of_int !cnt)),lc),lc),lc) in
     cnt := !cnt + 1;
     let a2 = Systemj.Abort (Systemj.Not(Systemj.Esymbol (ack_sym,lc),lc),
 			    Systemj.While(Systemj.True,
-					  Systemj.Block([Systemj.Pause(Some ("L" ^ (string_of_int !cnt)),lc);
+					  Systemj.Block([Systemj.Pause(Some ("$" ^ (string_of_int !cnt)),lc);
 							 Systemj.Emit (req_sym,None,lc)],lc),lc),lc) in
     (* Systemj.Block([Systemj.Signal(None,ack_sym,lc);Systemj.Signal(None,req_sym,lc);a1;a2],lc) *)
     Systemj.Block([a1;a2],lc)
@@ -42,18 +42,18 @@ let rewrite_receive cnt = function
     let req_sym = Systemj.Symbol ((sym ^ "_req"),lc1) in
     cnt := !cnt + 1;
     let a1 = Systemj.Abort (Systemj.Not(Systemj.Esymbol (req_sym,lc),lc),
-			    Systemj.While(Systemj.True,Systemj.Pause(Some ("L" ^ (string_of_int !cnt)),lc),lc),lc) in
+			    Systemj.While(Systemj.True,Systemj.Pause(Some ("$" ^ (string_of_int !cnt)),lc),lc),lc) in
     cnt := !cnt + 1;
     let a2 = Systemj.Abort (Systemj.Esymbol (req_sym,lc),
 			    Systemj.While(Systemj.True,
-					  Systemj.Block([Systemj.Pause(Some ("L" ^ (string_of_int !cnt)),lc);
+					  Systemj.Block([Systemj.Pause(Some ("$" ^ (string_of_int !cnt)),lc);
 							 Systemj.Emit (ack_sym,None,lc)],lc),lc),lc) in
     (* Systemj.Block([Systemj.Signal(None,ack_sym,lc);Systemj.Signal(None,req_sym,lc);a1;a2],lc) *)
     Systemj.Block([a1;a2],lc)
   | _ -> raise (Internal_error "Tried to rewrite a non-receive as receive")
 
 let rec add_labels_and_rewrite cnt = function
-  | Systemj.Pause (None,x) as s -> cnt := !cnt + 1; Systemj.Pause(Some ("L" ^ (string_of_int !cnt)), x)
+  | Systemj.Pause (None,x) as s -> cnt := !cnt + 1; Systemj.Pause(Some ("$" ^ (string_of_int !cnt)), x)
   | Systemj.Pause _ as s -> s
   | Systemj.Present (e,t,Some el,x) -> 
     let a = add_labels_and_rewrite cnt t in
@@ -301,7 +301,7 @@ and term_spar r = function
 	       And(term h, term (Systemj.Spar(t,r))))
   | [] -> False
 
-(* Use (a&&b) || (!b&&!a) version of the <-> law, because it will result
+(* Use (a /\ b) \/ (~b /\ ~a) version of the <=> law, because it will result
    in smaller graph *)
 let rec stutters = function
   | Systemj.Noop | Systemj.Emit _ | Systemj.Signal _ 

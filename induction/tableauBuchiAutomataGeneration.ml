@@ -65,14 +65,14 @@ let rec expand node nodes_set =
 	(* Contradiction, abondon! *)
 	if n = False || List.exists (fun x -> x = (negate n)) node.old then 
 	  (* Raise an error stating that there is a contradiction in the formula!! *)
-	  (* if n <> False then *)
-	  (*   let () = output_hum stdout (sexp_of_logic (negate n)) in *)
-	  (*   let () = print_string " && " in *)
-	  (*   let () = output_hum stdout (sexp_of_logic n) in *)
-	  (*   let () = print_endline "" in *)
-	  (*   print_endline "Warning : Contradiction"; *)
-	  (* else *)
-	  (*   let () =  print_endline "Warning: False proposition" in *)
+	  if n <> False then
+	    let () = output_hum stdout (sexp_of_logic (negate n)) in
+	    let () = print_string " && " in
+	    let () = output_hum stdout (sexp_of_logic n) in
+	    let () = print_endline "" in
+	    print_endline "Warning : Contradiction";
+	  else
+	    let () =  print_endline "Warning: False proposition" in
 	    ()
 	else 
 	  let () = node.old <- node.old @ [n] in expand node nodes_set
