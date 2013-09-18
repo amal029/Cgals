@@ -20,6 +20,7 @@ rule lexer = parse
   | "signal" {Parser.TSignal}
   | "channel" {Parser.TChannel}
   | "&&" {Parser.And}
+  | ":" {Parser.TColon}
   | "par" {Parser.TSplit}
   | "||" {Parser.Or}
   | "trap" {Parser.TTrap}

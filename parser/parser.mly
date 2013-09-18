@@ -23,7 +23,7 @@
 %token TPlus TMinus TTimes TDiv TPow TOP TSEMICOLON TCP TEqual TOB TCB TComma TLess TLessEqual TGreater TGreaterEqual TEqualEqual TMod TASYNC
 %token And Or Where TXCL TQ TSuspend TAbort TWhile TTrue TFalse TWhile TTrap
 %token TLbrack TRbrack TColon TPresent TEof TLShift TRShift TElse TExit TEmit
-%token TMain TIn TOut TOtherwise TPar TFor TSignal TChannel TPause
+%token TMain TIn TOut TOtherwise TPar TFor TSignal TChannel TPause TColon
 %token TInt8 TInt16 TInt32 TInt64 TInt8s TInt16s TInt32s TInt64s TFloat8 TFloat32 TFloat64 TFloat16
 %token TExtern TSplit TAT
 
@@ -79,7 +79,7 @@ stmt:
     | TExit TOP symbol TCP TSEMICOLON {Systemj.Exit($3,ln())}
     | TEmit symbol TSEMICOLON {Systemj.Emit($2,None,ln())}
     | TPause TSEMICOLON {Systemj.Pause(None,ln())}
-    /*| TSplit TOP stmtlist TCP {Systemj.Spar($3,ln())}*/
+    | symbol TColon TPause TSEMICOLON {Systemj.Pause(Some (match $1 with Systemj.Symbol (x,_) -> x),ln())}
     | send TSEMICOLON {$1}
     | receive TSEMICOLON {$1}
     | twhile {$1}

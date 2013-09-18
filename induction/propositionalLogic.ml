@@ -53,7 +53,8 @@ let rewrite_receive cnt = function
   | _ -> raise (Internal_error "Tried to rewrite a non-receive as receive")
 
 let rec add_labels_and_rewrite cnt = function
-  | Systemj.Pause (_,x) as s -> cnt := !cnt + 1; Systemj.Pause(Some ("L" ^ (string_of_int !cnt)), x)
+  | Systemj.Pause (None,x) as s -> cnt := !cnt + 1; Systemj.Pause(Some ("L" ^ (string_of_int !cnt)), x)
+  | Systemj.Pause _ as s -> s
   | Systemj.Present (e,t,Some el,x) -> 
     let a = add_labels_and_rewrite cnt t in
     let b = add_labels_and_rewrite cnt el in
@@ -284,8 +285,7 @@ let rec term = function
   | Systemj.While (_,s,_) -> False
   | Systemj.Suspend (e,s,_) -> And(Not (expr_to_logic e), term s)
   | Systemj.Abort(e,s,_)  -> And(solve_logic(collect_labels s),Or(NextTime (expr_to_logic e), term s))
-  | Systemj.Trap (Systemj.Symbol(e,_),s,_) -> 
-    And(solve_logic(collect_labels s), Or (term s, Proposition (Expr e))) 	(* You can exit it if the body exits it! *)
+  | Systemj.Trap (e,s,_) -> And(solve_logic(collect_labels s), term s) 	(* You can exit it if the body exits it! *)
   | Systemj.Exit (Systemj.Symbol (s,_),_) -> False
   | Systemj.Signal _ 
   | Systemj.Channel _ -> False

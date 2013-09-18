@@ -17,10 +17,10 @@
 	  abort(TRLITAVI){
 	    while(true){
 	      abort(AS){
-		while(true){pause;}
+		while(true){ TUTU: pause;}
 	      }
 	      abort(sVP||VS){
-		while(true){pause;}
+		while(true){TUTU1: pause;}
 	      }
 	      emit resetTimer;
 	    }
@@ -36,7 +36,7 @@
       while(true){
 	VP?;
 	emit sVP;
-	pause;
+      TUTU2: pause;
       }
     } /* Remove this block to avoid an error */
 }
