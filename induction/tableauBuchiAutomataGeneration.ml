@@ -122,7 +122,11 @@ let rec expand index node nodes_set =
 		    neew=node.neew;old=node.old@[n];
 		    next=node.next@[x]} in
 	expand index node nodes_set
-      | Brackets x -> expand index node nodes_set
+      | Brackets x as s -> 
+	output_hum stderr (sexp_of_logic s);
+	print_endline "\n^^^^^^^^^^^^^^^^^^^^^^^^^^^";
+	raise (Internal_error "Brackets should have been removed in the above formula")
+	(* expand index node nodes_set *)
       | _ as s -> 
 	output_hum stdout (sexp_of_logic s); print_endline "";
 	print_endline "^^^^^^^^^^";

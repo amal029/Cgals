@@ -125,7 +125,7 @@ let rec props = function
 let rec push_not = function
   | Not x -> invert_not x
   | True | False as s -> s
-  | Brackets x -> Brackets (push_not x)
+  | Brackets x -> push_not x
   | Proposition _ as s -> s
   | NextTime x -> NextTime (push_not x)
   | Or (x,y) -> Or (push_not x, push_not y)
@@ -135,8 +135,10 @@ and invert_not = function
   | False -> True
   | Or (x,y) -> push_not (And (Not x, Not y))
   | And (x,y) -> push_not (Or (Not x, Not y))
-  | Not x -> push_not x 		(* Not Not x *)
-  | _ as s -> Not(push_not s)
+  | Not x -> push_not x 
+  | Brackets x -> push_not (Not x)
+  | NextTime x -> push_not (NextTime (Not x))
+  | _ as s -> Not s
 
 let rec collect_labels = function
   | Systemj.Noop | Systemj.Emit _ | Systemj.Signal _ 
