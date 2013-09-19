@@ -31,6 +31,8 @@ rule lexer = parse
   | "if" {Parser.TPresent}
   | "else" {Parser.TElse}
   | "abort" {Parser.TAbort}
+  | "send" {Parser.TSend}
+  | "receive" {Parser.TReceive}
   | "suspend" {Parser.TSuspend}
   | "exit" {Parser.TExit}
   | "emit" {Parser.TEmit}

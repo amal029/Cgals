@@ -25,7 +25,7 @@
 %token TLbrack TRbrack TColon TPresent TEof TLShift TRShift TElse TExit TEmit
 %token TMain TIn TOut TOtherwise TPar TFor TSignal TChannel TPause TColon
 %token TInt8 TInt16 TInt32 TInt64 TInt8s TInt16s TInt32s TInt64s TFloat8 TFloat32 TFloat64 TFloat16
-%token TExtern TSplit TAT
+%token TExtern TSplit TAT TSend TReceive
 
 /* Constructors with an argument */
 %token <string> TInt
@@ -40,6 +40,7 @@
 %left TPow
 %left TOP TCP
 %left And Or
+%left TXCL
 %nonassoc TUminus /* useful for difference between -2 and 1 - 2*/
 
 /* The start of the parsing function */
@@ -76,7 +77,7 @@ stmt:
     | present {$1}
     | abort {$1}
     | suspend {$1}
-    | TExit TOP symbol TCP TSEMICOLON {Systemj.Exit($3,ln())}
+    /*| TExit TOP symbol TCP TSEMICOLON {Systemj.Exit($3,ln())}*/
     | TEmit symbol TSEMICOLON {Systemj.Emit($2,None,ln())}
     | TPause TSEMICOLON {Systemj.Pause(None,ln())}
     | symbol TColon TPause TSEMICOLON {Systemj.Pause(Some (match $1 with Systemj.Symbol (x,_) -> x),ln())}
@@ -99,9 +100,10 @@ receive:
     | symbol TQ  {Systemj.Receive($1,ln())}
 ;
 
-trap:
+/*trap:
     | TTrap TOP symbol TCP stmt {Systemj.Trap($3,$5,ln())}
-;
+;*/
+
 suspend:
     | TSuspend TOP expr TCP stmt {Systemj.Suspend($3,$5,ln())}
 ;
@@ -123,7 +125,6 @@ expr:
     | TXCL expr {Systemj.Not($2,ln())}
     | expr Or expr {Systemj.Or($1,$3,ln())}
     | expr And expr {Systemj.And($1,$3,ln())}
-    | expr And expr {Systemj.And($1,$3,ln())}
     | TOP expr TCP {Systemj.Brackets($2,ln())}
 ;
 
@@ -135,5 +136,6 @@ bool_expr:
 symbol:
     | TSymbol {Systemj.Symbol ($1, ln())} /*e.g.: t*/
 ;
+
 %%
 (* This is the trailer *)
