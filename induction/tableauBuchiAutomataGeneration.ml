@@ -34,7 +34,7 @@ let negate = function
     print_endline "^^^^^^^^^^";
     raise (Internal_error "Don't know how to negate non-proposition clauses!!")
 
-let rec expand node nodes_set = 
+let rec expand index node nodes_set = 
   match node.neew with
   | [] -> 
     (try
@@ -52,7 +52,7 @@ let rec expand node nodes_set =
 		 incoming=[node.name];
 		 neew=node.next;
 		 old=[]; next=[]} in
-       expand st nodes_set)
+       expand index st nodes_set)
   | _ -> 
     (* Here n stands for $\nu$ the greek letter *)
     let n = List.hd node.neew in
@@ -63,19 +63,36 @@ let rec expand node nodes_set =
       | True
       | False -> 
 	(* Contradiction, abondon! *)
-	if n = False || List.exists (fun x -> x = (negate n)) node.old then 
+	let s = 
+	  if (match n with | Proposition (Expr t) -> t.[0] = '$' | _ -> false) then
+	    try 
+	      (Hashtbl.find (List.at !update_tuple_proposition_ll index) n)
+	    with | _ as s ->
+	      output_hum stdout (sexp_of_logic n);
+	      raise s
+	  else n in
+	if n = False || List.exists (fun x -> x = (negate n)) node.old 
+	|| List.exists (fun x -> x = (negate s)) node.old then
+	  (* TODO: Need to change this *)
 	  (* Raise an error stating that there is a contradiction in the formula!! *)
 	  if n <> False then
-	    let () = output_hum stdout (sexp_of_logic (negate n)) in
-	    let () = print_string " && " in
-	    let () = output_hum stdout (sexp_of_logic n) in
-	    let () = print_endline "" in
-	    print_endline "Warning : Contradiction";
+	    if s = n then
+	      let () = output_hum stdout (sexp_of_logic (negate n)) in
+	      let () = print_string " /\\ " in
+	      let () = output_hum stdout (sexp_of_logic n) in
+	      let () = print_endline "\n^^^^^^^^^^^^^^^^^^" in
+	      print_endline "Warning : Contradiction";
+	    else
+	      let () = output_hum stdout (sexp_of_logic (negate s)) in
+	      let () = print_string " /\\ " in
+	      let () = output_hum stdout (sexp_of_logic s) in
+	      let () = print_endline "\n^^^^^^^^^^^^^^^^^^" in
+	      print_endline "Warning : Contradiction";
 	  else
 	    let () =  print_endline "Warning: False proposition" in
 	    ()
 	else 
-	  let () = node.old <- node.old @ [n] in expand node nodes_set
+	  let () = node.old <- node.old @ [n] in expand index node nodes_set
       | And (x,y) -> 
 	let ups = ref [x;y] in
 	let () = List.iter (fun y -> ups := (List.remove_all !ups y)) node.old in
@@ -83,7 +100,7 @@ let rec expand node nodes_set =
 		  incoming=node.incoming;
 		  neew=node.neew @ !ups;
 		  old=node.old @ [n]; next=node.next} in
-	expand st nodes_set
+	expand index st nodes_set
       | Or (x,y) -> 
 	let nn1 = new_name () in
 	let ups = ref [x] in
@@ -98,14 +115,14 @@ let rec expand node nodes_set =
 	let node2 = {name=nn2;father=node.name;incoming=node.incoming;
 		     neew=node.neew @ !ups;old=node.old @ [n];
 		     next=node.next} in
-	let () = expand node1 nodes_set in
-	expand node2 nodes_set
+	let () = expand index node1 nodes_set in
+	expand index node2 nodes_set
       | NextTime x -> 
 	let node = {name=node.name;father=node.name;incoming=node.incoming;
 		    neew=node.neew;old=node.old@[n];
 		    next=node.next@[x]} in
-	expand node nodes_set
-      | Brackets x -> expand node nodes_set
+	expand index node nodes_set
+      | Brackets x -> expand index node nodes_set
       | _ as s -> 
 	output_hum stdout (sexp_of_logic s); print_endline "";
 	print_endline "^^^^^^^^^^";
@@ -113,14 +130,14 @@ let rec expand node nodes_set =
     ) in
     ()
 
-let create_graph formula = 
+let create_graph index formula = 
   let nn = new_name () in
   let st = {name=nn; father=nn;
 	    incoming=["Init"];
 	    neew=[formula];
 	    old=[]; next=[]} in
   let nodes_set = ref [] in
-  let () = expand st nodes_set in
+  let () = expand index st nodes_set in
   !nodes_set
 
 let state_label propositions powerset = function

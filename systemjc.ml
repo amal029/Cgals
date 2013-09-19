@@ -7,10 +7,10 @@ module SSL = Sexplib.Std
 module PL = PropositionalLogic
 open TableauBuchiAutomataGeneration
 
-let rec map4 f a b c d = 
-  match (a,b,c,d) with
-  | ([],[],[],[]) -> []
-  | ((h1::t1),(h2::t2),(h3::t3),(h4::t4)) -> (f h1 h2 h3 h4) :: map4 f t1 t2 t3 t4
+let rec map5 f a b c d e = 
+  match (a,b,c,d,e) with
+  | ([],[],[],[],[]) -> []
+  | ((h1::t1),(h2::t2),(h3::t3),(h4::t4), (h5::t5)) -> (f h1 h2 h3 h4 h5) :: map5 f t1 t2 t3 t4 t5
   | _ -> failwith "Lists not of equal length"
 
 let usage_msg = "Usage: systemjc [options] <filename>\nsee -help for more options" in
@@ -41,7 +41,7 @@ try
     let () = SS.output_hum Pervasives.stdout (PropositionalLogic.sexp_of_logic x) in
     print_endline "\n\n\n\n\n\n-----------------------------------------------\n\n\n\n") ltls ELSE () ENDIF in
   let () = print_endline "....Building Buchi Automata ..." in
-  let buchi_automatas = List.map TableauBuchiAutomataGeneration.create_graph ltls in
+  let buchi_automatas = List.mapi TableauBuchiAutomataGeneration.create_graph ltls in
   let labeled_buchi_automatas = List.map2 TableauBuchiAutomataGeneration.add_labels ltls buchi_automatas in
   let () = IFDEF DEBUG THEN List.iter (fun x -> 
     let () = SS.output_hum Pervasives.stdout (SSL.sexp_of_list TableauBuchiAutomataGeneration.sexp_of_labeled_graph_node x) in
@@ -113,7 +113,8 @@ try
       ()
     else 
       try
-	let uppaal_automatas = map4 Uppaal.make_xml (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_signal_declarations x)
+	let uppaal_automatas = map5 Uppaal.make_xml (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_signal_declarations x)
+	  (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_input_signal_declarations x)
 	  (List.init (List.length labeled_buchi_automatas) (fun x -> x)) (List.rev !init) labeled_buchi_automatas in
 	let strings = Buffer.create(10000) in
 	let () = List.iter (Buffer.add_buffer strings) uppaal_automatas in
@@ -132,7 +133,8 @@ try
     else 
       try
 	let fd = open_out !promela in
-	let promela_model = map4 Promela.make_promela (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_signal_declarations x)
+	let promela_model = map5 Promela.make_promela (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_signal_declarations x)
+	  (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_input_signal_declarations x)
 	  (List.init (List.length labeled_buchi_automatas) (fun x -> x)) (List.rev !init) labeled_buchi_automatas in
 	(* make the channel declarations in the global space!! *)
 	let promela_channels = List.fold_left Pretty.append Pretty.empty (List.map (fun x -> Pretty.text ("bool "^x^";\n"))channels) in

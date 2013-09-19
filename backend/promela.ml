@@ -33,32 +33,7 @@ let get_outgoings o = function
       print_endline ("Node: " ^ n);
       raise s
 
-
-let rec label index updates = function
-  | And (x,y) -> (label index updates x) ^ "&&" ^ (label index updates y)
-  | Or (x,y) -> (label index updates x) ^ "||" ^ (label index updates y)
-  | Not (Proposition x) as s-> "!"^(match x with 
-    | Label x -> x 
-    | Expr x ->
-      if x.[0] = '$' then 
-	let () = output_hum stdout (sexp_of_logic s) in
-	raise (Internal_error "^^^^^^^^^^^^ Not emit proposition impossible!")
-      else x
-    | Update x -> raise (Internal_error ("Tried to update " ^ x ^ " on a guard!!")))
-  | Proposition x as s -> (match x with 
-    | Label x -> x 
-    | Expr x -> 
-      if x.[0] = '$' then 
-	begin updates :=  (Hashtbl.find (L.nth !update_tuple_tbl_ll index) s) :: !updates; "true" end
-      else x
-    | Update x -> raise (Internal_error ("Tried to update " ^ x ^ " on a guard!!")))
-  | True -> "true"
-  | False -> "false"
-  | _ as s -> 
-    let () = output_hum stdout (sexp_of_logic s) in
-    raise (Internal_error ("Got a non And proposition type when building transition labels" ))
-
-let make_body o index signals = function
+let make_body o index signals isignals = function
   (* Make the body of the process!! *)
   | ({name=n},tlabel,_) -> 
     let o = (match Hashtbl.find_option o n with Some x -> x | None -> []) in
@@ -71,10 +46,11 @@ let make_body o index signals = function
       if o <> [] then
 	L.map2 (fun x g ->
 	  let updates = ref [] in
-	  let g = label index updates g in
+	  let g = Util.label index updates isignals g in
 	  let updates = List.unique (List.map (fun (Update x) ->x) !updates) in
 	  let to_false = ref signals in
 	  let () = L.iter (fun x -> to_false := L.filter (fun y -> y <> x) !to_false) updates in
+	  (* let () = L.iter (fun x -> to_false := L.filter (fun y -> y <> x) !to_false) isignals in *)
 	  ((if g <> "" then (":: (" ^ g ^ ") -> ") else (":: true -> ")) >> text)
 	  (* These are the updates to be made here!! *)
 	  ++ L.fold_left (++) empty (L.mapi (fun i x -> ((x ^ "=true;\t") >> text)) updates)
@@ -86,17 +62,17 @@ let make_body o index signals = function
     ++ ("fi;\n" >> text)
       
       
-let make_process o index signals init lgn = 
+let make_process o index signals isignals init lgn = 
   (("active proctype CD" ^ (string_of_int index) ^ "(") >> text) 
   ++ (L.fold_left (++) empty) (L.mapi (make_args (L.length signals)) signals)
   ++ ("){\n" >> text)
   ++ (("goto " ^ init ^ ";\n") >> text)
-  ++ ((L.reduce (++) (L.map (fun x -> make_body o index signals (x.node,x.tlabels,x.guards)) lgn)) >> (4 >> indent))
+  ++ ((L.reduce (++) (L.map (fun x -> make_body o index signals isignals (x.node,x.tlabels,x.guards)) lgn)) >> (4 >> indent))
   ++ ("}\n" >> text)
   ++ (" " >> line)
 
-let make_promela signals index init lgn = 
+let make_promela signals isignals index init lgn = 
   let o = Hashtbl.create 1000 in
   let () = L.iter (fun x -> get_outgoings o (x.node,x.guards)) lgn in
-  group ((make_process o index signals init lgn) ++ (" " >> line))
+  group ((make_process o index signals isignals init lgn) ++ (" " >> line))
     

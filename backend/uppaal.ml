@@ -20,33 +20,8 @@ open TableauBuchiAutomataGeneration
 
 exception Internal_error of string
 
-let rec label index updates = function
-  | And (x,y) -> (label index updates x) ^ "&amp;&amp;" ^ (label index updates y)
-  | Or (x,y) -> (label index updates x) ^ "||" ^ (label index updates y)
-  | Not (Proposition x) as s-> "!"^(match x with 
-    | Label x -> x 
-    | Expr x ->
-      if x.[0] = '$' then 
-	let () = output_hum stdout (sexp_of_logic s) in
-	raise (Internal_error "^^^^^^^^^^^^ Not emit proposition impossible!")
-      else x
-    | Update x -> raise (Internal_error ("Tried to update " ^ x ^ " on a guard!!")))
-  | Proposition x as s -> (match x with 
-    | Label x -> x 
-    | Expr x -> 
-      if x.[0] = '$' then 
-	let () = IFDEF DEBUG THEN output_hum stdout (sexp_of_logic s) ELSE () ENDIF in
-	let () = IFDEF DEBUG THEN print_endline (string_of_int index) ELSE () ENDIF in
-	begin updates :=  (Hashtbl.find (List.nth !update_tuple_tbl_ll index) s) :: !updates; "true" end
-      else x
-    | Update x -> raise (Internal_error ("Tried to update " ^ x ^ " on a guard!!")))
-  | True -> "true"
-  | False -> "false"
-  | _ as s -> 
-    let () = output_hum stdout (sexp_of_logic s) in
-    raise (Internal_error ("Got a non And proposition type when building transition labels" ))
 (* Make transitions *)
-let make_transitions index init ob signals = function
+let make_transitions index init ob signals isignals = function
   | (({name=n;incoming=i}),tlabel,guards) -> 
     let () = IFDEF DEBUG THEN print_endline (string_of_int index) ELSE () ENDIF in
     if i <> [] then
@@ -56,17 +31,15 @@ let make_transitions index init ob signals = function
 	let () = B.add_string ob ("<target ref=\"" ^ n ^ "\"/>\n") in
 	(* This is where the labels go! *)
 	let updates = ref [] in
-	let g = label index updates g in
+	let g = Util.label index updates isignals g in
 	let updates = List.unique (List.map (fun (Update x) ->x) !updates) in
 	let () = (if g <> "" then
 	    let () = B.add_string ob "<label kind=\"guard\">" in
 	    B.add_string ob g;
 	    B.add_string ob "\n</label>\n") in
 	let to_false = ref signals in
-	let () = IFDEF DEBUG THEN print_endline ("FALSE: " ^ (string_of_int (List.length !to_false))) ELSE () ENDIF in
-	let () = IFDEF DEBUG THEN print_int index; print_endline "INDEX" ELSE () ENDIF in
-	let () = IFDEF DEBUG THEN print_int (List.length !to_false); print_endline "LENGTH" ELSE () ENDIF in
 	let () = List.iter (fun x -> to_false := List.filter (fun y -> y <> x) !to_false) updates in
+	(* let () = List.iter (fun x -> to_false := List.filter (fun y -> y <> x) !to_false) isignals in *)
 	let () = B.add_string ob "<label kind=\"assignment\">" in
 	let () = List.iteri (fun i x -> 
 	  let () = B.add_string ob (x ^ "=true") in
@@ -96,7 +69,7 @@ let ss1 = ref []
 
 (* Outputs the XML file for Uppaal model-checker *)
 (* This is for each clock-domain *)
-let make_xml signals index init lgn = 
+let make_xml signals isignals index init lgn = 
   let ob = B.create(10000) in
   let () = B.add_string ob "<template>\n" in
   counter := !counter + 1;
@@ -122,7 +95,7 @@ let make_xml signals index init lgn =
   let () = List.iter (make_locations ob) (List.map (fun x -> (x.node,x.tlabels)) lgn) in
   let () = B.add_string ob ("<init ref=\"" ^ init ^ "\"/>\n") in
   (* Make transitions *)
-  let () = List.iter (make_transitions index init ob signals) (List.map (fun x -> (x.node,x.tlabels,x.guards)) lgn) in
+  let () = List.iter (make_transitions index init ob signals isignals) (List.map (fun x -> (x.node,x.tlabels,x.guards)) lgn) in
   (* Add the system declaration *)
   let () = B.add_string ob "</template>\n" in 
   ob

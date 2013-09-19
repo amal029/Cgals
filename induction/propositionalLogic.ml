@@ -203,6 +203,8 @@ let rec solve_logic = function
    respect to the logical clock *)
 let update_tuple_tbl = Hashtbl.create 1000
 let update_tuple_tbl_ll = ref []
+let update_tuple_proposition = Hashtbl.create 1000
+let update_tuple_proposition_ll = ref []
 
 let rec inst = function
   | Systemj.Noop -> True
@@ -210,9 +212,9 @@ let rec inst = function
   | Systemj.Emit (s,Some uniq,_) -> 
     let key = Proposition (Expr ("$" ^ uniq)) in
     let () = Hashtbl.add update_tuple_tbl key (Update (match s with | Systemj.Symbol (s,_) -> s)) in
-    (* FIXME: Just trying out automatic causality analysis *)
-    And (NextTime key, NextTime (Proposition (Expr (match s with Systemj.Symbol (s,_)->s))))
-    (* NextTime key *)
+    let exprr = (Proposition (Expr (match s with Systemj.Symbol (s,_)->s))) in
+    let () = Hashtbl.add update_tuple_proposition key exprr in
+    NextTime key
   | Systemj.Emit (s,None,_) as t -> 
     let () = output_hum stdout (Systemj.sexp_of_stmt t) in
     raise (Internal_error "Emit stmt without a unique identifier cannot be initialized for data propositions")
@@ -382,8 +384,10 @@ let build_propositional_tree_logic = function
     List.map (fun x -> 
       let control_logic = solve_logic (push_not (build_ltl x)) in
       update_tuple_tbl_ll := !update_tuple_tbl_ll @ [Hashtbl.copy update_tuple_tbl];
+      update_tuple_proposition_ll := !update_tuple_proposition_ll @ [Hashtbl.copy update_tuple_proposition];
       let () = IFDEF PDEBUG THEN print_int (List.length !update_tuple_tbl_ll); print_endline "-- LEN" ELSE () ENDIF in
       let () = Hashtbl.clear update_tuple_tbl in
+      let () = Hashtbl.clear update_tuple_proposition in
       control_logic) x
 
 let rec string_of_logic = function

@@ -79,7 +79,7 @@ let rec collect_channels = function
 let rec collect_signal_declarations = function
   | Pause _ | Emit _ | Exit _ | Noop
   | Channel _ -> []
-  | Signal (_,Symbol (s,_),_) -> [s]
+  | Signal (io,Symbol (s,_),_) -> [s]
   | Present (_,s,None,_) -> collect_signal_declarations s
   | Present (_,s,Some x,_) -> collect_signal_declarations s @ collect_signal_declarations x
   | Trap (_,s,_) -> collect_signal_declarations s
@@ -88,5 +88,19 @@ let rec collect_signal_declarations = function
   | Abort (_,s,_) -> collect_signal_declarations s
   | Suspend (_,s,_) -> collect_signal_declarations s
   | While (_,s,_) -> collect_signal_declarations s
+  | Send _ | Receive _ -> raise (Internal_error "Collect signals: Cannot get send/receive after re-write!!")
+
+let rec collect_input_signal_declarations = function
+  | Pause _ | Emit _ | Exit _ | Noop
+  | Channel _ -> []
+  | Signal (io,Symbol (s,_),_) -> (match io with Some _ -> [s] | None -> [])
+  | Present (_,s,None,_) -> collect_input_signal_declarations s
+  | Present (_,s,Some x,_) -> collect_input_signal_declarations s @ collect_input_signal_declarations x
+  | Trap (_,s,_) -> collect_input_signal_declarations s
+  | Block (s,_) 
+  | Spar (s,_) -> List.flatten (List.map collect_input_signal_declarations s)
+  | Abort (_,s,_) -> collect_input_signal_declarations s
+  | Suspend (_,s,_) -> collect_input_signal_declarations s
+  | While (_,s,_) -> collect_input_signal_declarations s
   | Send _ | Receive _ -> raise (Internal_error "Collect signals: Cannot get send/receive after re-write!!")
 
