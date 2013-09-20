@@ -1,4 +1,4 @@
-CC=ocamlopt -annot
+CCC ?= ocamlopt -annot
 OCAMLOPTS=-a
 LANGUAGELIB=systemj.cmxa
 REPORTLIB=error.cmxa
@@ -12,13 +12,13 @@ all: logic.cmxa
 
 
 logic.cmxa: logic.cmx
-	$(CC) $(OCAMLOPTS) -I $(REPORTDIR) -I $(LANGUAGEDIR) propositionalLogic.cmx \
+	$(CCC) $(OCAMLOPTS) -I $(REPORTDIR) -I $(LANGUAGEDIR) propositionalLogic.cmx \
 	tableauBuchiAutomataGeneration.cmx modelSystem.cmx -o $@
 
 logic.cmx:
 	@echo $(BATDIR)
 	@echo $(SEXPLIB)
-	$(CC) -pp "camlp4o -I $(TYPECONV) -I $(SEXPLIB)			\
+	$(CCC) -pp "camlp4o -I $(TYPECONV) -I $(SEXPLIB)			\
 	pa_type_conv.cma pa_sexp_conv.cma pa_macro.cmo -UDEBUG -USDEBUG	\
 	-UPDEBUG -UZDEBUG" -I $(REPORTDIR) -I $(LANGUAGEDIR) -I		\
 	$(BATDIR) -I $(SEXPLIB) -c $(SRC)

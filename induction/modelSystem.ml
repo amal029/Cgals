@@ -11,6 +11,13 @@ module Set = BatSet
 
 exception Internal_error of string
 
+(* The set functor *)
+module PropType = struct
+  type t = logic
+  let compare = compare
+end
+module PropSet = Set.Make(PropType)
+
 (* The initial hashtbl to hold the mapping from tlabel to node name*)
 let tbl = Hashtbl.create 100
 let replaced = Hashtbl.create 100
@@ -25,10 +32,15 @@ let replace = function
     
 
 let make = function
-  | {node=n;tlabels=t} as s  -> 
+  | {node=n;tls=llabels} as s  -> 
     try
       (* Some node with same tlabel already exists in the hashtbl *)
-      let ({node=nn;tlabels=tt} as ss) = Hashtbl.find tbl t in
+      let () = print_endline ("NODE :"^ n.name) in
+      let labels = PropSet.of_enum (List.enum llabels) in
+      let x = List.filter (fun (x,y) -> PropSet.equal labels x) (List.of_enum (Hashtbl.enum tbl)) in
+      let ({node=nn;tls=nllabels} as ss) = 
+	if x = [] then raise Not_found
+	else (match (List.hd x) with | (_,x) ->x) in
       (* add to replaced *)
       let () = Hashtbl.add replaced n.name nn.name in
       (* replace this current node s with the new_node *)
@@ -38,7 +50,11 @@ let make = function
     with
     | Not_found -> 
       (* Add to tbl if not there already *)
-      Hashtbl.add tbl t s
+      let () = print_endline ("not found node for: " ^ n.name) in
+      let () = print_endline ("adding key: ") in
+      output_hum stdout (sexp_of_list sexp_of_logic (PropSet.elements (PropSet.of_enum (List.enum llabels))));
+      let () = print_endline "" in
+      Hashtbl.add tbl (PropSet.of_enum (List.enum llabels)) s
 
 
 let propagate_guards_from_st nodeset = 
@@ -65,12 +81,6 @@ let propagate_guards_from_st nodeset =
   ) nodeset in 
   List.iter (fun x -> x.guards <- []; x.node.incoming <- []) sts
 
-(* The set functor *)
-module PropType = struct
-  type t = logic
-  let compare = compare
-end
-module PropSet = Set.Make(PropType)
 
 let find_subformula_equivalents model = function
   | {node=n;tls=llabels;tlabels=labs} as s -> 

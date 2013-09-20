@@ -96,6 +96,10 @@ try
 	 incoming nodes 3.) FIXME (IMP): If no replacements are possible
 	 then these nodes and their corresponding guards should be
 	 delted!  *)
+      let () = print_endline "....Building FUCKING SystemJ model......" in
+      let () = IFDEF DEBUG THEN List.iter (fun x -> 
+	let () = SS.output_hum Pervasives.stdout (SSL.sexp_of_list TableauBuchiAutomataGeneration.sexp_of_labeled_graph_node x) in
+	print_endline "\n\n\n\n\n\n-----------------------------------------------------\n\n\n\n") labeled_buchi_automatas ELSE () ENDIF in
       let torep = (List.filter(fun {tlabels=t} -> (match t with | PL.Proposition (PL.Label x) -> x <> "st" | _ -> true))
       		     (List.filter (fun{node=n} -> n.incoming=["Init"])ret)) in
       let () = List.iter(fun {node=n} -> n.incoming <- List.remove_all n.incoming "Init";) ret in
