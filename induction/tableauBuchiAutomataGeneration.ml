@@ -10,15 +10,11 @@ type graph_node = {mutable name:string; mutable father:string; mutable incoming:
 		   mutable neew: logic list; mutable old:logic list; mutable next: logic list}
 with sexp
 
-type labeled_graph_node = {node: graph_node; labels : logic list list; mutable tlabels: logic; 
+type labeled_graph_node = {node: graph_node; mutable tlabels: logic; 
 			   mutable guards: logic list; tls : logic list}
 with sexp
 
 let counter = ref 0
-
-let rec powerset = function
-  | [] -> [[]]
-  | h::t -> List.fold_left (fun xs t -> (h::t)::t::xs) [] (powerset t);;
 
 let new_name () = 
   counter := !counter + 1; 
@@ -144,7 +140,7 @@ let create_graph index formula =
   let () = expand index st nodes_set in
   !nodes_set
 
-let state_label propositions powerset = function
+let state_label propositions = function
   | {name=n;old=o} as s -> 
     let pos_props = ref [] in
     let () = List.iter (fun x ->  
@@ -157,15 +153,12 @@ let state_label propositions powerset = function
     let tls = if labels <> [] then List.reduce (fun x y -> And(x,y)) labels else True in
     let g = if g <> [] then List.reduce (fun x y -> solve_logic (And(x,y))) g else True in
     let g = BatArray.to_list (BatArray.make (List.length s.incoming) g) in
-    {node=s;labels=[];tlabels=solve_logic tls;guards=g; tls=labels}
+    {node=s;tlabels=solve_logic tls;guards=g; tls=labels}
 
 let add_labels formula nodes_set =
   (* Get all the propositions used in the formula *)
   let propositions = props formula in
   (* Remove the duplicates *)
   let propositions = List.sort_unique compare propositions in
-  (* The powerset of the proposition => domain of accepting alphabets of
-     the Buchi automata *)
-  let prop_powerset = powerset propositions in
-  let lba = List.map (state_label propositions prop_powerset) nodes_set in
+  let lba = List.map (state_label propositions) nodes_set in
   lba

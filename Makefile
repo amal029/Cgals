@@ -17,10 +17,11 @@ compile:
 	$(MAKE) -e -C util/ all
 	$(MAKE) -e -C backend/ all
 	ocamlfind $(CC) -pp "camlp4o pa_macro.cmo -UDEBUG -USDEBUG" -o	\
-	systemjc -linkpkg -package batteries -package sexplib -package	\
-	pretty -I ./language -I ./error -I ./parser -I ./induction -I	\
-	./util -I ./backend $(ERRORLIB) $(LANGUAGELIB) $(PARSERLIB)	\
-	$(LOGICLIB) $(UTILLIB) $(CODEGENLIB) systemjc.ml
+	systemjc -syntax batteries.syntax -linkpkg -package batteries	\
+	-package sexplib -package pretty -I ./language -I ./error -I	\
+	./parser -I ./induction -I ./util -I ./backend $(ERRORLIB)	\
+	$(LANGUAGELIB) $(PARSERLIB) $(LOGICLIB) $(UTILLIB)		\
+	$(CODEGENLIB) systemjc.ml
 
 clean:
 	$(MAKE) -e -C language/ clean
