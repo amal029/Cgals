@@ -7,10 +7,10 @@ module SSL = Sexplib.Std
 module PL = PropositionalLogic
 open TableauBuchiAutomataGeneration
 
-let rec map5 f a b c d e = 
-  match (a,b,c,d,e) with
-  | ([],[],[],[],[]) -> []
-  | ((h1::t1),(h2::t2),(h3::t3),(h4::t4), (h5::t5)) -> (f h1 h2 h3 h4 h5) :: map5 f t1 t2 t3 t4 t5
+let rec map6 f a b c d e g = 
+  match (a,b,c,d,e,g) with
+  | ([],[],[],[],[],[]) -> []
+  | ((h1::t1),(h2::t2),(h3::t3),(h4::t4),(h5::t5),(h6::t6)) -> (f h1 h2 h3 h4 h5 h6) :: map6 f t1 t2 t3 t4 t5 t6
   | _ -> failwith "Lists not of equal length"
 
 let usage_msg = "Usage: systemjc [options] <filename>\nsee -help for more options" in
@@ -19,7 +19,7 @@ try
   let uppaal = ref "" in
   let promela = ref "" in
   let () = Arg.parse [
-    ("-uppaal", Arg.Set_string uppaal, " The name of the uppaal xml output file");
+    (* ("-uppaal", Arg.Set_string uppaal, " The name of the uppaal xml output file"); *)
     ("-promela", Arg.Set_string promela, " The name of the promela output file")] 
     (fun x -> file_name := x) usage_msg in
 
@@ -107,33 +107,36 @@ try
     let () = print_endline "....Building SystemJ model......" in
     let () = SS.output_hum Pervasives.stdout (SSL.sexp_of_list TableauBuchiAutomataGeneration.sexp_of_labeled_graph_node x) in
     print_endline "\n\n\n\n\n\n-----------------------------------------------------\n\n\n\n") labeled_buchi_automatas ELSE () ENDIF in
-  let () = 
-    if !uppaal = "" then
-      (* Buffer.output_buffer stdout uppaal_automata *)
-      ()
-    else 
-      try
-	let uppaal_automatas = map5 Uppaal.make_xml (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_signal_declarations x)
-	  (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_input_signal_declarations x)
-	  (List.init (List.length labeled_buchi_automatas) (fun x -> x)) (List.rev !init) labeled_buchi_automatas in
-	let strings = Buffer.create(10000) in
-	let () = List.iter (Buffer.add_buffer strings) uppaal_automatas in
-	let () = IFDEF DEBUG THEN print_endline (string_of_int (List.length channels)) ELSE () ENDIF in
-	let uppaal_automata = Uppaal.make_uppaal channels strings in
-	(* Write to output file if the -o argument is given, else write to stdout *)
-	let fd = open_out !uppaal in
-	let () = Buffer.output_buffer fd uppaal_automata in
-	close_out fd
-      with
-      | Sys_error _ as s -> raise s
-  in
+  (* let () =  *)
+  (*   if !uppaal = "" then *)
+  (*     (\* Buffer.output_buffer stdout uppaal_automata *\) *)
+  (*     () *)
+  (*   else  *)
+  (*     try *)
+  (* 	let uppaal_automatas = map5 Uppaal.make_xml (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_signal_declarations x) *)
+  (* 	  (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_input_signal_declarations x) *)
+  (* 	  (List.init (List.length labeled_buchi_automatas) (fun x -> x)) (List.rev !init) labeled_buchi_automatas in *)
+  (* 	let strings = Buffer.create(10000) in *)
+  (* 	let () = List.iter (Buffer.add_buffer strings) uppaal_automatas in *)
+  (* 	let () = IFDEF DEBUG THEN print_endline (string_of_int (List.length channels)) ELSE () ENDIF in *)
+  (* 	let uppaal_automata = Uppaal.make_uppaal channels strings in *)
+  (* 	(\* Write to output file if the -o argument is given, else write to stdout *\) *)
+  (* 	let fd = open_out !uppaal in *)
+  (* 	let () = Buffer.output_buffer fd uppaal_automata in *)
+  (* 	close_out fd *)
+  (*     with *)
+  (*     | Sys_error _ as s -> raise s *)
+  (* in *)
   let () = 
     if !promela = "" then
       ()
     else 
       try
 	let fd = open_out !promela in
-	let promela_model = map5 Promela.make_promela (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_signal_declarations x)
+	let promela_model = map6 
+	  Promela.make_promela 
+	  (List.init (List.length labeled_buchi_automatas) (fun x -> channels))
+	  (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_signal_declarations x)
 	  (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_input_signal_declarations x)
 	  (List.init (List.length labeled_buchi_automatas) (fun x -> x)) (List.rev !init) labeled_buchi_automatas in
 	(* make the channel declarations in the global space!! *)

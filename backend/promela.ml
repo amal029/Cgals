@@ -40,6 +40,7 @@ let make_body o index signals isignals = function
     let (o,guards) = L.split o in
     (* First add the location label *)
     ((n ^ "/*" ^ (string_of_logic tlabel) ^ "*/" ^ ":\n") >> text)
+    ++ ("atomic{\n" >> text)
     ++ ("if\n" >> text)
     (* Now add the transitions *)
     ++ (L.reduce (++) (
@@ -57,22 +58,25 @@ let make_body o index signals isignals = function
 	  ++ L.fold_left (++) empty (L.mapi (fun i x -> ((x ^ "=false;\t") >> text)) !to_false)
 	  ++ (("goto " ^ x ^ ";\n") >> text)
 	) o guards
-      else [("::skip;\n" >> text)]
+      else [("::goto " ^ n ^ ";\n">> text)]
     )) 
     ++ ("fi;\n" >> text)
+    ++ ("}\n" >> text)
       
       
-let make_process o index signals isignals init lgn = 
+let make_process channels o index signals isignals init lgn = 
+  let ss = ref signals in
+  let () = L.iter (fun x -> ss := L.remove_all !ss x) channels in
   (("active proctype CD" ^ (string_of_int index) ^ "(") >> text) 
-  ++ (L.fold_left (++) empty) (L.mapi (make_args (L.length signals)) signals)
+  ++ (L.fold_left (++) empty) (L.mapi (make_args (L.length !ss)) !ss)
   ++ ("){\n" >> text)
   ++ (("goto " ^ init ^ ";\n") >> text)
   ++ ((L.reduce (++) (L.map (fun x -> make_body o index signals isignals (x.node,x.tlabels,x.guards)) lgn)) >> (4 >> indent))
   ++ ("}\n" >> text)
   ++ (" " >> line)
 
-let make_promela signals isignals index init lgn = 
+let make_promela channels signals isignals index init lgn = 
   let o = Hashtbl.create 1000 in
   let () = L.iter (fun x -> get_outgoings o (x.node,x.guards)) lgn in
-  group ((make_process o index signals isignals init lgn) ++ (" " >> line))
+  group ((make_process channels o index signals isignals init lgn) ++ (" " >> line))
     

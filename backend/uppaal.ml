@@ -7,6 +7,8 @@
 
    Sat Aug 17 10:47:06 NZST 2013
 
+   FIXME: This is lagging behind promela and will not be maintained any
+   further.
 *)
 module List = Batteries.List
 module Hashtbl = Batteries.Hashtbl
