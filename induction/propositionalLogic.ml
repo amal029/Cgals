@@ -368,14 +368,14 @@ and move_spar r = function
 
 let build_ltl stmt = 
   (* let shared = Or(Not( (collect_labels stmt)),term stmt) in *)
-  let fdis = And(And(inst stmt, Proposition (Label "st")),NextTime(Not((collect_labels stmt)))) in
-  let () = IFDEF PDEBUG THEN output_hum stdout (sexp_of_logic ( solve_logic (push_not fdis))); print_endline "<-- FIRST" ELSE () ENDIF in
-  let sdis = And(Proposition (Label "st"), enter stmt) in
-  let () = IFDEF PDEBUG THEN output_hum stdout (sexp_of_logic ( solve_logic (push_not sdis))); print_endline "<-- SECOND" ELSE () ENDIF in
-  let tdis = And(Not(Proposition (Label "st")), NextTime(Not( (collect_labels stmt)))) in
-  let () = IFDEF PDEBUG THEN output_hum stdout (sexp_of_logic ( solve_logic (push_not tdis))); print_endline "<-- THIRD" ELSE () ENDIF in
-  let fdis = move stmt in
-  let () = IFDEF PDEBUG THEN output_hum stdout (sexp_of_logic ( solve_logic (push_not fdis))); print_endline "<-- FOURTH" ELSE () ENDIF in
+  (* let fdis = And(And(inst stmt, Proposition (Label "st")),NextTime(Not((collect_labels stmt)))) in *)
+  (* let () = IFDEF PDEBUG THEN output_hum stdout (sexp_of_logic ( solve_logic (push_not fdis))); print_endline "<-- FIRST" ELSE () ENDIF in *)
+  (* let sdis = And(Proposition (Label "st"), enter stmt) in *)
+  (* let () = IFDEF PDEBUG THEN output_hum stdout (sexp_of_logic ( solve_logic (push_not sdis))); print_endline "<-- SECOND" ELSE () ENDIF in *)
+  (* let tdis = And(Not(Proposition (Label "st")), NextTime(Not( (collect_labels stmt)))) in *)
+  (* let () = IFDEF PDEBUG THEN output_hum stdout (sexp_of_logic ( solve_logic (push_not tdis))); print_endline "<-- THIRD" ELSE () ENDIF in *)
+  (* let fdis = move stmt in *)
+  (* let () = IFDEF PDEBUG THEN output_hum stdout (sexp_of_logic ( solve_logic (push_not fdis))); print_endline "<-- FOURTH" ELSE () ENDIF in *)
 
   Or(Or(Or(And(Proposition (Label "st"),And(inst stmt,NextTime(Not((collect_labels stmt))))),
 	   And(Proposition (Label "st"),enter stmt)),
