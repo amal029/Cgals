@@ -15,7 +15,7 @@
 	{
 			emit resetTimer;
 			while(true){
-				if(TRLITAVI){
+				if(TLRITAVI){
 					AP!;
 					emit oAP;
 				}
