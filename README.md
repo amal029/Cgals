@@ -46,10 +46,14 @@ Structures 36(4): 317-344 (2010)
 
 Compiling:
 
+```shell
 ./systemjc <name-of-file>.sysj -promela [name-of-promela-file.pml] -formula ["formula"]
+```
 
-Once compiled: verify the property like so:
+Once compiled: verify the property using "ispin".
+``` shell
 ispin <name-of-promela-file.pml>
+```
 
 see SPIN documentation for more details.
 
