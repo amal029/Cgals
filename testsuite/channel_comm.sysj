@@ -19,8 +19,9 @@
   C?;
   ||				/*Remove this parallel operator to break
 				  the system and see a deadlock
-				  happen. Can be seen SPIN model-checker
-				  with the above described property*/
+				  happen. Can be seen in SPIN
+				  model-checker with the above described
+				  property*/
   M!;
   emit A;
   pause;
