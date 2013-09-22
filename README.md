@@ -10,7 +10,7 @@ Asynchronous Locally Synchronous) model of computation to schedule
 processes and a variant of 'C' programming language for writing
 data. The compiler automatically extracts linear temporal logic from the
 written programs and compiles them to a model for verification with SPIN
-or model-checker using LTL (Linear temporal logic) properties --
+model-checker using LTL (Linear temporal logic) properties --
 guaranteeing functional and timing requirements. Finally, 'C' code is
 extracted from the verified models to be compiled with the compcert 'C'
 compiler, which is a verified 'C' compiler.
