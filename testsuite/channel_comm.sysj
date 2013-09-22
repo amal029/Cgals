@@ -1,5 +1,5 @@
 /* ltl property used to check liveness */
-/* Need to set weak-liveness */
+/* Need to set weak-fairness guarantees */
 /* (<> CD0_A && CD1_A) */
 /* Result -- pass */
 {
