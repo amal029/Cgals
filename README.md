@@ -1,7 +1,7 @@
 # CGals
 ===========
 
-A C compiler with proven real-time and functional guarantees.
+A Cgals compiler with proven real-time and functional guarantees.
 
 
 Cgals (pronounced seagull) is a programming language for writing safety
