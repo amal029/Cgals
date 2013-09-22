@@ -1,0 +1,44 @@
+/* ltl property used to check liveness */
+/* Need to set weak-fairness guarantees */
+/* [](CD0_A -> <> CD1_A) */
+/* Result -- fail */
+
+/* Run this example like so: */
+/* ./systemjc testsuite/channel_comm2.sysj -promela channel.pml -formula "[](CD0_A -> <> CD1_A)" */
+{
+  output signal A;
+  output channel C;
+  input channel M;
+  while(true) {
+    emit A;
+    pause;
+    C!;
+    M?;
+  }
+}
+><
+{
+  output signal A;
+  input channel C;
+  output channel C;
+  input signal PIPI;
+  while(true) {
+    /* The failure is caused because of this channel deadlock. */
+    M!;C?; 
+    emit A;
+    pause;
+  }
+}
+
+/* Solution: 
+
+   1.) Put a parallel operator for channel communication like so:
+   M!; || C?; in the second clock-domain 
+
+   2.) Put a parallel operator in the first clock-domain like so:
+   C!;||M?;
+
+
+   3.) Fix the order of communication in either of the clock-domains.
+
+*/
