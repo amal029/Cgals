@@ -1,28 +1,35 @@
 /* ltl property used to check liveness */
 /* Need to set weak-fairness guarantees */
-/* (<> CD0_A && CD1_A) */
-/* Result -- pass */
+/* [](CD0_A -> <> CD1_A) */
+/* Result -- fail */
+
+/* Run this example like so: */
+/* ./systemjc testsuite/channel_comm.sysj -promela channel.pml -formula "[](CD0_A -> <> CD1_A)" */
 {
   output signal A;
   output channel C;
   input channel M;
-  M?;
-  C!;
-  emit A;
-  pause;
+  while(true) {
+    emit A;
+    pause;
+    C!;
+    M?;
+  }
 }
 ><
 {
   output signal A;
   input channel C;
-  output channel M;
-  C?;
-  ||				/*Remove this parallel operator to break
-				  the system and see a deadlock
-				  happen. Can be seen in SPIN
-				  model-checker with the above described
-				  property*/
-  M!;
-  emit A;
+  output channel C;
+  input signal PIPI;
+  /* This abort is the reason for failure!! */
+  abort(PIPI)
+    while(true) {
+      M!;||C?;
+      emit A;
+      pause;
+    }
+  /* This is one path that will lead to non-completion of the channel
+     rendezvous!*/
   pause;
 }
