@@ -1,0 +1,74 @@
+/* Example from: A FORMAL TELECOMMUNICATIONS APPLICATION FROM ESTEREL */
+/* In observer based verification we convert the property below (the
+   original one to a simple safety property) */
+/* [](CD0_HEAT -> <> CD0_LIGHT) = [] !CD0_VIOLATED*/
+
+/* What this conversion states is that there exists no state in, which
+   VIOLATED is emitted to the environment and hence, the system
+   satisfies the property!*/
+/* Result -- pass */
+
+{
+  input signal START;
+  input signal STOP;
+  input signal DOOR_OPEN;
+  input signal  MINUTE;
+  output signal HEAT;
+  output signal LIGHT;
+  
+  /* Extra signals for observer based verification */
+  output signal SAT; 		/*signal stating the the property is
+				  verified*/
+  output signal VIOLATED;	/*signal emitted when the property is
+				  violated */
+
+  signal S;
+  {
+    /* Reaction - 1 */
+    while(true) {
+      abort(START)
+	while(true)
+	  pause;
+    
+      abort(MINUTE){
+	abort(DOOR_OPEN || STOP){
+	  while(true){
+	    emit HEAT; 
+	    pause;
+	  }
+	  ||{
+	    while(true){
+	      emit LIGHT;
+	      pause;
+	    }
+	  }
+	}
+      }
+    } 
+  }
+  ||{
+    /* Reaction - 2 */
+    while(true)
+      if (DOOR_OPEN)
+	abort(!DOOR_OPEN)
+	  while(true){
+	    emit LIGHT;
+	    pause;
+	  }
+  }
+  /* Safety property via observers!! */
+  ||{
+    while(true)
+      if ((!HEAT) || LIGHT){
+	emit S;
+	pause;
+      }
+  }
+  ||{
+    while(true){
+      if (S) { pause; emit SAT;}
+      else {pause; emit VIOLATED;}
+    }
+  }
+}
+
