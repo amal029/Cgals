@@ -1,43 +1,121 @@
-{
-  input signal AS;
-  input signal VS;
-  input signal TLRITAVI;
-  input channel VP;
+{/* LRI CD */
+	input signal AS;
+	input signal VS;
+/*    input signal TLRITAVI;*/
+	signal TLRITAVI;
+	input channel VP;
 
-  output signal AP;
-  output signal resetTimer;
-  output channel AP;
-  output signal oAP;
-  signal sVP;
+	output signal resetTimer;
+	output channel AP;
+	output signal oAP;
+	signal sVP;
 
-  emit resetTimer;
-    while(true){
-      abort(sVP || VS){
-	while(true){
-	  abort(TRLITAVI){
-	    while(true){
-	      abort(AS){
-		while(true){ TUTU: pause;}
-	      }
-	      abort(sVP||VS){
-		while(true){TUTU1: pause;}
-	      }
-	      emit resetTimer;
-	    }
-	  }
-	  AP!;
-	  emit oAP;
+/*    Observer signals -> */
+	output channel OB;
+	{
+			emit resetTimer;
+			while(true){
+				if(TRLITAVI){
+					AP!;
+					emit oAP;
+				}
+				if(AS){
+					abort(sVP||VS){
+						while(true){pause;}
+					}
+					emit resetTimer;
+					pause;
+				}
+				if(sVP||VS){
+					emit resetTimer;
+				}
+				pause;
+			}
+			||
+			while(true){
+				VP?;
+				emit sVP;
+				pause;
+			}
 	}
-      }
-      emit resetTimer;
-    }
-  ||
-    { /* Remove this block to avoid an error */
-      while(true){
-	VP?;
-	emit sVP;
-      TUTU2: pause;
-      }
-    } /* Remove this block to avoid an error */
+	||
+	{
+/*        Environment*/
+		pause;
+		pause;
+		pause;
+		emit TLRITAVI;
+	}
+/*    ||*/
+/*    {*/
+/*        while(true){*/
+/*            abort(oAP){while(true){emit sus1;pause;}}*/
+/*            OB!;*/
+/*        }*/
+/*    }*/
 }
+><
+{/* AVI CD */
+	input signal AS;
+	input signal VS;
+	input channel AP;
+	signal TAVI;
+	signal TURI;
 
+	output signal resetTimer;
+	output signal oVP;
+	output channel VP;
+
+	signal sAP;
+/*    Observer signals -> */
+	signal sus2;
+	signal mytest;
+	input channel OB;
+	{
+			while(true){
+				abort(AS||sAP){while(true)pause;}
+				emit resetTimer;
+
+				abort(TAVI){while(true)pause;}
+				if(TURI){
+					VP!;
+					emit oVP;
+				}
+				else{
+					abort(VS){
+						abort(TURI){while(true)pause;}
+						VP!;
+						emit oVP;
+					}
+				}
+				pause;
+			}
+			||
+			while(true){
+				AP?;
+				emit sAP;
+				pause;
+			}
+	}
+	||
+	{
+/*        Environment*/
+		abort(sAP){while(true)pause;}
+		pause;
+		pause;
+		pause;
+		pause;
+		emit TAVI; emit TURI;
+	}
+/*    ||*/
+/*    {*/
+/*        {*/
+/*            OB?;*/
+/*            emit mytest;*/
+/*        }	*/
+/*        ||*/
+/*        while(true){*/
+/*            */
+/*        }*/
+/*    }*/
+}

@@ -1,0 +1,11 @@
+{
+  output signal A;
+  emit A;
+  pause;
+}
+><
+{
+  output signal A;
+  emit A;
+  pause;
+}

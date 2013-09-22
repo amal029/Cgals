@@ -16,11 +16,13 @@ let rec map6 f a b c d e g =
 let usage_msg = "Usage: systemjc [options] <filename>\nsee -help for more options" in
 try
   let file_name = ref "" in
-  let uppaal = ref "" in
+  let formula = ref "" in
   let promela = ref "" in
+  let outfile = ref "" in
   let () = Arg.parse [
-    (* ("-uppaal", Arg.Set_string uppaal, " The name of the uppaal xml output file"); *)
-    ("-promela", Arg.Set_string promela, " The name of the promela output file")] 
+    ("-formula", Arg.Set_string formula, " The propositional linear temporal logic formula to verify (see promela ltl man page)");
+    ("-promela", Arg.Set_string promela, " The name of the promela output file");
+    ("-o", Arg.Set_string outfile, " The name of the [llvm/C/Java] output file (NOT IMPLEMENTED YET)")] 
     (fun x -> file_name := x) usage_msg in
 
   (* Initialize the error reporting structures *)
@@ -107,41 +109,29 @@ try
     let () = print_endline "....Building SystemJ model......" in
     let () = SS.output_hum Pervasives.stdout (SSL.sexp_of_list TableauBuchiAutomataGeneration.sexp_of_labeled_graph_node x) in
     print_endline "\n\n\n\n\n\n-----------------------------------------------------\n\n\n\n") labeled_buchi_automatas ELSE () ENDIF in
-  (* let () =  *)
-  (*   if !uppaal = "" then *)
-  (*     (\* Buffer.output_buffer stdout uppaal_automata *\) *)
-  (*     () *)
-  (*   else  *)
-  (*     try *)
-  (* 	let uppaal_automatas = map5 Uppaal.make_xml (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_signal_declarations x) *)
-  (* 	  (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_input_signal_declarations x) *)
-  (* 	  (List.init (List.length labeled_buchi_automatas) (fun x -> x)) (List.rev !init) labeled_buchi_automatas in *)
-  (* 	let strings = Buffer.create(10000) in *)
-  (* 	let () = List.iter (Buffer.add_buffer strings) uppaal_automatas in *)
-  (* 	let () = IFDEF DEBUG THEN print_endline (string_of_int (List.length channels)) ELSE () ENDIF in *)
-  (* 	let uppaal_automata = Uppaal.make_uppaal channels strings in *)
-  (* 	(\* Write to output file if the -o argument is given, else write to stdout *\) *)
-  (* 	let fd = open_out !uppaal in *)
-  (* 	let () = Buffer.output_buffer fd uppaal_automata in *)
-  (* 	close_out fd *)
-  (*     with *)
-  (*     | Sys_error _ as s -> raise s *)
-  (* in *)
   let () = 
     if !promela = "" then
       ()
     else 
       try
 	let fd = open_out !promela in
+	let signals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_signal_declarations x) in
+	let isignals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_input_signal_declarations x) in
 	let promela_model = map6 
 	  Promela.make_promela 
-	  (List.init (List.length labeled_buchi_automatas) (fun x -> channels))
-	  (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_signal_declarations x)
-	  (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_input_signal_declarations x)
+	  (List.init (List.length labeled_buchi_automatas) (fun x -> channels)) signals isignals
 	  (List.init (List.length labeled_buchi_automatas) (fun x -> x)) (List.rev !init) labeled_buchi_automatas in
 	(* make the channel declarations in the global space!! *)
 	let promela_channels = List.fold_left Pretty.append Pretty.empty (List.map (fun x -> Pretty.text ("bool "^x^";\n"))channels) in
-	let () = Pretty.print ~output:(output_string fd) (Pretty.append promela_channels (List.reduce Pretty.append promela_model)) in
+	let promela_gsigs = List.fold_left Pretty.append Pretty.empty 
+	  (List.mapi (fun i y -> List.fold_left Pretty.append Pretty.empty (List.map (fun x -> Pretty.text ("bool CD"^(string_of_int i)^"_"^x^";\n")) y))
+	     signals) in
+	let appf = if !formula = "" then Pretty.empty else (Pretty.text ("ltl {" ^ !formula ^ "}\n")) in
+	let () = Pretty.print ~output:(output_string fd) 
+	  (Pretty.append promela_gsigs
+	     (Pretty.append promela_channels 
+		(Pretty.append appf
+		   (List.reduce Pretty.append promela_model)))) in
 	close_out fd;
       with
       | Sys_error _ as s -> raise s in ()
