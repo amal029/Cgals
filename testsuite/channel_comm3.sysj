@@ -1,0 +1,34 @@
+/* ltl property used to check liveness */
+/* Need to set weak-fairness guarantees */
+/* [](CD0_A -> <> CD1_A) */
+/* Result -- pass */
+
+/* Run this example like so: */
+/* ./systemjc testsuite/channel_comm3.sysj -promela channel.pml -formula "[](CD0_A -> <> CD1_A)" */
+{
+  output signal A;
+  input signal B;
+  output channel C;
+  /* input channel M; */
+  while(true) {
+    emit A;
+    pause;
+    /* The only reason the liveness property gets verified, is because
+       of this channel communication. Notice that the channel
+       communication is still point to point.*/
+    if (B)
+      C!;
+    else C!; 			/*If one removes this else part, the
+				  property won't be satisfied.*/
+  }
+}
+><
+{
+  output signal A;
+  output channel C;
+  while(true) {
+    C?; 
+    emit A;
+    pause;
+  }
+}

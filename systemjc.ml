@@ -124,7 +124,8 @@ try
 	(* make the channel declarations in the global space!! *)
 	let promela_channels = List.fold_left Pretty.append Pretty.empty (List.map (fun x -> Pretty.text ("bool "^x^";\n"))channels) in
 	let promela_gsigs = List.fold_left Pretty.append Pretty.empty 
-	  (List.mapi (fun i y -> List.fold_left Pretty.append Pretty.empty (List.map (fun x -> Pretty.text ("bool CD"^(string_of_int i)^"_"^x^";\n")) y))
+	  (List.mapi (fun i y -> List.fold_left Pretty.append Pretty.empty (List.map (fun x -> Pretty.text ("bool CD"^(string_of_int i)^"_"^x^";\n")) 
+									      (List.sort_unique compare y)))
 	     signals) in
 	let appf = if !formula = "" then Pretty.empty else (Pretty.text ("ltl {" ^ !formula ^ "}\n")) in
 	let () = Pretty.print ~output:(output_string fd) 
