@@ -32,7 +32,8 @@
 	    emit HEAT; 
 	    pause;
 	  }
-	  ||{
+	  ||{ 			/*We need to add  this xtra reaction for
+				  the property to be satisfied*/
 	    while(true){
 	      emit LIGHT;
 	      pause;
