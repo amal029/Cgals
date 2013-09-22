@@ -26,11 +26,11 @@ INSTALL:
 
 Install dependencies:
 
-1.) Batteries: http://batteries.forge.ocamlcore.org/
-2.) Sexplib: https://github.com/janestreet/sexplib.git
-3.) ocaml-pretty: https://github.com/toyvo/ocaml-pretty (will need to write the META file)
-4.) ocaml-find/findlib: http://projects.camlcity.org/projects/findlib.html
-5.) SPIN model-checker: spinroot.com/
+* Batteries: http://batteries.forge.ocamlcore.org/
+* Sexplib: https://github.com/janestreet/sexplib.git
+* ocaml-pretty: https://github.com/toyvo/ocaml-pretty (will need to write the META file)
+* ocaml-find/findlib: http://projects.camlcity.org/projects/findlib.html
+* SPIN model-checker: spinroot.com/
 
 make clean && make in the source directory.
 
