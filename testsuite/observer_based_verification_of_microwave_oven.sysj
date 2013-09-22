@@ -13,8 +13,8 @@
   input signal STOP;
   input signal DOOR_OPEN;
   input signal  MINUTE;
-  signal HEAT;
-  signal LIGHT;
+  output signal HEAT;
+  output signal LIGHT;
   
   /* Extra signals for observer based verification */
   output signal SAT; 		/*signal stating the the property is

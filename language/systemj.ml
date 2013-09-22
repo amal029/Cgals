@@ -93,7 +93,7 @@ let rec collect_signal_declarations = function
 let rec collect_input_signal_declarations = function
   | Pause _ | Emit _ | Exit _ | Noop
   | Channel _ -> []
-  | Signal (io,Symbol (s,_),_) -> (match io with Some _ -> [s] | None -> [])
+  | Signal (io,Symbol (s,_),_) -> (match io with Some Input -> [s] | _ -> [])
   | Present (_,s,None,_) -> collect_input_signal_declarations s
   | Present (_,s,Some x,_) -> collect_input_signal_declarations s @ collect_input_signal_declarations x
   | Trap (_,s,_) -> collect_input_signal_declarations s

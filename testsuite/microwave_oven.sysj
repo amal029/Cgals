@@ -17,10 +17,8 @@
   input signal STOP;
   input signal DOOR_OPEN;
   input signal  MINUTE;
-  /* FIXME: The compiler currently seems to ignore output signals in the
-     guards. That should not happen! */
-  signal HEAT;
-  signal LIGHT;
+  output signal HEAT;
+  output signal LIGHT;
   {
     /* Reaction - 1 */
     while(true) {
@@ -34,8 +32,9 @@
 	    emit HEAT; 
 	    pause;
 	  }
-	  ||{ 			/*We need to add  this xtra reaction for
-				  the property to be satisfied*/
+	  ||{ 			/*We need to add this xtra reaction for
+				  the property to be satisfied as shown
+				  in the paper*/
 	    while(true){
 	      emit LIGHT;
 	      pause;
