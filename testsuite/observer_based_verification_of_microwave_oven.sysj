@@ -13,8 +13,8 @@
   input signal STOP;
   input signal DOOR_OPEN;
   input signal  MINUTE;
-  output signal HEAT;
-  output signal LIGHT;
+  signal HEAT;
+  signal LIGHT;
   
   /* Extra signals for observer based verification */
   output signal SAT; 		/*signal stating the the property is
@@ -66,8 +66,8 @@
   }
   ||{
     while(true){
-      if (S) { pause; emit SAT;}
-      else {pause; emit VIOLATED;}
+      if (S) { emit SAT; pause;}
+      else {emit VIOLATED; pause;}
     }
   }
 }

@@ -17,8 +17,10 @@
   input signal STOP;
   input signal DOOR_OPEN;
   input signal  MINUTE;
-  output signal HEAT;
-  output signal LIGHT;
+  /* FIXME: The compiler currently seems to ignore output signals in the
+     guards. That should not happen! */
+  signal HEAT;
+  signal LIGHT;
   {
     /* Reaction - 1 */
     while(true) {
