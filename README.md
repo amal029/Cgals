@@ -37,6 +37,8 @@ make clean && make in the source directory.
 
 # Usage:
 
+## Language:
+
 The language description is available here:
 
 Avinash Malik, Zoran Salcic, Partha S. Roop, Alain Girault: SystemJ: A
@@ -44,7 +46,7 @@ GALS language for system level design. Computer Languages, Systems &
 Structures 36(4): 317-344 (2010)
 
 
-# Compiling:
+## Compiling:
 
 ```shell
 ./systemjc <name-of-file>.sysj -promela [name-of-promela-file.pml] -formula ["formula"]
