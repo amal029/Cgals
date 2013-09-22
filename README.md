@@ -1,4 +1,4 @@
-CGals
+# CGals
 ===========
 
 A C compiler with proven real-time and functional guarantees.
@@ -21,7 +21,7 @@ Generating Safety Critical Java (SCJ) code level-0 and level-1 are
 planned.
 
 
-INSTALL:
+# INSTALL:
 
 
 Install dependencies:
@@ -35,7 +35,7 @@ Install dependencies:
 make clean && make in the source directory.
 
 
-Usage:
+# Usage:
 
 The language description is available here:
 
@@ -44,7 +44,7 @@ GALS language for system level design. Computer Languages, Systems &
 Structures 36(4): 317-344 (2010)
 
 
-Compiling:
+# Compiling:
 
 ```shell
 ./systemjc <name-of-file>.sysj -promela [name-of-promela-file.pml] -formula ["formula"]
