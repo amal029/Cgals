@@ -31,4 +31,4 @@ clean:
 	$(MAKE) -e -C util/ clean
 	$(MAKE) -e -C backend/ clean
 	rm -rf *.ll *.lle *.bc *.s *.dot *.grf *.part* gmon.out TAGS *.mli *.cm* *.o systemjc \
-	*.xml *.annot *.pml
+	*.xml *.annot *.pml *_spi* *_ver* *.pml.trail

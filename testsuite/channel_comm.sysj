@@ -1,11 +1,27 @@
+/* ltl property used to check liveness */
+/* Need to set weak-liveness */
+/* (<> CD0_A && CD1_A) */
+/* Result -- pass */
 {
   output signal A;
+  output channel C;
+  input channel M;
+  M?;
+  C!;
   emit A;
   pause;
 }
 ><
 {
   output signal A;
+  input channel C;
+  output channel M;
+  C?;
+  ||				/*Remove this parallel operator to break
+				  the system and see a deadlock
+				  happen. Can be seen SPIN model-checker
+				  with the above described property*/
+  M!;
   emit A;
   pause;
 }
