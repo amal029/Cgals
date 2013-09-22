@@ -19,3 +19,39 @@ verified 'C' compiler.
 
 Generating Safety Critical Java (SCJ) code level-0 and level-1 are
 planned.
+
+
+INSTALL:
+
+
+Install dependencies:
+
+1.) Batteries: http://batteries.forge.ocamlcore.org/
+2.) Sexplib: https://github.com/janestreet/sexplib.git
+3.) ocaml-pretty: https://github.com/toyvo/ocaml-pretty (will need to write the META file)
+4.) ocaml-find/findlib: http://projects.camlcity.org/projects/findlib.html
+5.) SPIN model-checker: spinroot.com/
+
+make clean && make in the source directory.
+
+
+Usage:
+
+The language description is available here:
+
+Avinash Malik, Zoran Salcic, Partha S. Roop, Alain Girault: SystemJ: A
+GALS language for system level design. Computer Languages, Systems &
+Structures 36(4): 317-344 (2010)
+
+
+Compiling:
+
+./systemjc <name-of-file>.sysj -promela [name-of-promela-file.pml] -formula ["formula"]
+
+Once compiled: verify the property like so:
+ispin <name-of-promela-file.pml>
+
+see SPIN documentation for more details.
+
+
+A complete example is available in testsuite/channel_comm.sysj
