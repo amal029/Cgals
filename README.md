@@ -59,4 +59,4 @@ ispin <name-of-promela-file.pml>
 see SPIN documentation for more details.
 
 
-A complete example is available in testsuite/ directory
+Complete examples are available in testsuite/ directory
