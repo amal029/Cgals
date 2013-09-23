@@ -1,107 +1,108 @@
 {/* LRI CD */
-  input signal AS;
-  input signal VS;
-  /*    input signal TLRITAVI;*/
-  signal TLRITAVI;
-  input channel VP;
+	signal AS;
+	signal VS;
+	/*    input signal TLRITAVI;*/
+	signal TLRITAVI;
+	input channel VP;
 
-  output signal resetTimer;
-  output channel AP;
-  output signal oAP;
-  signal sVP;
+	output signal resetTimer;
+	output channel AP;
+	output signal oAP;
+	signal sVP;
 
-  /*    Observer signals -> */
-  output channel OB;
-  {
-    emit resetTimer;
-    {
-      while(true){
-	if(TLRITAVI){
-	  AP!;
-	  emit oAP;
-	} 
-	if(AS){
-	  abort(sVP||VS){
-	    while(true){pause;}
-	  }
-	  emit resetTimer;
-	  pause;
+	/*    Observer signals -> */
+	output channel OB;
+	{
+		emit resetTimer;
+		{
+			while(true){
+				if(TLRITAVI){
+					AP!;
+					emit oAP;
+				} 
+				if(AS){
+					abort(sVP||VS){
+						while(true){pause;}
+					}
+					emit resetTimer;
+					pause;
+				}
+				if(sVP||VS){
+					emit resetTimer;
+				}
+				pause;
+			}
+		}
+		||
+		{
+			while(true){
+				VP?;
+				emit sVP;
+				pause;
+			}
+		}
+	}||{
+		/*        Environment*/
+		pause;
+		pause;
+		pause;
+		emit TLRITAVI;
+		pause;
 	}
-	if(sVP||VS){
-	  emit resetTimer;
-	}
-	pause;
-      }
-    }||{
-      while(true){
-	VP?;
-	emit sVP;
-	pause;
-      }
-    }
-  }||{
-    /*        Environment*/
-    pause;
-    pause;
-    pause;
-    emit TLRITAVI;
-    pause;
-    emit TLRITAVI;
-  }
 }
 ><
 {
-  input signal AS;
-  input signal VS;
-  input channel AP;
-  signal TAVI;
-  signal TURI;
+	signal AS;
+	signal VS;
+	input channel AP;
+	signal TAVI;
+	signal TURI;
 
-  output signal resetTimer;
-  output signal oVP;
-  output channel VP;
+	output signal resetTimer;
+	output signal oVP;
+	output channel VP;
 
-  signal sAP;
-  /*    Observer signals -> */
-  signal sus2;
-  signal mytest;
-  input channel OB;
-  {
-    {
-      while(true){
-	abort(AS||sAP)
-	  while(true)
-	    pause;
-	emit resetTimer;
+	signal sAP;
+	/*    Observer signals -> */
+	signal sus2;
+	signal mytest;
+	input channel OB;
+	{
+		{
+			while(true){
+				abort(AS||sAP){while(true)pause;}
+				emit resetTimer;
 
-	abort(TAVI){while(true)pause;}
-	if(TURI){
-	  VP!;
-	  emit oVP;
-	  pause;
-	}else{
-	  abort(VS){
-	    abort(TURI){while(true)pause;}
-	    VP!;
-	    emit oVP;
-	  }
-	  pause;
+				abort(TAVI){while(true)pause;}
+				if(TURI){
+					VP!;
+					emit oVP;
+				}
+				else{
+					abort(VS){
+						abort(TURI){while(true)pause;}
+						VP!;
+						emit oVP;
+					}
+				}
+				pause;
+			}
+		}
+		||
+		{
+			while(true){
+				AP?;
+				emit sAP;
+				pause;
+			}
+		}
 	}
-      }
-    }||{
-      while(true){
-	AP?;
-	emit sAP;
-	pause;
-      }
-    }
-  }
-  ||{
-    /*        Environment*/
-    abort(sAP){while(true)pause;}
-    pause;
-    pause;
-    emit TAVI; emit TURI;
-    pause;
-  }
+	||{
+		/*        Environment*/
+		abort(sAP){while(true)pause;}
+		pause;
+		pause;
+		emit TAVI; emit TURI;
+		pause;
+	}
 }
