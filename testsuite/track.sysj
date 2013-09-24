@@ -1,0 +1,52 @@
+{
+	/* N1 */
+	signal a;
+	signal b;
+	signal ok1;
+	signal ok2;
+	signal enter;
+	signal resv_next;
+	signal bye;
+	signal timeout;
+
+	output signal A1ok;
+	output signal A2ok;
+	output signal go_ahead;
+
+	output channel C1n;
+	input channel C2p;
+	
+	{ /* Train reaction */
+		while(true){
+			abort(enter && ok2){
+				while(true){
+					abort(a){while(true)pause;}
+					emit ok1;
+					X1: pause;
+				}
+			}
+			emit A1ok;
+			abort(resv_next){while(true)A: pause;}
+			C1n!;
+			emit go_ahead;
+			abort(bye){while(true)D:pause;}
+		}
+	}
+	||
+	{/* Interface reaction */
+		while(true){
+			abort(timeout){
+				abort(enter && ok1){
+					while(true){
+						abort(b){while(true)pause;}
+						emit ok2;
+						X2: pause;
+					}
+				}
+				emit A2ok;
+				abort(bye){while(true)G:pause;}
+			}
+			C2p?;
+		}
+	}
+}

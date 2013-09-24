@@ -9,6 +9,8 @@ default:
 	@echo '	pacemaker : pacemaker example'
 	@echo '	micro : microwave example'
 	@echo '	micro_ob : microwave example with observer'
+	@echo '	robot_c : robot motion controller'
+	@echo '	conveyor : conveyor example'
 	@echo '	clean : removing generated files'
 
 pacemaker: FILE = pacemaker
@@ -19,6 +21,12 @@ micro: FORMULA =[](CD0_HEAT -> <> CD0_LIGHT)
 
 micro_ob: FILE = observer_based_verification_of_microwave_oven
 micro_ob: FORMULA = [] !CD0_VIOLATED
+
+robot_c: FILE = robot_motion_controller
+robot_c: FORMULA = [] (!CD1_VIOLATED)
+
+conveyor: FILE = conveyor_belt
+conveyor: FORMULA = [] (!CD0_VIOLATED && !CD1_VIOLATED)
 
 %:
 	systemjc -promela $(FILE).pml $(FILE).sysj -formula '$(FORMULA)'
