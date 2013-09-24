@@ -37,12 +37,10 @@
   output signal VIOLATED;
   signal SC1;
   signal SC2;
-  signal T;
-  signal U;
   {
     while(true) {
-      {C1?;emit T;}||{abort(T) while(true) {emit SC1; pause;}}
-      {C2?;emit U;}||{abort(U) while(true) {emit SC2; pause;}}
+      C1?; emit SC1;
+      C2?; emit SC2;
     PICKOBJECT: pause;
       emit objectpicked;
     }
@@ -57,9 +55,9 @@
       abort(objectpicked){
   	abort(SC1){
   	  while(true){
-  	    emit VIOLATED;
   	    pause;
   	  }
+	  emit VIOLATED;
   	}
       }
     }

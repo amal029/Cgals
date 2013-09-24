@@ -2,7 +2,7 @@
   output channel C;
   output signal sent;
   output signal VIOLATED;
-  input signal last;
+  signal last;
   signal S1;
   {
     while(true) {
@@ -16,10 +16,11 @@
     }
   }||{
     /* observer */
-    while(true) {
-      if (!S1 && sent) emit VIOLATED;
-      pause;
-    }
+    abort(!S1 && sent)
+      while(true)
+	pause;
+    emit VIOLATED;
+    pause;
   }
 }
 ><
@@ -28,7 +29,7 @@
   signal MOVE;
   output signal mv_belt;
   output signal VIOLATED;
-  input signal out;
+  signal out;
   {
     while(true){
       C?;
@@ -41,9 +42,10 @@
     }
   }||{
     /* Observer */
-    while(true) {
-      if (!MOVE && mv_belt) emit VIOLATED;
-      pause;
-    }
+    abort(!MOVE && mv_belt)
+      while(true)
+	pause;
+    emit VIOLATED;
+    pause;
   }
 }

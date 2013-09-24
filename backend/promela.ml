@@ -46,9 +46,10 @@ let make_body channels o index signals isignals = function
     ++ (L.reduce (++) (
       if o <> [] then
 	L.map2 (fun x g ->
-	  let updates = ref [] in
+	  (* let updates = ref [] in *)
+	  let updates = Util.get_updates index g in
 	  let g = Util.label channels index updates isignals g in
-	  let updates = List.unique (List.map (fun (Update x) ->x) !updates) in
+	  let updates = List.sort_unique compare (List.map (fun (Update x) ->x) updates) in
 	  let to_false = ref signals in
 	  let () = L.iter (fun x -> to_false := L.filter (fun y -> y <> x) !to_false) updates in
 	  (* let () = L.iter (fun x -> to_false := L.filter (fun y -> y <> x) !to_false) isignals in *)
