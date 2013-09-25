@@ -171,7 +171,7 @@
 	}
 	||
 	{ /* Environment */
-		await(EN1){while(true)pause;}
+		abort(EN1){while(true)pause;}
 		pause;
 		emit a; emit b; emit enter;
 		pause;
@@ -249,7 +249,7 @@
 	}
 	||
 	{ /* Environment */
-		await(EN1){while(true)pause;}
+		abort(EN1){while(true)pause;}
 		pause;
 		emit a; emit b; emit enter;
 		pause;
