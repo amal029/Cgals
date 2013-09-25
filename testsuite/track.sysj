@@ -149,7 +149,7 @@
 						while(true){
 							abort(b){while(true)pause;}
 							emit ok2;
-							X1: pause;
+							X11: pause;
 						}
 					}
 					emit A3ok;
