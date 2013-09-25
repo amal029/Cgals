@@ -28,6 +28,9 @@ robot_c: FORMULA = [] (!CD1_VIOLATED)
 conveyor: FILE = conveyor_belt
 conveyor: FORMULA = [] (!CD0_VIOLATED && !CD1_VIOLATED)
 
+washing: FILE = washing
+washing: FORMULA = [] !(CD0_WASHING && CD0_DRYING)
+
 %:
 	systemjc -promela $(FILE).pml $(FILE).sysj -formula '$(FORMULA)'
 	spin -a $(FILE).pml
