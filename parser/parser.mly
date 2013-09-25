@@ -25,7 +25,7 @@
 %token TLbrack TRbrack TColon TPresent TEof TLShift TRShift TElse TExit TEmit
 %token TMain TIn TOut TOtherwise TPar TFor TSignal TChannel TPause TColon
 %token TInt8 TInt16 TInt32 TInt64 TInt8s TInt16s TInt32s TInt64s TFloat8 TFloat32 TFloat64 TFloat16
-%token TExtern TSplit TAT TSend TReceive
+%token Timm TExtern TSplit TAT TSend TReceive
 
 /* Constructors with an argument */
 %token <string> TInt
@@ -108,6 +108,7 @@ suspend:
     | TSuspend TOP expr TCP stmt {Systemj.Suspend($3,$5,ln())}
 ;
 abort:
+    | TAbort TOP Timm expr TCP stmt { Systemj.Present($4,Systemj.Noop,Some $6,ln())}
     | TAbort TOP expr TCP stmt {Systemj.Abort($3,$5,ln())}
 ;
 
