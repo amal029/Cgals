@@ -11,6 +11,7 @@ default:
 	@echo '	micro_ob : microwave example with observer'
 	@echo '	robot_c : robot motion controller'
 	@echo '	conveyor : conveyor example'
+	@echo '	washing : washing machine example'
 	@echo '	clean : removing generated files'
 
 pacemaker: FILE = pacemaker
