@@ -11,6 +11,7 @@ Target:
 	robot_c : robot motion controller
 	conveyor : conveyor example
 	washing : washing machine example
+	abort_imm : immediate abortion test
 	clean : removing generated files
 endef
 export README
