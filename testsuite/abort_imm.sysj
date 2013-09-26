@@ -4,12 +4,13 @@
 	{
 		abort(immediate A){
 			emit B;
-			pause;
+			L1:pause;
 		}
+		L2:pause;
 	}
 	||
 	{
 		emit A;
-		pause;
+		L3:	pause;
 	}	
 }

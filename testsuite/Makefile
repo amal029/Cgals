@@ -38,7 +38,10 @@ washing: FILE = washing
 washing: FORMULA = [] !(CD0_WASHING && CD0_DRYING)
 
 abort_imm: FILE=abort_imm
-abort_imm: FORMULA=[]<> !CD0_B
+abort_imm: FORMULA=[] !CD0_B
+
+await: FILE=a
+await: FORMULA=[]<> CD0_B
 
 %:
 	systemjc -promela $(FILE).pml $(FILE).sysj -formula '$(FORMULA)'

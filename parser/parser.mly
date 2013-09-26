@@ -25,7 +25,7 @@
 %token TLbrack TRbrack TColon TPresent TEof TLShift TRShift TElse TExit TEmit
 %token TMain TIn TOut TOtherwise TPar TFor TSignal TChannel TPause TColon
 %token TInt8 TInt16 TInt32 TInt64 TInt8s TInt16s TInt32s TInt64s TFloat8 TFloat32 TFloat64 TFloat16
-%token Timm TExtern TSplit TAT TSend TReceive
+%token TAwait Timm TExtern TSplit TAT TSend TReceive
 
 /* Constructors with an argument */
 %token <string> TInt
@@ -76,6 +76,7 @@ stmt:
     | par {$1}
     | present {$1}
     | abort {$1}
+    | await TSEMICOLON {$1}
     | suspend {$1}
     /*| TExit TOP symbol TCP TSEMICOLON {Systemj.Exit($3,ln())}*/
     | TEmit symbol TSEMICOLON {Systemj.Emit($2,None,ln())}
@@ -91,6 +92,9 @@ par:
     | stmt Or stmt {Systemj.Spar([$3;$1],ln())}
 ;
 
+await:
+    | TAwait TOP expr TCP {Systemj.Abort($3,Systemj.While(Systemj.True,Systemj.Pause(None,ln()),ln()),ln()) }
+;
 
 send:
     | symbol TXCL {Systemj.Send($1,ln())}
@@ -105,10 +109,11 @@ receive:
 ;*/
 
 suspend:
+    /*| TSuspend TOP Timm expr TCP stmt {Systemj.Noop}*/
     | TSuspend TOP expr TCP stmt {Systemj.Suspend($3,$5,ln())}
 ;
 abort:
-    | TAbort TOP Timm expr TCP stmt { Systemj.Present($4,Systemj.Noop,Some $6,ln())}
+    | TAbort TOP Timm expr TCP stmt { Systemj.Present($4,Systemj.Noop,Some (Systemj.Abort($4,$6,ln())),ln())}
     | TAbort TOP expr TCP stmt {Systemj.Abort($3,$5,ln())}
 ;
 

@@ -15,6 +15,7 @@ rule lexer = parse
   | '!'  {Parser.TXCL}
   | '?'  {Parser.TQ}
   | "immediate" {Parser.Timm}
+  | "await" {Parser.TAwait}
   | "pause" {Parser.TPause}
   | "input" {Parser.TIn}
   | "output" {Parser.TOut}
