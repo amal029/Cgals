@@ -289,7 +289,7 @@ let rec term = function
   | Systemj.Block (sl,r) -> term_seq r sl
   | Systemj.Spar (sl,r) -> term_spar r sl
   | Systemj.While (_,s,_) -> False
-  | Systemj.Suspend (e,s,_) -> And(Not (expr_to_logic e), term s)
+  | Systemj.Suspend (e,s,_) -> And(NextTime(Not (expr_to_logic e)), term s)
   | Systemj.Abort(e,s,_)  -> And((collect_labels s),Or(NextTime (expr_to_logic e), term s))
   | Systemj.Trap (e,s,_) -> And((collect_labels s), term s) 	(* You can exit it if the body exits it! *)
   | Systemj.Exit (Systemj.Symbol (s,_),_) -> False
@@ -348,7 +348,7 @@ let rec move = function
     let inS = ( (collect_labels s)) in
     let mS = ( (move s)) in
     let stutterS =  (stutters s) in
-     (Or(And(And(NextTime sigma,inS),stutterS),And(NextTime (Not sigma), mS)))
+    (Or(And(And(NextTime sigma,inS),stutterS),And(NextTime (Not sigma), mS)))
   | _ -> raise (Internal_error "Inst: Cannot get send/receive after rewriting!!")
 and move_seq r = function
   | h::t -> 
