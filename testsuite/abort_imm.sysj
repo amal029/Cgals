@@ -1,16 +1,16 @@
 {
-	signal A;
-	signal B;
-	{
-		abort(immediate A){
-			emit B;
-			L1:pause;
-		}
-		L2:pause;
-	}
-	||
-	{
-		emit A;
-		L3:	pause;
-	}	
+  signal A;
+  signal B;
+  {
+    abort(A)
+      while(true)
+	pause;
+    emit B;
+  L3:pause;
+  }
+  ||
+    {
+      emit A;
+    L2:pause;
+    }	
 }

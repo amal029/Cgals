@@ -1,4 +1,5 @@
 SHELL:=/bin/bash -O extglob
+SYSTEMJC ?= systemjc
 FILE=
 FORMULA=
 define README
@@ -44,10 +45,10 @@ await: FILE=a
 await: FORMULA=[]<> CD0_B
 
 %:
-	systemjc -promela $(FILE).pml $(FILE).sysj -formula '$(FORMULA)'
+	$(SYSTEMJC) -promela $(FILE).pml $(FILE).sysj -formula '$(FORMULA)'
 	spin -a $(FILE).pml
 	@echo 'Checking the property $(FORMULA)'
-	gcc-4 -DMEMLIM=1024 -O2 -DXUSAFE -w -o pan pan.c
+	cc -DMEMLIM=1024 -O2 -DXUSAFE -w -o pan pan.c
 	./pan -m10000 -a -f
 clean:
 	rm -vf !(*.sysj|Makefile)

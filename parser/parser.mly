@@ -93,7 +93,9 @@ par:
 ;
 
 await:
-    | TAwait TOP expr TCP {Systemj.Abort($3,Systemj.While(Systemj.True,Systemj.Pause(None,ln()),ln()),ln()) }
+    | TAwait TOP expr TCP {Systemj.Abort($3,Systemj.While(Systemj.True,Systemj.Pause(None ,ln()),ln()),ln())}
+    | symbol TColon TAwait TOP expr TCP {Systemj.Abort($5,Systemj.While(Systemj.True,Systemj.Pause(Some (match $1 with Systemj.Symbol (x,_) -> x)
+												      ,ln()),ln()),ln())}
 ;
 
 send:
