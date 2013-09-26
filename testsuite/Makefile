@@ -16,7 +16,7 @@ endef
 export README
 
 default:
-	echo "$$README"
+	@echo "$$README"
 
 pacemaker: FILE = pacemaker
 pacemaker: FORMULA = [] (CD0_TLRITAVI -> <> CD1_oVP)
