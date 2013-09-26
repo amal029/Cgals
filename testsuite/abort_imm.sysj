@@ -1,0 +1,14 @@
+{
+	signal A;
+	signal B;
+	{
+		abort(immediate A){
+			emit B;
+			pause;
+		}
+	}
+	||
+	{
+		emit A;
+	}	
+}
