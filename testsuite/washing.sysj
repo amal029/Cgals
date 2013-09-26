@@ -1,0 +1,32 @@
+{
+	signal wash_on;
+	signal wash_off;
+	signal spin_on;
+	signal spin_off;
+
+	signal WASHING;
+	signal DRYING;
+	{
+		while(true){
+			abort(wash_on){while(true)pause;}
+			abort(wash_off){while(true){emit WASHING; pause;}}
+		}
+	}
+	||
+	{
+		while(true){
+			abort(spin_on){while(true)pause;}
+			abort(WASHING){
+				pause;
+				abort(spin_off){while(true){emit DRYING; pause;}}
+			}
+		}
+	}
+	||
+	{
+		while(true){
+			pause;pause;emit wash_on;pause;pause;
+			emit spin_on;pause;emit spin_off;emit wash_off;
+		}
+	}
+}

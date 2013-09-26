@@ -1,17 +1,23 @@
 SHELL:=/bin/bash -O extglob
 FILE=
 FORMULA=
+define README
+-- Testsuit examples --
+Usage: make <target>
+Target:
+	pacemaker : pacemaker example
+	micro : microwave example
+	micro_ob : microwave example with observer
+	robot_c : robot motion controller
+	conveyor : conveyor example
+	washing : washing machine example
+	abort_imm : immediate abortion test
+	clean : removing generated files
+endef
+export README
 
 default:
-	@echo '-- Testsuit examples --'
-	@echo 'Usage: make <target>'
-	@echo 'Target:'
-	@echo '	pacemaker : pacemaker example'
-	@echo '	micro : microwave example'
-	@echo '	micro_ob : microwave example with observer'
-	@echo '	robot_c : robot motion controller'
-	@echo '	conveyor : conveyor example'
-	@echo '	clean : removing generated files'
+	@echo "$$README"
 
 pacemaker: FILE = pacemaker
 pacemaker: FORMULA = [] (CD0_TLRITAVI -> <> CD1_oVP)
@@ -27,6 +33,12 @@ robot_c: FORMULA = [] (!CD1_VIOLATED)
 
 conveyor: FILE = conveyor_belt
 conveyor: FORMULA = [] (!CD0_VIOLATED && !CD1_VIOLATED)
+
+washing: FILE = washing
+washing: FORMULA = [] !(CD0_WASHING && CD0_DRYING)
+
+abort_imm: FILE=abort_imm
+abort_imm: FORMULA=[]<> !CD0_B
 
 %:
 	systemjc -promela $(FILE).pml $(FILE).sysj -formula '$(FORMULA)'
