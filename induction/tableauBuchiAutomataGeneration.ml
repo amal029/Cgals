@@ -68,7 +68,16 @@ let rec expand index node nodes_set =
 	      raise s
 	  else n in
 	if n = False || List.exists (fun x -> x = (negate n)) node.old 
-	|| List.exists (fun x -> x = (negate s)) node.old then
+	|| List.exists (fun x -> 
+	  let tt = if (match x with | Proposition (Expr t) -> t.[0] = '$' | _ -> false) then
+	      try 
+		(Hashtbl.find (List.at !update_tuple_proposition_ll index) x)
+	      with | _ as s ->
+		output_hum stdout (sexp_of_logic x);
+		raise s
+	    else x in
+	  tt = (negate s)
+	) node.old then
 	  (* TODO: Need to change this *)
 	  (* Raise an error stating that there is a contradiction in the formula!! *)
 	  if n <> False then
