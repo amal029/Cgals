@@ -2,15 +2,15 @@
   signal A;
   signal B;
   {
-    abort(A)
-      while(true)
-	pause;
+    abort(A){
+      while(true){
+      L1:pause;
+      }
+    }
     emit B;
   L3:pause;
-  }
-  ||
-    {
-      emit A;
-    L2:pause;
-    }	
+  }||{
+    emit A;
+  L2:pause;
+  }	
 }

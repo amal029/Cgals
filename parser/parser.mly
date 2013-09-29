@@ -125,7 +125,7 @@ present:
 ;
 
 twhile:
-    | TWhile TOP bool_expr TCP stmt {Systemj.While($3,$5,ln())}
+    | TWhile stmt {Systemj.While(Systemj.True ,$2,ln())}
 ;
 
 expr:

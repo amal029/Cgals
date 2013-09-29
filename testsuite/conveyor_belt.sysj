@@ -5,9 +5,9 @@
   signal last;
   signal S1;
   {
-    while(true) {
+    loop {
       abort(last)
-	while(true) {
+	loop {
 	  emit S1;
 	S1: pause;
 	}
@@ -17,7 +17,7 @@
   }||{
     /* observer */
     abort(!S1 && sent)
-      while(true)
+      loop
 	pause;
     emit VIOLATED;
     pause;
@@ -31,19 +31,19 @@
   output signal VIOLATED;
   signal out;
   {
-    while(true){
+    loop {
       C?;
       emit mv_belt;
       abort(out)
-	while(true){
-	  emit MOVE;
-	MOVE: pause;
-	}
+	loop {
+	emit MOVE;
+      MOVE: pause;
+      }
     }
   }||{
     /* Observer */
     abort(!MOVE && mv_belt)
-      while(true)
+      loop
 	pause;
     emit VIOLATED;
     pause;
