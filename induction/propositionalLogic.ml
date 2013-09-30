@@ -230,7 +230,11 @@ let rec inst = function
   | Systemj.Spar (sl,_) -> 
     if sl = [] then True 
     else List.reduce (fun x y -> And (x,y)) (List.map inst sl)
-  | Systemj.While (_,s,_) -> inst s
+  | Systemj.While (_,s,ln) -> 
+    let ret = solve_logic (inst s) in
+    if ret <> False then 
+      raise (Internal_error ((Reporting.get_line_and_column ln) ^ "Instantaneous loop detected")) 
+    else ret
   | Systemj.Suspend (_,s,_) | Systemj.Abort(_,s,_)  | Systemj.Trap (_,s,_) -> inst s
   | Systemj.Signal _ | Systemj.Exit _ | Systemj.Channel _ -> True
   | _ -> raise (Internal_error "Inst: Cannot get send/receive after rewriting!!")

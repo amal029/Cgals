@@ -12,9 +12,9 @@
 }
 ><
 {
-  /* Instantaneous loop -- not detected! */
+  /* Instantaneous loop -- detected! */
   signal A;
-  while(true)
+  loop
     emit A;
 }
 ><
@@ -41,14 +41,14 @@
   signal S2;
   {
     abort(S1)
-      while(true)
+      loop
 	pause;
     emit S2;
   }
   ||
   {
     abort (S2)
-      while(true)
+      loop
 	pause;
     emit S1;
   }
