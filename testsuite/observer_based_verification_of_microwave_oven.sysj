@@ -9,66 +9,73 @@
 /* Result -- pass */
 
 {
-  input signal START;
-  input signal STOP;
-  input signal DOOR_OPEN;
-  input signal  MINUTE;
-  output signal HEAT;
-  output signal LIGHT;
-  
-  /* Extra signals for observer based verification */
-  output signal SAT; 		/*signal stating the the property is
-				  verified*/
-  output signal VIOLATED;	/*signal emitted when the property is
-				  violated */
+	input signal START;
+	input signal STOP;
+	input signal DOOR_OPEN;
+	input signal  MINUTE;
+	output signal HEAT;
+	output signal LIGHT;
 
-  signal S;
-  {
-    /* Reaction - 1 */
-    while(true) {
-      abort(START)
-	while(true)
-	  pause;
-    
-      abort(MINUTE){
-	abort(DOOR_OPEN || STOP){
-	  while(true){
-	    emit HEAT; 
-	    pause;
-	  }
-	  ||{
-	    while(true){
-	      emit LIGHT;
-	      pause;
-	    }
-	  }
+	/* Extra signals for observer based verification */
+	output signal SAT; 		/*signal stating the the property is
+							  verified*/
+	output signal VIOLATED;	/*signal emitted when the property is
+							  violated */
+
+	signal S;
+	{
+		/* Reaction - 1 */
+		loop {
+			abort(START)
+				loop{
+					pause;
+				}
+
+			abort(MINUTE){
+				abort(DOOR_OPEN || STOP){
+					loop{
+						emit HEAT; 
+						pause;
+					}
+					||{
+						loop{
+							emit LIGHT;
+							pause;
+						}
+					}
+				}
+			}
+		} 
 	}
-      }
-    } 
-  }
-  ||{
-    /* Reaction - 2 */
-    while(true)
-      if (DOOR_OPEN)
-	abort(!DOOR_OPEN)
-	  while(true){
-	    emit LIGHT;
-	    pause;
-	  }
-  }
-  /* Safety property via observers!! */
-  ||{
-    while(true)
-      if ((!HEAT) || LIGHT){
-	emit S;
-	pause;
-      }
-  }
-  ||{
-    while(true){
-      if (S) { emit SAT; pause;}
-      else {emit VIOLATED; pause;}
-    }
-  }
+	||
+	{
+		/* Reaction - 2 */
+		loop{
+			if (DOOR_OPEN)
+				abort(!DOOR_OPEN)
+					loop{
+						emit LIGHT;
+						pause;
+					}
+			pause;
+		}
+	}
+	/* Safety property via observers!! */
+	||
+	{
+		loop{
+			if ((!HEAT) || LIGHT){
+				emit S;
+			}
+			pause;
+		}
+	}
+	||
+	{
+		loop{
+			if (S) { emit SAT; pause;}
+			else {emit VIOLATED; pause;}
+		}
+	}
 }
 

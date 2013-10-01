@@ -15,6 +15,7 @@ let rec map6 f a b c d e g =
 
 let usage_msg = "Usage: systemjc [options] <filename>\nsee -help for more options" in
 try
+  let mytime = Sys.time() in
   let file_name = ref "" in
   let formula = ref "" in
   let promela = ref "" in
@@ -135,7 +136,9 @@ try
 		   (List.reduce Pretty.append promela_model)))) in
 	close_out fd;
       with
-      | Sys_error _ as s -> raise s in ()
+      | Sys_error _ as s -> raise s in 
+  let () = Printf.printf "Execution time: %fs\n" (Sys.time() -. mytime) in
+  ()
 with
 | End_of_file -> exit 0
 | Sys_error  _ -> print_endline usage_msg
