@@ -1,0 +1,6 @@
+#!/bin/bash
+if [ $# -eq 1 ]
+then
+	echo "state count : `cat $1 | grep 'N*\/\*' | wc -l`"
+	echo "edge count : `cat $1 | grep '::' | wc -l`"
+fi
