@@ -287,8 +287,10 @@ let rec term = function
   | Systemj.Emit _ -> False
   | Systemj.Pause (Some x,_) -> Proposition (Label x)
   | Systemj.Pause (None,lc) -> raise (Internal_error ("Pause without a label: " ^ (Reporting.get_line_and_column lc)))
-  | Systemj.Present (e,t,Some el,_) -> Or(And(And(term t, Not((collect_labels el))),NextTime(expr_to_logic e)),
-					  And(term el, Not( (collect_labels t))))
+  (* | Systemj.Present (e,t,Some el,_) -> Or(And(And(term t, Not((collect_labels el))),NextTime(expr_to_logic e)), *)
+  (* 					  And(term el, Not( (collect_labels t)))) *)
+  | Systemj.Present (e,t,Some el,_) -> Or(And(And(term t, Not((collect_labels el))),True),
+					  And(term el, Not((collect_labels t))))
   | Systemj.Present (e,t,None,_) -> term t
   | Systemj.Block (sl,r) -> term_seq r sl
   | Systemj.Spar (sl,r) -> term_spar r sl

@@ -5,18 +5,18 @@
   output channel O;		/*Channel used to communicate between the observers*/
   output channel C2;
   {
-    while(true) {
+    loop {
       abort(objectfound)
-	while(true)
+	loop
 	SEARCH: pause;
       C1!;
       C2!;
     }
   }||{
     /* observer */
-    while(true) {
+    loop {
       abort(objectfound)
-	while(true)
+	loop
 	P1: pause;
       O!;
     }
@@ -38,7 +38,7 @@
   signal SC1;
   signal SC2;
   {
-    while(true) {
+    loop {
       C1?; emit SC1;
       C2?; emit SC2;
     PICKOBJECT: pause;
@@ -46,15 +46,15 @@
     }
   }||{
     /* observer */
-    while(true) {
+    loop {
       O?;
       abort(SC2){
-      	while(true)
+      	loop
       	  pause;
       }
       abort(objectpicked){
   	abort(SC1){
-  	  while(true){
+  	  loop{
   	    pause;
   	  }
 	  emit VIOLATED;

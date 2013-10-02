@@ -1,111 +1,108 @@
 {/* LRI CD */
-	signal AS;
-	signal VS;
-	/*    input signal TLRITAVI;*/
-	signal TLRITAVI;
-	input channel VP;
+  signal AS;
+  signal VS;
+  /*    input signal TLRITAVI;*/
+  signal TLRITAVI;
+  input channel VP;
 
-	output signal resetTimer;
-	output channel AP;
-	output signal oAP;
-	signal sVP;
+  output signal resetTimer;
+  output channel AP;
+  output signal oAP;
+  signal sVP;
 
-	/*    Observer signals -> */
-	output channel OB;
-	{
-		emit resetTimer;
-		{
-			loop{
-				if(TLRITAVI){
-					AP!;
-					emit oAP;
-				} 
-				if(AS){
-					abort(sVP||VS){
-						loop{pause;}
-					}
-					emit resetTimer;
-					pause;
-				}
-				if(sVP||VS){
-					emit resetTimer;
-				}
-				pause;
-			}
-		}
-		||
-		{
-			loop{
-				VP?;
-				emit sVP;
-				pause;
-			}
-		}
+  /*    Observer signals -> */
+  output channel OB;
+  {
+    emit resetTimer;
+    {
+      loop{
+	if(TLRITAVI){
+	  AP!;
+	  emit oAP;
+	} 
+	if(AS){
+	  abort(sVP||VS){
+	    loop{pause;}
+	  }
+	  emit resetTimer;
+	  pause;
 	}
-	||
-	{
-		/*        Environment*/
-		pause;
-		pause;
-		pause;
-		emit TLRITAVI;
-		pause;
+	if(sVP||VS){
+	  emit resetTimer;
 	}
+	pause;
+      }
+    }
+    ||
+      {
+	loop{
+	  VP?;
+	  emit sVP;
+	  pause;
+	}
+      }
+  }
+  ||
+    {
+      /*        Environment*/
+      emit TLRITAVI;
+      pause;
+    }
 }
 ><
 {
-	signal AS;
-	signal VS;
-	input channel AP;
-	signal TAVI;
-	signal TURI;
+  signal AS;
+  signal VS;
+  input channel AP;
+  signal TAVI;
+  signal TURI;
 
-	output signal resetTimer;
-	output signal oVP;
-	output channel VP;
+  output signal resetTimer;
+  output signal oVP;
+  output channel VP;
 
-	signal sAP;
-	/*    Observer signals -> */
-	signal sus2;
-	signal mytest;
-	input channel OB;
-	{
-		{
-			loop{
-				abort(AS||sAP){loop{pause;}}
-				emit resetTimer;
+  signal sAP;
+  /*    Observer signals -> */
+  signal sus2;
+  signal mytest;
+  input channel OB;
+  {
+    {
+      loop{
+	abort(AS||sAP){loop{pause;}}
+	emit resetTimer;
 
-				abort(TAVI){loop{pause;}}
-				if(TURI){
-					VP!;
-					emit oVP;
-				}
-				else{
-					abort(VS){
-						abort(TURI){loop{pause;}}
-						VP!;
-						emit oVP;
-					}
-				}
-				pause;
-			}
-		}
-		||
-		{
-			loop{
-				AP?;
-				emit sAP;
-				pause;
-			}
-		}
+	abort(TAVI){loop{pause;}}
+	if(TURI){
+	  VP!;
+	  emit oVP;
 	}
-	||
-	{
-		/*        Environment*/
-		abort(sAP){loop{pause;}}
-		pause;
-		pause;
-		emit TAVI; emit TURI;
-		pause;
+	else{
+	  abort(VS){
+	    abort(TURI){loop{pause;}}
+	    VP!;
+	    emit oVP;
+	  }
 	}
+	pause;
+      }
+    }
+    ||
+      {
+	loop{
+	  AP?;
+	  emit sAP;
+	  pause;
+	}
+      }
+  }
+  ||
+    {
+      /*        Environment*/
+      abort(sAP){loop{pause;}}
+      pause;
+      pause;
+      emit TAVI; emit TURI;
+      pause;
+    }
 }

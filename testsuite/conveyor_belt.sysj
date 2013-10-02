@@ -21,6 +21,11 @@
 	pause;
     emit VIOLATED;
     pause;
+  }||{
+    /* Env */
+    pause;
+    emit last;
+    pause;
   }
 }
 ><

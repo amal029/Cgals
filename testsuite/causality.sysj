@@ -1,23 +1,23 @@
-{
-  signal S1;
-  signal S2;
-  signal I;
-  signal O;
-  if(I) emit S1;
-  ||
-  if(!S1) ; else emit S2;
-  ||
-  if (S2) emit O;
-  pause;
-}
-><
-{
-  /* Instantaneous loop -- detected! */
-  signal A;
-  loop
-    emit A;
-}
-><
+/* { */
+/*   signal S1; */
+/*   signal S2; */
+/*   signal I; */
+/*   signal O; */
+/*   if(I) emit S1; */
+/*   || */
+/*   if(!S1) ; else emit S2; */
+/*   || */
+/*   if (S2) emit O; */
+/*   pause; */
+/* } */
+/* >< */
+/* { */
+/*   /\* Instantaneous loop -- detected! *\/ */
+/*   signal A; */
+/*   loop */
+/*     emit A; */
+/* } */
+/* >< */
 {
   /* First causal cycle -- detected */
   signal S1;
@@ -27,31 +27,31 @@
   if (S2) ; else emit S1;
   pause;
 }
-><
-{
-  /* Second causal cycle -- detected */
-  signal A;
-  if (A) ; else emit A;
-  pause;
-}
-><
-{
-  /* Static deadlocks -- correct, but do nothing! */
-  signal S1;
-  signal S2;
-  {
-    abort(S1)
-      loop
-	pause;
-    emit S2;
-  }
-  ||
-  {
-    abort (S2)
-      loop
-	pause;
-    emit S1;
-  }
-  ||
-  pause;
-}
+/* >< */
+/* { */
+/*   /\* Second causal cycle -- detected *\/ */
+/*   signal A; */
+/*   if (A) ; else emit A; */
+/*   pause; */
+/* } */
+/* >< */
+/* { */
+/*   /\* Static deadlocks -- correct, but do nothing! *\/ */
+/*   signal S1; */
+/*   signal S2; */
+/*   { */
+/*     abort(S1) */
+/*       loop */
+/* 	pause; */
+/*     emit S2; */
+/*   } */
+/*   || */
+/*   { */
+/*     abort (S2) */
+/*       loop */
+/* 	pause; */
+/*     emit S1; */
+/*   } */
+/*   || */
+/*   pause; */
+/* } */
