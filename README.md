@@ -29,6 +29,7 @@ Install dependencies:
 * Sexplib: https://github.com/janestreet/sexplib.git
 * ocaml-pretty: https://github.com/toyvo/ocaml-pretty (will need to write the META file)
 * ocaml-find/findlib: http://projects.camlcity.org/projects/findlib.html
+* parmap: https://github.com/rdicosmo/parmap
 * SPIN model-checker: http://spinroot.com/
 
 make clean && make in the source directory.
