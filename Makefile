@@ -18,7 +18,7 @@ compile:
 	$(MAKE) -e -C backend/ all
 	ocamlfind $(CC) -pp "camlp4o pa_macro.cmo -UDEBUG -USDEBUG" -o	\
 	systemjc -syntax batteries.syntax -linkpkg -package batteries	\
-	-package sexplib -package pretty -I ./language -I ./error -I	\
+	-package sexplib -package pretty -package ocamlviz -thread -I ./language -I ./error -I	\
 	./parser -I ./induction -I ./util -I ./backend $(ERRORLIB)	\
 	$(LANGUAGELIB) $(PARSERLIB) $(LOGICLIB) $(UTILLIB)		\
 	$(CODEGENLIB) systemjc.ml

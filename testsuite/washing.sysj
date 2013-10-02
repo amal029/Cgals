@@ -1,29 +1,29 @@
 {
-	signal wash_on;
-	signal wash_off;
-	signal spin_on;
-	signal spin_off;
+  signal wash_on;
+  signal wash_off;
+  signal spin_on;
+  signal spin_off;
 
-	signal WASHING;
-	signal DRYING;
-	{
-		loop{
-			abort(wash_on){loop{pause;}}
-			abort(wash_off){loop{emit WASHING; pause;}}
-		}
-	}
-	||{
-		loop{
-			abort(spin_on){loop{pause;}}
-			abort(WASHING){
-				pause;
-				abort(spin_off){loop{emit DRYING; pause;}}
-			}
-		}
-	}||{
-		loop{
-			pause;pause;emit wash_on;pause;pause;
-			emit spin_on;pause;emit spin_off;emit wash_off;
-		}
-	}
+  signal WASHING;
+  signal DRYING;
+  {
+    loop{
+      abort(wash_on){loop{pause;}}
+      abort(wash_off){loop{emit WASHING; pause;}}
+    }
+  }
+  ||{
+    loop{
+      abort(spin_on){loop{pause;}}
+      abort(WASHING){
+	pause;
+	abort(spin_off){loop{emit DRYING; pause;}}
+      }
+    }
+  }||{
+    loop{
+      pause;pause;emit wash_on;pause;pause;
+      emit spin_on;pause;emit spin_off;emit wash_off;
+    }
+  }
 }

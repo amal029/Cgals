@@ -21,7 +21,7 @@ default:
 	@echo "$$README"
 
 pacemaker: FILE = pacemaker
-pacemaker: FORMULA = [] (CD0_TLRITAVI -> <> CD1_oVP)
+pacemaker: FORMULA = [] true
 
 micro: FILE = microwave_oven
 micro: FORMULA =[](CD0_HEAT -> <> CD0_LIGHT) 
