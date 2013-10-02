@@ -15,7 +15,6 @@ let rec map6 f a b c d e g =
 
 let usage_msg = "Usage: systemjc [options] <filename>\nsee -help for more options" in
 try
-  let mytime = Sys.time() in
   let file_name = ref "" in
   let formula = ref "" in
   let promela = ref "" in
@@ -27,6 +26,7 @@ try
     (fun x -> file_name := x) usage_msg in
 
   (* Initialize the error reporting structures *)
+  let mytime = Sys.time() in
   let in_chan = open_in !file_name in
   let () = print_endline "....Lexing and parsing..." in
   let lexbuf = Lexing.from_channel in_chan in
