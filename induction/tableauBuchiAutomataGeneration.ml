@@ -64,6 +64,7 @@ let rec expand index node nodes_set =
 	    try 
 	      (Hashtbl.find (List.at !update_tuple_proposition_ll index) n)
 	    with | _ as s ->
+	      print_endline ("Index: " ^ (string_of_int index));
 	      output_hum stdout (sexp_of_logic n);
 	      raise s
 	  else n in

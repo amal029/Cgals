@@ -44,8 +44,12 @@ try
     let () = SS.output_hum Pervasives.stdout (PropositionalLogic.sexp_of_logic x) in
     print_endline "\n\n\n\n\n\n-----------------------------------------------\n\n\n\n") ltls ELSE () ENDIF in
   let () = print_endline "....Building Buchi Automata ..." in
-  (* let buchi_automatas = List.mapi TableauBuchiAutomataGeneration.create_graph ltls in *)
-  let buchi_automatas = Parmap.parmapi TableauBuchiAutomataGeneration.create_graph (Parmap.L ltls) in
+  let buchi_automatas = List.mapi TableauBuchiAutomataGeneration.create_graph ltls in
+  (* let buchi_automatas = Parmap.parmapi TableauBuchiAutomataGeneration.create_graph (Parmap.L ltls) in *)
+  (* let ccount = List.init (List.length ltls) (fun x -> x) in *)
+  (* let ltls1 = List.combine ccount ltls in *)
+  (* let () = Functory.Cores.set_number_of_cores 4 in *)
+  (* let buchi_automatas = Functory.Cores.map (fun (x,y) -> TableauBuchiAutomataGeneration.create_graph x y) ltls1 in *)
   let labeled_buchi_automatas = List.map2 TableauBuchiAutomataGeneration.add_labels ltls buchi_automatas in
   let () = IFDEF DEBUG THEN List.iter (fun x -> 
     let () = SS.output_hum Pervasives.stdout (SSL.sexp_of_list TableauBuchiAutomataGeneration.sexp_of_labeled_graph_node x) in
@@ -90,8 +94,8 @@ try
 	  let ig = List.reduce (fun x y -> PL.Or(x,y)) !ig in
 	  gg := List.map (fun x -> PL.solve_logic (PL.And (x,ig))) !gg;
 	  ln.guards <- !gg;
-	  (* This is deleting the rest of the nodes with incoming as Init *)
-	  (* n.incoming <- List.remove_all n.incoming "Init"; *)
+      (* This is deleting the rest of the nodes with incoming as Init *)
+      (* n.incoming <- List.remove_all n.incoming "Init"; *)
       ) ret in
       (* There are other nodes without "st", these can be logic
 	 formulas, in that case we need to find the nodes, which these
