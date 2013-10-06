@@ -22,21 +22,19 @@ let make_body channels o index signals isignals = function
     let (o,guards) = L.split o in
     (* First add the location label *)
     ((n ^ "/*" ^ (string_of_logic tlabel) ^ "*/" ^ ":\n") >> text)
-    ++ ("atomic{\n" >> text)
-    ++ List.reduce (++) (
-      if o <> [] then
-	L.map2 (fun x g ->
-	  let updates = Util.get_updates index g in
-	  let updates = List.sort_unique compare (List.map (fun (Update x) ->x) updates) in
-	  let to_false = ref signals in
-	  let () = L.iter (fun x -> to_false := L.filter (fun y -> y <> x) !to_false) updates in
-	  L.fold_left (++) empty (L.mapi (fun i x -> 
-	    ((if not (L.exists (fun t -> t = x) channels) then ("CD"^(string_of_int index)^"_"^x) else x)
-	     ^ " = false;\t" >> text)) !to_false)
-	) o guards 
-      else [empty]
-    )
-    ++ ("\nif\n" >> text)
+    (* ++ List.reduce (++) ( *)
+    (*   if o <> [] then *)
+    (* 	L.map2 (fun x g -> *)
+    (* 	  let updates = Util.get_updates index g in *)
+    (* 	  let updates = List.sort_unique compare (List.map (fun (Update x) ->x) updates) in *)
+    (* 	  let to_false = ref signals in *)
+    (* 	  let () = L.iter (fun x -> to_false := L.filter (fun y -> y <> x) !to_false) updates in *)
+    (* 	  L.fold_left (++) empty (L.mapi (fun i x ->  *)
+    (* 	    ((if not (L.exists (fun t -> t = x) channels) then ("CD"^(string_of_int index)^"_"^x) else x) *)
+    (* 	     ^ " = false;\t" >> text)) !to_false) *)
+    (* 	) o guards  *)
+    (*   else [empty] *)
+    (* ) *)
     (* Now add the transitions *)
     ++ (L.reduce (++) (
       if o <> [] then
@@ -47,21 +45,23 @@ let make_body channels o index signals isignals = function
 	  let updates = List.sort_unique compare (List.map (fun (Update x) ->x) updates) in
 	  let to_false = ref signals in
 	  let () = L.iter (fun x -> to_false := L.filter (fun y -> y <> x) !to_false) updates in
-	  (* let () = L.iter (fun x -> to_false := L.filter (fun y -> y <> x) !to_false) isignals in *)
-	  ((if g <> "" then (":: (" ^ g ^ ") -> ") else (":: true -> ")) >> text)
+	  let () = L.iter (fun x -> to_false := L.filter (fun y -> y <> x) !to_false) isignals in
+	  ("atomic{\n" >> text)
+	  ++ L.fold_left (++) empty (L.mapi (fun i x ->
+	    ((if not (L.exists (fun t -> t = x) channels) then ("CD"^(string_of_int index)^"_"^x) else x)
+	     ^ " = false;\t" >> text)) !to_false)
+	  ++ ("\nif\n" >> text)
+	  ++ ((if g <> "" then (":: (" ^ g ^ ") -> ") else (":: true -> ")) >> text)
 	  (* These are the updates to be made here!! *)
 	  ++ L.fold_left (++) empty (L.mapi (fun i x -> 
 	    ((if not (L.exists (fun t -> t = x) channels) then ("CD"^(string_of_int index)^"_"^x) else x)
 	     ^ " = true;\t") >> text) updates)
-	  (* ++ L.fold_left (++) empty (L.mapi (fun i x ->  *)
-	  (*   ((if not (L.exists (fun t -> t = x) channels) then ("CD"^(string_of_int index)^"_"^x) else x) *)
-	  (*    ^ " = false;\t" >> text)) !to_false) *)
 	  ++ (("goto " ^ x ^ ";\n") >> text)
+	  ++ ("fi;\n" >> text)
+	  ++ ("}\n" >> text)
 	) o guards
-      else [("::goto " ^ n ^ ";\n">> text)]
+      else [("goto " ^ n ^ ";\n">> text)]
     )) 
-    ++ ("fi;\n" >> text)
-    ++ ("}\n" >> text)
       
       
 let make_process channels o index signals isignals init lgn = 
