@@ -44,8 +44,8 @@ try
     let () = SS.output_hum Pervasives.stdout (PropositionalLogic.sexp_of_logic x) in
     print_endline "\n\n\n\n\n\n-----------------------------------------------\n\n\n\n") ltls ELSE () ENDIF in
   let () = print_endline "....Building Buchi Automata ..." in
-  let buchi_automatas = List.mapi TableauBuchiAutomataGeneration.create_graph ltls in
-  (* let buchi_automatas = Parmap.parmapi TableauBuchiAutomataGeneration.create_graph (Parmap.L ltls) in *)
+  (* let buchi_automatas = List.mapi TableauBuchiAutomataGeneration.create_graph ltls in *)
+  let buchi_automatas = Parmap.parmapi ~ncores:4 TableauBuchiAutomataGeneration.create_graph (Parmap.L ltls) in
   (* let ccount = List.init (List.length ltls) (fun x -> x) in *)
   (* let ltls1 = List.combine ccount ltls in *)
   (* let () = Functory.Cores.set_number_of_cores 4 in *)

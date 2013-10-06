@@ -1,5 +1,6 @@
 module L = Batteries.List
 module Hashtbl = Batteries.Hashtbl
+module LL = Batteries.LazyList
 
 open Sexplib
 open Std
@@ -13,25 +14,6 @@ open Pretty
 
 let (++) = append
 let (>>) x f = f x
-
-(* let make_args length index signal =  *)
-(*   (("bool " ^ signal) >> text) *)
-(*   ++ ((if index = (length-1) then "" else "; ") >> text) *)
-
-let get_outgoings o = function
-  | ({name=n;incoming=i},guards) ->
-    try
-      List.iter2 (fun x g -> 
-	match Hashtbl.find_option o x with
-	| Some ll -> Hashtbl.replace o x ((n,g) :: ll)
-	| None -> Hashtbl.add o x [(n,g)]
-      ) i guards
-    with
-    | _ as s -> 
-      output_hum stdout (sexp_of_list sexp_of_string i);
-      output_hum stdout (sexp_of_list sexp_of_logic guards);
-      print_endline ("Node: " ^ n);
-      raise s
 
 let make_body channels o index signals isignals = function
   (* Make the body of the process!! *)
@@ -93,6 +75,6 @@ let make_process channels o index signals isignals init lgn =
 
 let make_promela channels signals isignals index init lgn = 
   let o = Hashtbl.create 1000 in
-  let () = L.iter (fun x -> get_outgoings o (x.node,x.guards)) lgn in
+  let () = L.iter (fun x -> Util.get_outgoings o (x.node,x.guards)) lgn in
   group ((make_process channels o index signals isignals init lgn) ++ (" " >> line))
     
