@@ -57,6 +57,7 @@ let make_body channels o index signals isignals = function
 	    ((if not (L.exists (fun t -> t = x) channels) then ("CD"^(string_of_int index)^"_"^x) else x)
 	     ^ " = true;\t") >> text) updates)
 	  ++ (("goto " ^ x ^ ";\n") >> text)
+      ++ ((":: else -> skip;\n") >> text)
 	  ++ ("fi;\n" >> text)
 	  ++ ("}\n" >> text)
 	) o guards

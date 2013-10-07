@@ -1,5 +1,6 @@
 module List = Batteries.List
 module Hashtbl = Batteries.Hashtbl
+module MyString = Batteries.String
 
 module SS = Sexplib.Sexp
 module SSL = Sexplib.Std
@@ -14,6 +15,7 @@ let rec map6 f a b c d e g =
   | _ -> failwith "Lists not of equal length"
 
 let usage_msg = "Usage: systemjc [options] <filename>\nsee -help for more options" in
+
 try
   let file_name = ref "" in
   let formula = ref "" in
@@ -118,32 +120,59 @@ try
   (* Remove the unreachable nodes from the generated graph *)
   let labeled_buchi_automatas = List.map Util.reachability labeled_buchi_automatas in
   let () = 
-    if !promela = "" then
-      ()
-    else 
+    if !promela <> "" then
       try
-	let fd = open_out !promela in
-	let signals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_signal_declarations x) in
-	let isignals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_input_signal_declarations x) in
-	let promela_model = map6 
-	  Promela.make_promela 
-	  (List.init (List.length labeled_buchi_automatas) (fun x -> channels)) signals isignals
-	  (List.init (List.length labeled_buchi_automatas) (fun x -> x)) (List.rev !init) labeled_buchi_automatas in
-	(* make the channel declarations in the global space!! *)
-	let promela_channels = List.fold_left Pretty.append Pretty.empty (List.map (fun x -> Pretty.text ("bool "^x^";\n"))channels) in
-	let promela_gsigs = List.fold_left Pretty.append Pretty.empty 
-	  (List.mapi (fun i y -> List.fold_left Pretty.append Pretty.empty (List.map (fun x -> Pretty.text ("bool CD"^(string_of_int i)^"_"^x^";\n")) 
-									      (List.sort_unique compare y)))
-	     signals) in
-	let appf = if !formula = "" then Pretty.empty else (Pretty.text ("ltl {" ^ !formula ^ "}\n")) in
-	let () = Pretty.print ~output:(output_string fd) 
-	  (Pretty.append promela_gsigs
-	     (Pretty.append promela_channels 
-		(Pretty.append appf
-		   (List.reduce Pretty.append promela_model)))) in
-	close_out fd;
-      with
-      | Sys_error _ as s -> raise s in 
+        let fd = open_out !promela in
+        let signals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_signal_declarations x) in
+        let isignals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_input_signal_declarations x) in
+        let promela_model = map6 
+          Promela.make_promela 
+          (List.init (List.length labeled_buchi_automatas) (fun x -> channels)) signals isignals
+          (List.init (List.length labeled_buchi_automatas) (fun x -> x)) (List.rev !init) labeled_buchi_automatas in
+        (* make the channel declarations in the global space!! *)
+        let promela_channels = List.fold_left Pretty.append Pretty.empty (List.map (fun x -> Pretty.text ("bool "^x^";\n"))channels) in
+        let promela_gsigs = List.fold_left Pretty.append Pretty.empty 
+          (List.mapi (fun i y -> List.fold_left Pretty.append Pretty.empty (List.map (fun x -> Pretty.text ("bool CD"^(string_of_int i)^"_"^x^";\n")) 
+                                              (List.sort_unique compare y)))
+             signals) in
+        let appf = if !formula = "" then Pretty.empty else (Pretty.text ("ltl {" ^ !formula ^ "}\n")) in
+        let () = Pretty.print ~output:(output_string fd) 
+          (Pretty.append promela_gsigs
+             (Pretty.append promela_channels 
+            (Pretty.append appf
+               (List.reduce Pretty.append promela_model)))) in
+        close_out fd;
+          with
+          | Sys_error _ as s -> raise s  
+    else if MyString.ends_with !outfile ".c" then
+        let fd = open_out !outfile in
+        let signals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_signal_declarations x) in
+        let isignals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_input_signal_declarations x) in
+        let c_model = map6 
+          C.make_c
+          (List.init (List.length labeled_buchi_automatas) (fun x -> channels)) signals isignals
+          (List.init (List.length labeled_buchi_automatas) (fun x -> x)) (List.rev !init) labeled_buchi_automatas in
+        let c_headers = Pretty.text ("#include <stdio.h>\n"^"typedef int bool;\n"^"#define true 1\n"^"#define false 0\n") in
+        let c_main = C.make_main (List.length labeled_buchi_automatas) in
+        let c_channels = List.fold_left Pretty.append Pretty.empty (List.map (fun x -> Pretty.text ("bool "^x^" = false;\n"))channels) in
+        let c_gsigs = List.fold_left Pretty.append Pretty.empty 
+          (List.mapi (fun i y -> List.fold_left Pretty.append Pretty.empty (List.map (fun x -> Pretty.text ("bool CD"^(string_of_int i)^"_"^x^" = false;\n")) 
+                                              (List.sort_unique compare y)))
+             signals) in
+        let () = Pretty.print ~output:(output_string fd) 
+          (Pretty.append c_headers
+            (Pretty.append c_gsigs
+             (Pretty.append c_channels 
+               (Pretty.append(List.reduce Pretty.append c_model)
+                c_main)))) in
+        close_out fd;
+(*
+        let kkkk = (List.init (List.length labeled_buchi_automatas) (fun x -> channels)) in
+        let () = List.iter (fun x -> List.iter (fun x -> print_endline x) x ) kkkk in
+*)
+        ()
+    else 
+      () in
   let () = Printf.printf "Execution time: %fs\n" (Sys.time() -. mytime) in
   ()
 with
