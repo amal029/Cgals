@@ -12,31 +12,53 @@ open TableauBuchiAutomataGeneration
 
 exception Internal_error of string
 
-let rec label channels index updates isignals = function
-  | And (x,y) -> (label channels index updates isignals x) ^ "&&" ^ (label channels index updates isignals y)
-  | Or (x,y) -> (label channels index updates isignals x) ^ "||" ^ (label channels index updates isignals y)
-  | Not (Proposition x) as s-> "!"^(match x with 
-    | Expr x ->
-      if (not (L.exists (fun t -> t = x) isignals)) then
-	if x.[0] = '$' then 
-	  let () = output_hum stdout (sexp_of_logic s) in
-	  raise (Internal_error "^^^^^^^^^^^^ Not emit proposition impossible!")
-	else if not (L.exists (fun t -> t = x) channels) then ("CD"^(string_of_int index)^"_"^x) else x
-	else "false"
-    | Update x -> raise (Internal_error ("Tried to update " ^ x ^ " on a guard!!"))
-    | Label x -> raise (Internal_error ("Tried to put label " ^ x ^ " on a guard!!"))) 
+let rec label tf internal_signals channels index updates isignals = function
+  | And (x,y) -> 
+    let lv = (label tf internal_signals channels index updates isignals x)  in
+    let rv = (label tf internal_signals channels index updates isignals y) in
+    (match (lv,rv) with
+    | ("false",_) | (_,"false") -> "false"
+    | (_,_) -> lv ^ "&&" ^ rv)
+  | Or (x,y) -> 
+    let lv = (label tf internal_signals channels index updates isignals x)  in
+    let rv = (label tf internal_signals channels index updates isignals y) in
+    (match (lv,rv) with
+    | ("true",_) | (_,"true") -> "true"
+    | (_,_) -> lv ^ "||" ^ rv)
+  | Not (Proposition x) as s-> 
+    let v = (match x with 
+      | Expr x ->
+	if ((L.exists (fun t -> t = x) tf)) then "false"
+	else
+	  if (not (L.exists (fun t -> t = x) isignals)) then
+	    if x.[0] = '$' then 
+	      let () = output_hum stdout (sexp_of_logic s) in
+	      raise (Internal_error "^^^^^^^^^^^^ Not emit proposition impossible!")
+	    else 
+	      if not (L.exists (fun t -> t = x) channels) then ("CD"^(string_of_int index)^"_"^x) 
+	      else x
+	  else "false"
+      | Update x -> raise (Internal_error ("Tried to update " ^ x ^ " on a guard!!"))
+      | Label x -> raise (Internal_error ("Tried to put label " ^ x ^ " on a guard!!"))) in 
+    (match v with
+    | "false" -> "true"
+    | "true" -> "false"
+    | _ -> "!"^v)
   | Proposition x as s -> (match x with 
     | Expr x -> 
-      if (not (L.exists (fun t -> t = x) isignals)) then
-	if x.[0] = '$' then "true"
-	  (* begin updates :=  (Hashtbl.find (L.nth !update_tuple_tbl_ll index) s) :: !updates; "true" end *)
-	else 
-	  (* (\* This can only ever happen here! *\) *)
-	  if not (List.exists (fun (Update t) -> t = x) updates) then
-	    if not (L.exists (fun t -> t = x) channels) then ("CD"^(string_of_int index)^"_"^x) 
-	    else x
-	  else "true"
-      else "true"
+      if ((L.exists (fun t -> t = x) tf)) then
+      	let () = print_endline ("[WARNING] ********Possible Causal cycle detected on signal********: " ^ x) in
+	"false"
+      else
+	if (not (L.exists (fun t -> t = x) isignals)) then
+	  if x.[0] = '$' then "true"
+	  else 
+	  (* This can only ever happen here! *)
+	    if not (List.exists (fun (Update t) -> t = x) updates) then
+	      if not (L.exists (fun t -> t = x) channels) then ("CD"^(string_of_int index)^"_"^x) 
+	      else x
+	    else "true"
+	else "true"
     | Update x -> raise (Internal_error ("Tried to update " ^ x ^ " on a guard!!"))
     | Label x -> raise (Internal_error ("Tried to put label " ^ x ^ " on a guard!!"))) 
   | True -> "true"
@@ -107,3 +129,4 @@ let reachability lgn =
   let () = solve q o ret lgn in
   (* Finally the list is returned *)
   L.sort_unique compare !ret
+

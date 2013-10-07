@@ -1,3 +1,4 @@
+
 module L = Batteries.List
 module Hashtbl = Batteries.Hashtbl
 module LL = Batteries.LazyList
@@ -35,28 +36,24 @@ let make_body internal_signals channels o index signals isignals = function
 	  let g = Util.label !to_false internal_signals channels index updates isignals g in
 	  let updates = updates1 in
 	  if g <> "false" then
-	    ("atomic{\n" >> text)
-	    ++ L.fold_left (++) empty (L.mapi (fun i x ->
+	    L.fold_left (++) empty (L.mapi (fun i x ->
 	      ((if not (L.exists (fun t -> t = x) channels) then ("CD"^(string_of_int index)^"_"^x) else x)
 	       ^ " = false;\t" >> text)) !to_false)
-	    ++ ("\nif\n" >> text)
-	    ++ ((if g <> "" then (":: (" ^ g ^ ") -> ") else (":: true -> ")) >> text)
+	    ++ ("\nif" >> text)
+	    ++ ((if g <> "" then ("(" ^ g ^ ") {\n") else (":: true -> ")) >> text)
 	    (* These are the updates to be made here!! *)
 	    ++ L.fold_left (++) empty (L.mapi (fun i x -> 
 	      ((if not (L.exists (fun t -> t = x) channels) then ("CD"^(string_of_int index)^"_"^x) else x)
 	       ^ " = true;\t") >> text) updates)
 	    ++ (("goto " ^ x ^ ";\n") >> text)
-	    ++ ((":: else skip;\n") >> text)
-	    ++ ("fi;\n" >> text)
 	    ++ ("}\n" >> text)
 	  else empty
 	) o guards
       else [("goto " ^ n ^ ";\n">> text)]
     )) 
-      
-      
+
 let make_process internal_signals channels o index signals isignals init lgn = 
-  (("active proctype CD" ^ (string_of_int index) ^ "(") >> text) 
+  (("void CD" ^ (string_of_int index) ^ "(") >> text) 
   (* ++ (L.fold_left (++) empty) (L.mapi (make_args (L.length !ss)) !ss) *)
   ++ ("){\n" >> text)
   ++ (("goto " ^ init ^ ";\n") >> text)
@@ -64,7 +61,14 @@ let make_process internal_signals channels o index signals isignals init lgn =
   ++ ("}\n" >> text)
   ++ (" " >> line)
 
-let make_promela channels internal_signals signals isignals index init lgn = 
+let make_main index = 
+ ("int main(){\n" >> text) ++
+ ("while(true){\n" >> text) ++ 
+ L.fold_left (++) empty (L.init index (fun x -> "CD"^(string_of_int x)^"();\n" >> text)) ++
+ ("}\n" >> text) ++
+ ("}\n" >> text)
+
+let make_c channels internal_signals signals isignals index init lgn = 
   let o = Hashtbl.create 1000 in
   let () = L.iter (fun x -> Util.get_outgoings o (x.node,x.guards)) lgn in
   group ((make_process internal_signals channels o index signals isignals init lgn) ++ (" " >> line))

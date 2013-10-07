@@ -8,10 +8,10 @@ module SSL = Sexplib.Std
 module PL = PropositionalLogic
 open TableauBuchiAutomataGeneration
 
-let rec map6 f a b c d e g = 
-  match (a,b,c,d,e,g) with
-  | ([],[],[],[],[],[]) -> []
-  | ((h1::t1),(h2::t2),(h3::t3),(h4::t4),(h5::t5),(h6::t6)) -> (f h1 h2 h3 h4 h5 h6) :: map6 f t1 t2 t3 t4 t5 t6
+let rec map7 f a b c d e g i = 
+  match (a,b,c,d,e,g,i) with
+  | ((h1::t1),(h2::t2),(h3::t3),(h4::t4),(h5::t5),(h6::t6),(h7::t7)) -> (f h1 h2 h3 h4 h5 h6 h7) :: map7 f t1 t2 t3 t4 t5 t6 t7
+  | ([],[],[],[],[],[],[]) -> []
   | _ -> failwith "Lists not of equal length"
 
 let usage_msg = "Usage: systemjc [options] <filename>\nsee -help for more options" in
@@ -125,9 +125,10 @@ try
         let fd = open_out !promela in
         let signals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_signal_declarations x) in
         let isignals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_input_signal_declarations x) in
-        let promela_model = map6 
+        let internal_signals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_internal_signal_declarations x) in
+        let promela_model = map7 
           Promela.make_promela 
-          (List.init (List.length labeled_buchi_automatas) (fun x -> channels)) signals isignals
+          (List.init (List.length labeled_buchi_automatas) (fun x -> channels)) internal_signals signals isignals
           (List.init (List.length labeled_buchi_automatas) (fun x -> x)) (List.rev !init) labeled_buchi_automatas in
         (* make the channel declarations in the global space!! *)
         let promela_channels = List.fold_left Pretty.append Pretty.empty (List.map (fun x -> Pretty.text ("bool "^x^";\n"))channels) in
@@ -143,14 +144,15 @@ try
                (List.reduce Pretty.append promela_model)))) in
         close_out fd;
           with
-          | Sys_error _ as s -> raise s  
+          | Sys_error _ as s -> raise s 
     else if MyString.ends_with !outfile ".c" then
         let fd = open_out !outfile in
         let signals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_signal_declarations x) in
         let isignals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_input_signal_declarations x) in
-        let c_model = map6 
+        let internal_signals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_internal_signal_declarations x) in
+        let c_model = map7 
           C.make_c
-          (List.init (List.length labeled_buchi_automatas) (fun x -> channels)) signals isignals
+          (List.init (List.length labeled_buchi_automatas) (fun x -> channels)) internal_signals signals isignals
           (List.init (List.length labeled_buchi_automatas) (fun x -> x)) (List.rev !init) labeled_buchi_automatas in
         let c_headers = Pretty.text ("#include <stdio.h>\n"^"typedef int bool;\n"^"#define true 1\n"^"#define false 0\n") in
         let c_main = C.make_main (List.length labeled_buchi_automatas) in
@@ -166,10 +168,6 @@ try
                (Pretty.append(List.reduce Pretty.append c_model)
                 c_main)))) in
         close_out fd;
-(*
-        let kkkk = (List.init (List.length labeled_buchi_automatas) (fun x -> channels)) in
-        let () = List.iter (fun x -> List.iter (fun x -> print_endline x) x ) kkkk in
-*)
         ()
     else 
       () in
