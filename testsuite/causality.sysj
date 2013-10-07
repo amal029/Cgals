@@ -18,22 +18,22 @@
 /*     emit A; */
 /* } */
 /* >< */
-{
-  /* First causal cycle -- detected */
-  signal S1;
-  signal S2;
-  if (S1) ; else emit S2;
-  ||
-  if (S2) ; else emit S1;
-  pause;
-}
-/* >< */
 /* { */
-/*   /\* Second causal cycle -- detected *\/ */
-/*   signal A; */
-/*   if (A) ; else emit A; */
+/*   /\* First causal cycle -- detected *\/ */
+/*   signal S1; */
+/*   signal S2; */
+/*   if (S1) ; else emit S2; */
+/*   || */
+/*   if (S2) ; else emit S1; */
 /*   pause; */
 /* } */
+/* >< */
+{
+  /* Second causal cycle -- detected */
+  signal A;
+  if (A) ; else emit A;
+  pause;
+}
 /* >< */
 /* { */
 /*   /\* Static deadlocks -- correct, but do nothing! *\/ */

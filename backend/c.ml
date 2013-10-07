@@ -44,7 +44,7 @@ let make_body internal_signals channels o index signals isignals = function
 	    (* These are the updates to be made here!! *)
 	    ++ L.fold_left (++) empty (L.mapi (fun i x -> 
 	      ((if not (L.exists (fun t -> t = x) channels) then ("CD"^(string_of_int index)^"_"^x) else x)
-	       ^ " = true;\t") >> text) updates)
+	       ^ " = true;\t printf(\"Emitted: "^x^"\\n\");\t") >> text) updates)
 	    ++ (("goto " ^ x ^ ";\n") >> text)
 	    ++ ("}\n" >> text)
 	  else empty
@@ -62,11 +62,11 @@ let make_process internal_signals channels o index signals isignals init lgn =
   ++ (" " >> line)
 
 let make_main index = 
- ("int main(){\n" >> text) ++
- ("while(true){\n" >> text) ++ 
- L.fold_left (++) empty (L.init index (fun x -> "CD"^(string_of_int x)^"();\n" >> text)) ++
- ("}\n" >> text) ++
- ("}\n" >> text)
+  ("int main(){\n" >> text) ++
+    ("while(true){\n" >> text) ++ 
+    L.fold_left (++) empty (L.init index (fun x -> "CD"^(string_of_int x)^"();\n" >> text)) ++
+    ("}\n" >> text) ++
+    ("}\n" >> text)
 
 let make_c channels internal_signals signals isignals index init lgn = 
   let o = Hashtbl.create 1000 in

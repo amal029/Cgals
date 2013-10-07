@@ -24,7 +24,7 @@ try
   let () = Arg.parse [
     ("-formula", Arg.Set_string formula, " The propositional linear temporal logic formula to verify (see promela ltl man page)");
     ("-promela", Arg.Set_string promela, " The name of the promela output file");
-    ("-o", Arg.Set_string outfile, " The name of the [llvm/C/Java] output file (NOT IMPLEMENTED YET)")] 
+    ("-o", Arg.Set_string outfile, " The name of the [llvm/C/Java] output file (Only C backend implemented)")] 
     (fun x -> file_name := x) usage_msg in
 
   (* Initialize the error reporting structures *)
