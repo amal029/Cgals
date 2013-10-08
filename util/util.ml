@@ -28,8 +28,8 @@ let rec label tf internal_signals channels index updates isignals = function
   | Not (Proposition x) as s-> 
     let v = (match x with 
       | Expr x ->
-	if ((L.exists (fun t -> t = x) tf)) then "false"
-	else
+	(* if ((L.exists (fun t -> t = x) tf)) then "false" *)
+	(* else *)
 	  if (not (L.exists (fun t -> t = x) isignals)) then
 	    if x.[0] = '$' then 
 	      let () = output_hum stdout (sexp_of_logic s) in
@@ -46,10 +46,10 @@ let rec label tf internal_signals channels index updates isignals = function
     | _ -> "!"^v)
   | Proposition x as s -> (match x with 
     | Expr x -> 
-      if ((L.exists (fun t -> t = x) tf)) then
-      	let () = print_endline ("[WARNING] ********Possible Causal cycle detected on signal********: " ^ x) in
-	"false"
-      else
+      (* if ((L.exists (fun t -> t = x) tf)) then *)
+      (* 	let () = print_endline ("[WARNING] ********Possible Causal cycle detected on signal********: " ^ x) in *)
+      (* 	"false" *)
+      (* else *)
 	if (not (L.exists (fun t -> t = x) isignals)) then
 	  if x.[0] = '$' then "true"
 	  else 

@@ -2,7 +2,7 @@
   signal A;
   signal B;
   {
-    abort(immediate A)
+    abort(A)
       loop
 	L1:pause;
     emit B;

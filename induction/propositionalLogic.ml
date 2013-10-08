@@ -222,10 +222,8 @@ let rec inst = function
     let () = output_hum stdout (Systemj.sexp_of_stmt t) in
     raise (Internal_error "Emit stmt without a unique identifier cannot be initialized for data propositions")
   | Systemj.Pause _ -> False
-  | Systemj.Present (e,t,Some el,_) -> Or(And(NextTime (expr_to_logic e), inst t), And(NextTime (Not (expr_to_logic e)), inst el))
-  (* FIXME: Check if this is correct logic? *)
-  (* | Systemj.Present (e,t,None,_) -> And(NextTime (expr_to_logic e), inst t) *)
-  | Systemj.Present (e,t,None,_) -> Or(And(NextTime (expr_to_logic e), inst t), And(NextTime (Not (expr_to_logic e)), True))
+  | Systemj.Present (e,t,Some el,_) -> Or(And((expr_to_logic e), inst t), And((Not (expr_to_logic e)), inst el))
+  | Systemj.Present (e,t,None,_) -> Or(And((expr_to_logic e), inst t), And((Not (expr_to_logic e)), True))
   | Systemj.Block (sl,_) 
   | Systemj.Spar (sl,_) -> 
     if sl = [] then True 
@@ -247,10 +245,10 @@ let rec enter = function
   | Systemj.Emit _ -> False
   | Systemj.Pause (Some x,_) -> NextTime (Proposition (Label x))
   | Systemj.Present (e,t,Some el,_) -> Or(And (NextTime (Not ((collect_labels el))), 
-					       And (enter t, NextTime (expr_to_logic e))), 
+					       And (enter t, (expr_to_logic e))), 
 					  And (NextTime (Not ((collect_labels t))),
-					       And (enter el, NextTime (Not (expr_to_logic e)))))
-  | Systemj.Present (e,t,None,_) -> And (enter t, NextTime (expr_to_logic e))
+					       And (enter el, (Not (expr_to_logic e)))))
+  | Systemj.Present (e,t,None,_) -> And (enter t, (expr_to_logic e))
   | Systemj.Block (sl,t) as s -> enter_seq t sl
   | Systemj.Spar (sl,t) -> enter_spar t sl
   | Systemj.While (_,s,_)
@@ -295,8 +293,8 @@ let rec term = function
   | Systemj.Block (sl,r) -> term_seq r sl
   | Systemj.Spar (sl,r) -> term_spar r sl
   | Systemj.While (_,s,_) -> False
-  | Systemj.Suspend (e,s,_) -> And(NextTime(Not (expr_to_logic e)), term s)
-  | Systemj.Abort(e,s,_)  -> And((collect_labels s),Or(NextTime (expr_to_logic e), term s))
+  | Systemj.Suspend (e,s,_) -> And((Not (expr_to_logic e)), term s)
+  | Systemj.Abort(e,s,_)  -> And((collect_labels s),Or((expr_to_logic e), term s))
   | Systemj.Trap (e,s,_) -> And((collect_labels s), term s) 	(* You can exit it if the body exits it! *)
   | Systemj.Exit (Systemj.Symbol (s,_),_) -> False
   | Systemj.Signal _ 
@@ -344,7 +342,7 @@ let rec move = function
   | Systemj.Block (sl,r) -> move_seq r sl
   | Systemj.Spar (sl,r) -> move_spar r sl
   | Systemj.While (_,s,_) -> Or(move s,And(term s,  (enter s)))
-  | Systemj.Abort(e,s,_)  -> And(NextTime (Not(expr_to_logic e)),move s)
+  | Systemj.Abort(e,s,_)  -> And((Not(expr_to_logic e)),move s)
   | Systemj.Trap (e,s,_) -> move s
   | Systemj.Exit (Systemj.Symbol (s,_),_) -> False
   | Systemj.Signal _ 
@@ -354,7 +352,7 @@ let rec move = function
     let inS = ( (collect_labels s)) in
     let mS = ( (move s)) in
     let stutterS =  (stutters s) in
-    (Or(And(And(NextTime sigma,inS),stutterS),And(NextTime (Not sigma), mS)))
+    (Or(And(And(sigma,inS),stutterS),And((Not sigma), mS)))
   | _ -> raise (Internal_error "Inst: Cannot get send/receive after rewriting!!")
 and move_seq r = function
   | h::t -> 
