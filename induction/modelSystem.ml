@@ -54,6 +54,7 @@ let make = function
       Hashtbl.add tbl (PropSet.of_enum (List.enum llabels)) s
 
 
+(* FIXME: This needs to be fixed: propagate guards from all nodes!! *)
 let propagate_guards_from_st nodeset = 
   let sts = List.filter (fun {node=n;tlabels=t} -> (match t with 
     | Proposition x -> (match x with Label st -> st="st" | _ -> false) 

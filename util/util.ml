@@ -18,18 +18,20 @@ let rec label tf internal_signals channels index updates isignals = function
     let rv = (label tf internal_signals channels index updates isignals y) in
     (match (lv,rv) with
     | ("false",_) | (_,"false") -> "false"
+    | ("true","true") -> "true"
+    | ("true",(_ as s)) | ((_ as s),"true") -> s
     | (_,_) -> lv ^ "&&" ^ rv)
   | Or (x,y) -> 
     let lv = (label tf internal_signals channels index updates isignals x)  in
     let rv = (label tf internal_signals channels index updates isignals y) in
     (match (lv,rv) with
     | ("true",_) | (_,"true") -> "true"
+    | ("false","false") -> "false"
+    | ("false",(_ as s)) | ((_ as s),"false") -> s
     | (_,_) -> lv ^ "||" ^ rv)
   | Not (Proposition x) as s-> 
     let v = (match x with 
       | Expr x ->
-	(* if ((L.exists (fun t -> t = x) tf)) then "false" *)
-	(* else *)
 	  if (not (L.exists (fun t -> t = x) isignals)) then
 	    if x.[0] = '$' then 
 	      let () = output_hum stdout (sexp_of_logic s) in
@@ -46,10 +48,6 @@ let rec label tf internal_signals channels index updates isignals = function
     | _ -> "!"^v)
   | Proposition x as s -> (match x with 
     | Expr x -> 
-      (* if ((L.exists (fun t -> t = x) tf)) then *)
-      (* 	let () = print_endline ("[WARNING] ********Possible Causal cycle detected on signal********: " ^ x) in *)
-      (* 	"false" *)
-      (* else *)
 	if (not (L.exists (fun t -> t = x) isignals)) then
 	  if x.[0] = '$' then "true"
 	  else 
@@ -95,6 +93,8 @@ let get_outgoings o = function
       print_endline ("Node: " ^ n);
       raise s
 
+(* This needs to be fixed. FIXME: just checking in ret is not enough,
+   some branches get cutoff unnecessarily! *)
 let rec solve q o ret lgn = 
   if not (Q.is_empty q) then
     let element = Q.pop q in

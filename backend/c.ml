@@ -33,14 +33,14 @@ let make_body internal_signals channels o index signals isignals = function
 	  let to_false = ref signals in
 	  let () = L.iter (fun x -> to_false := L.filter (fun y -> y <> x) !to_false) updates1 in
 	  let () = L.iter (fun x -> to_false := L.filter (fun y -> y <> x) !to_false) isignals in
-	  let g = Util.label !to_false internal_signals channels index updates isignals g in
+	  let g = Util.label !to_false internal_signals channels index updates [] g in
 	  let updates = updates1 in
 	  if g <> "false" then
 	    L.fold_left (++) empty (L.mapi (fun i x ->
 	      ((if not (L.exists (fun t -> t = x) channels) then ("CD"^(string_of_int index)^"_"^x) else x)
 	       ^ " = false;\t" >> text)) !to_false)
 	    ++ ("\nif" >> text)
-	    ++ ((if g <> "" then ("(" ^ g ^ ") {\n") else (":: true -> ")) >> text)
+	    ++ ((if g <> "" then ("(" ^ g ^ ") {\n") else "") >> text)
 	    (* These are the updates to be made here!! *)
 	    ++ L.fold_left (++) empty (L.mapi (fun i x -> 
 	      ((if not (L.exists (fun t -> t = x) channels) then ("CD"^(string_of_int index)^"_"^x) else x)

@@ -118,7 +118,7 @@ try
     let () = SS.output_hum Pervasives.stdout (SSL.sexp_of_list TableauBuchiAutomataGeneration.sexp_of_labeled_graph_node x) in
     print_endline "\n\n\n\n\n\n-----------------------------------------------------\n\n\n\n") labeled_buchi_automatas ELSE () ENDIF in
   (* Remove the unreachable nodes from the generated graph *)
-  let labeled_buchi_automatas = List.map Util.reachability labeled_buchi_automatas in
+  (* let labeled_buchi_automatas = List.map Util.reachability labeled_buchi_automatas in *)
   let () = 
     if !promela <> "" then
       try
@@ -157,10 +157,11 @@ try
         let c_headers = Pretty.text ("#include <stdio.h>\n"^"typedef int bool;\n"^"#define true 1\n"^"#define false 0\n") in
         let c_main = C.make_main (List.length labeled_buchi_automatas) in
         let c_channels = List.fold_left Pretty.append Pretty.empty (List.map (fun x -> Pretty.text ("bool "^x^" = false;\n"))channels) in
+        let signals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_all_signal_declarations x) in
         let c_gsigs = List.fold_left Pretty.append Pretty.empty 
           (List.mapi (fun i y -> List.fold_left Pretty.append Pretty.empty (List.map (fun x -> Pretty.text ("bool CD"^(string_of_int i)^"_"^x^" = false;\n")) 
                                               (List.sort_unique compare y)))
-             signals) in
+             (signals)) in
         let () = Pretty.print ~output:(output_string fd) 
           (Pretty.append c_headers
             (Pretty.append c_gsigs

@@ -36,15 +36,15 @@ let make_body internal_signals channels o index signals isignals = function
 	  let updates = updates1 in
 	  if g <> "false" then
 	    ("atomic{\n" >> text)
-	    ++ L.fold_left (++) empty (L.mapi (fun i x ->
-	      ((if not (L.exists (fun t -> t = x) channels) then ("CD"^(string_of_int index)^"_"^x) else x)
-	       ^ " = false;\t" >> text)) !to_false)
 	    ++ ("\nif\n" >> text)
 	    ++ ((if g <> "" then (":: (" ^ g ^ ") -> ") else (":: true -> ")) >> text)
 	    (* These are the updates to be made here!! *)
 	    ++ L.fold_left (++) empty (L.mapi (fun i x -> 
 	      ((if not (L.exists (fun t -> t = x) channels) then ("CD"^(string_of_int index)^"_"^x) else x)
 	       ^ " = true;\t") >> text) updates)
+	    ++ L.fold_left (++) empty (L.mapi (fun i x ->
+	      ((if not (L.exists (fun t -> t = x) channels) then ("CD"^(string_of_int index)^"_"^x) else x)
+	       ^ " = false;\t" >> text)) !to_false)
 	    ++ (("goto " ^ x ^ ";\n") >> text)
 	    ++ ((":: else skip;\n") >> text)
 	    ++ ("fi;\n" >> text)

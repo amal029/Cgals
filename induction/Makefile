@@ -20,7 +20,7 @@ logic.cmx:
 	@echo $(SEXPLIB)
 	ocamlfind $(CCC) -pp "camlp4o -I $(TYPECONV) -I $(SEXPLIB)	\
 	pa_type_conv.cma pa_sexp_conv.cma pa_macro.cmo -UDEBUG -USDEBUG	\
-	-UPDEBUG -UZDEBUG" -I $(REPORTDIR) -I $(LANGUAGEDIR) -I	\
+	-DPDEBUG -UZDEBUG" -I $(REPORTDIR) -I $(LANGUAGEDIR) -I	\
 	$(BATDIR) -I $(SEXPLIB) -c $(SRC)
 
 clean:
