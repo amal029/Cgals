@@ -103,13 +103,11 @@ let rec solve q o ret lgn =
     let oo = (match Hashtbl.find_option o element.node.name with Some x -> x | None -> []) in
     let (oo,_) = L.split oo in
     (* Check if the oo contains names that are already there in the Q *)
-    let oo = L.filter (fun x -> not(Enum.exists (fun y -> y.node.name = x) (Q.enum q))) oo in
+    let oo = L.filter (fun x -> not(Enum.exists (fun y -> y.node.name = x) (Q.enum (Q.copy q)))) oo in
     (* Check if these are not already there in ret, because that means they have been visited *)
     let oo = L.filter (fun x -> not(L.exists (fun y -> y.node.name = x) !ret)) oo in
-    let () = IFDEF DEBUG THEN output_hum stdout (sexp_of_list sexp_of_string oo); print_endline ""; ELSE () ENDIF in
     (* Add the remaining elements *)
     let oo = L.map (fun x -> L.find (fun y -> y.node.name = x) lgn) oo in
-    (* let () = IFDEF DEBUG THEN output_hum stdout (sexp_of_list sexp_of_labeled_graph_node oo); print_endline ""; ELSE () ENDIF in *)
     (* Add to q *)
     let () = List.iter (fun x -> Q.push x q) oo in
     (* Finally add the element to the return list *)

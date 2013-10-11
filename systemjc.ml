@@ -118,7 +118,7 @@ try
     let () = SS.output_hum Pervasives.stdout (SSL.sexp_of_list TableauBuchiAutomataGeneration.sexp_of_labeled_graph_node x) in
     print_endline "\n\n\n\n\n\n-----------------------------------------------------\n\n\n\n") labeled_buchi_automatas ELSE () ENDIF in
   (* Remove the unreachable nodes from the generated graph *)
-  (* let labeled_buchi_automatas = List.map Util.reachability labeled_buchi_automatas in *)
+  let labeled_buchi_automatas = List.map Util.reachability labeled_buchi_automatas in
   let () = 
     if !promela <> "" then
       try
