@@ -16,7 +16,7 @@ compile:
 	$(MAKE) -e -C induction/ all
 	$(MAKE) -e -C util/ all
 	$(MAKE) -e -C backend/ all
-	ocamlfind $(CC) -pp "camlp4o pa_macro.cmo -DDEBUG -USDEBUG" -o	\
+	ocamlfind $(CC) -pp "camlp4o pa_macro.cmo -UDEBUG -USDEBUG" -o	\
 	systemjc -syntax batteries.syntax -linkpkg -package batteries	\
 	-package sexplib -package pretty -package parmap \
 	-thread -I ./language -I ./error -I ./parser -I	\

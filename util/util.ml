@@ -16,6 +16,7 @@ let rec label tf internal_signals channels index updates isignals = function
   | And (x,y) -> 
     let lv = (label tf internal_signals channels index updates isignals x)  in
     let rv = (label tf internal_signals channels index updates isignals y) in
+    let () = IFDEF DEBUG THEN output_hum stdout (sexp_of_list sexp_of_string [lv;rv]) ELSE () ENDIF in
     (match (lv,rv) with
     | ("false",_) | (_,"false") -> "false"
     | ("true","true") -> "true"
@@ -52,10 +53,10 @@ let rec label tf internal_signals channels index updates isignals = function
 	  if x.[0] = '$' then "true"
 	  else 
 	  (* This can only ever happen here! *)
-	    if not (List.exists (fun (Update t) -> t = x) updates) then
-	      if not (L.exists (fun t -> t = x) channels) then ("CD"^(string_of_int index)^"_"^x) 
-	      else x
-	    else "true"
+	    (* if not (List.exists (fun (Update t) -> t = x) updates) then *)
+	    if not (L.exists (fun t -> t = x) channels) then ("CD"^(string_of_int index)^"_"^x) 
+	    else x
+	    (* else "true" *)
 	else "true"
     | Update x -> raise (Internal_error ("Tried to update " ^ x ^ " on a guard!!"))
     | Label x -> raise (Internal_error ("Tried to put label " ^ x ^ " on a guard!!"))) 
@@ -93,8 +94,6 @@ let get_outgoings o = function
       print_endline ("Node: " ^ n);
       raise s
 
-(* This needs to be fixed. FIXME: just checking in ret is not enough,
-   some branches get cutoff unnecessarily! *)
 let rec solve q o ret lgn = 
   if not (Q.is_empty q) then
     let element = Q.pop q in

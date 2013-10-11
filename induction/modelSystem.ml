@@ -54,17 +54,14 @@ let make = function
       Hashtbl.add tbl (PropSet.of_enum (List.enum llabels)) s
 
 
-(* FIXME: This needs to be fixed: propagate guards from all nodes!! *)
 let propagate_guards_from_st nodeset = 
-  let sts = List.filter (fun {node=n;tlabels=t} -> (match t with 
-    | Proposition x -> (match x with Label st -> st="st" | _ -> false) 
-    | Not Proposition x ->(match x with Label st -> st="st" | _ -> false)
-    | _ -> false)) nodeset in
+  let sts = List.filter (fun {node=n;} -> n.incoming = ["Init"]) nodeset in
   let () = List.iter (fun {node=n} ->
     if not (List.for_all (fun x -> x="Init") n.incoming) then
       let () = print_endline n.name in
       raise (Internal_error "modelSystem: proposition st satisfied without an incoming type of Init!!");
   ) sts in
+  (* Does the real work *)
   let () = List.iter (fun ({node=n}as s) -> 
     List.iteri (fun i z ->
       if List.exists(fun {node=st} -> z = st.name) sts then
