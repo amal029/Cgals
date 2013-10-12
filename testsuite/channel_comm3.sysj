@@ -18,7 +18,7 @@
        communication is still point to point.*/
     if (B)
       C!;
-    else pause;
+    else C!;
   }
 }
 ><

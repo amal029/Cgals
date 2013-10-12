@@ -9,7 +9,7 @@
   output signal A;
   output channel C;
   input channel M;
-  while(true) {
+  loop {
     emit A;
     pause;
     C!;
@@ -22,7 +22,7 @@
   input channel C;
   output channel C;
   input signal PIPI;
-  while(true) {
+  loop {
     /* The failure is caused because of this channel deadlock. */
     M!;C?; 
     emit A;
