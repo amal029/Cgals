@@ -33,7 +33,7 @@ let rewrite_send cnt = function
 					  Systemj.Block([Systemj.Emit (req_sym,None,lc);
 							 Systemj.Pause(Some ("$" ^ (string_of_int !cnt)),lc)],lc),lc),lc) in
     (* Systemj.Block([Systemj.Signal(Some Systemj.Input,ack_sym,lc);Systemj.Signal(Some Systemj.Output,req_sym,lc);a1;a2],lc) *)
-    Systemj.Block([Systemj.Signal(Some Systemj.Output,req_sym,lc);a1;a2],lc)
+    Systemj.Block([Systemj.Signal(None,Some Systemj.Output,req_sym,lc);a1;a2],lc)
   | _ -> raise (Internal_error "Tried to rewrite a non-send as send")
 
 let rewrite_receive cnt = function
@@ -49,7 +49,7 @@ let rewrite_receive cnt = function
 					  Systemj.Block([Systemj.Emit (ack_sym,None,lc);
 							 Systemj.Pause(Some ("$" ^ (string_of_int !cnt)),lc)],lc),lc),lc) in
     (* Systemj.Block([Systemj.Signal(Some Systemj.Output,ack_sym,lc);Systemj.Signal(Some Systemj.Input,req_sym,lc);a1;a2],lc) *)
-    Systemj.Block([Systemj.Signal(Some Systemj.Output,ack_sym,lc);a1;a2],lc)
+    Systemj.Block([Systemj.Signal(None,Some Systemj.Output,ack_sym,lc);a1;a2],lc)
   | _ -> raise (Internal_error "Tried to rewrite a non-receive as receive")
 
 let rec add_labels_and_rewrite cnt = function

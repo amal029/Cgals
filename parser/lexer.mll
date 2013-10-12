@@ -21,10 +21,10 @@ rule lexer = parse
   | "output" {Parser.TOut}
   | "signal" {Parser.TSignal}
   | "channel" {Parser.TChannel}
-  | "&&" {Parser.And}
+  | "&" {Parser.And}
   | ":" {Parser.TColon}
   | "par" {Parser.TSplit}
-  | "||" {Parser.Or}
+  | "|" {Parser.Or}
   | "trap" {Parser.TTrap}
   | "loop" {Parser.TWhile}
   | "true" {Parser.TTrue}
@@ -38,6 +38,34 @@ rule lexer = parse
   | "suspend" {Parser.TSuspend}
   | "exit" {Parser.TExit}
   | "emit" {Parser.TEmit}
+  | "int" {Parser.TInt32s}
+  | "short" {Parser.TInt16s}
+  | "byte" {Parser.TInt8s}
+  | "extern" {Parser.TExtern}
+  | "bit" {Parser.TInt1s}
+  | '+' {Parser.TPlus}
+  | '-' {Parser.TMinus}
+  | '*' {Parser.TTimes}
+  | '/' {Parser.TDiv}
+  | '%' {Parser.TMod}
+  | '^' {Parser.TXor}
+  | "^^" {Parser.TPow}
+  | "==" {Parser.TEqualEqual}
+  | "=" {Parser.TEqual}
+  | "<=" {Parser.TLessEqual}
+  | ">=" {Parser.TGreaterEqual}
+  | ','  {Parser.TComma}
+  | '<'  {Parser.TLess}
+  | '>'  {Parser.TGreater}
+  | ">>"  {Parser.TRShift}
+  | "<<"  {Parser.TLShift}
+  | "!="  {Parser.TNotEqual}
+  | "op+" {Parser.TOpPlus}
+  | "op*" {Parser.TOpTimes}
+  | "for" {Parser.TFor}
+  | "#" {Parser.THash}
+  | "begin" {Parser.TBegin}
+  | "end" {Parser.TEnd}
   | ['0'-'9']+ {Parser.TInt (lexeme lexbuf)} (* an integer *)
   | ['0'-'9']+'.'['0'-'9']+ {Parser.TFloat (lexeme lexbuf)} (* a floating number *)
   | ['A'-'Z' 'a'-'z']['A'-'Z' 'a'-'z' '0'-'9' '_']* {Parser.TSymbol (lexeme lexbuf)} (* any identifier a letter followed by anything, except a '$' sign*)

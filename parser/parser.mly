@@ -21,11 +21,11 @@
 /* The tokens */
 /* Constant constructors */
 %token TPlus TMinus TTimes TDiv TPow TOP TSEMICOLON TCP TEqual TOB TCB TComma TLess TLessEqual TGreater TGreaterEqual TEqualEqual TMod TASYNC
-%token And Or Where TXCL TQ TSuspend TAbort TWhile TTrue TFalse TWhile TTrap
+%token And Or Where TXCL TQ TSuspend TAbort TWhile TTrue TFalse TWhile TTrap TXor
 %token TLbrack TRbrack TColon TPresent TEof TLShift TRShift TElse TExit TEmit
 %token TMain TIn TOut TOtherwise TPar TFor TSignal TChannel TPause TColon
-%token TInt8 TInt16 TInt32 TInt64 TInt8s TInt16s TInt32s TInt64s TFloat8 TFloat32 TFloat64 TFloat16
-%token TAwait Timm TExtern TSplit TAT TSend TReceive
+%token TInt8 TInt16 TInt32 TInt64 TInt8s TInt16s TInt32s TInt64s TFloat8 TFloat32 TFloat64 TFloat16 TInt1s
+%token TAwait Timm TExtern TSplit TAT TSend TReceive TNotEqual TOpPlus TOpTimes TBegin TEnd THash
 
 /* Constructors with an argument */
 %token <string> TInt
@@ -45,7 +45,7 @@
 
 /* The start of the parsing function */
 %start ast
-%type <Systemj.ast> ast /* Test if this is correct */
+%type <Systemj.ast> ast
 
 %%
 /* These are the parsing rules */
@@ -65,11 +65,10 @@ stmtlist:
 ;
 
 stmt:
-    | TIn TSignal symbol TSEMICOLON {Systemj.Signal(Some Systemj.Input, $3, ln())}
-    | TOut TSignal symbol TSEMICOLON {Systemj.Signal(Some Systemj.Output, $3, ln())}
-    | TSignal symbol TSEMICOLON {Systemj.Signal(None, $2, ln())}
-    | TIn TChannel symbol TSEMICOLON {Systemj.Channel(Systemj.Input, $3, ln())}
-    | TOut TChannel symbol TSEMICOLON {Systemj.Channel(Systemj.Output, $3, ln())}
+    | signal TSEMICOLON {$1}
+    | typed_signal TSEMICOLON {$1}
+    | channel TSEMICOLON {$1}
+    | typed_channel TSEMICOLON {$1}
     | TOB TCB {Systemj.Noop}
     | TSEMICOLON {Systemj.Noop}
     | TOB stmtlist TCB {Systemj.Block ($2, ln())}
@@ -85,11 +84,32 @@ stmt:
     | send TSEMICOLON {$1}
     | receive TSEMICOLON {$1}
     | twhile {$1}
+    | dataStmts {Systemj.Data $1}
     /*| trap {$1}*/
 ;
 
+typed_signal:
+    | dataTypes signal TOpPlus {Systemj.add_type_and_operator_to_signal $1 Systemj.OpPlus $2}
+    | dataTypes signal TOpTimes {Systemj.add_type_and_operator_to_signal $1 Systemj.OpTimes $2}
+;
+
+signal:
+    | TIn TSignal symbol {Systemj.Signal(None,Some Systemj.Input, $3, ln())}
+    | TOut TSignal symbol {Systemj.Signal(None,Some Systemj.Output, $3, ln())}
+    | TSignal symbol {Systemj.Signal(None,None, $2, ln())}
+;
+
+typed_channel:
+    | dataTypes channel TOpPlus {Systemj.add_type_and_operator_to_channel $1 Systemj.OpPlus $2}
+    | dataTypes channel TOpTimes {Systemj.add_type_and_operator_to_channel $1 Systemj.OpTimes $2}
+;
+
+channel:
+    | TIn TChannel symbol {Systemj.Channel(None,Systemj.Input, $3, ln())}
+    | TOut TChannel symbol {Systemj.Channel(None,Systemj.Output, $3, ln())}
+
 par:
-    | stmt Or stmt {Systemj.Spar([$3;$1],ln())}
+    | stmt Or Or stmt {Systemj.Spar([$4;$1],ln())}
 ;
 
 await:
@@ -131,18 +151,80 @@ twhile:
 expr:
     | symbol {Systemj.Esymbol($1,ln())}
     | TXCL expr {Systemj.Not($2,ln())}
-    | expr Or expr {Systemj.Or($1,$3,ln())}
-    | expr And expr {Systemj.And($1,$3,ln())}
+    | expr Or Or expr {Systemj.Or($1,$4,ln())}
+    | expr And And expr {Systemj.And($1,$4,ln())}
     | TOP expr TCP {Systemj.Brackets($2,ln())}
+    | relDataExpr {Systemj.DataExpr ($1)}
 ;
 
-bool_expr:
+/*All the data expressions/statements */
+relDataExpr:
+    | simpleDataExpr TLess simpleDataExpr {Systemj.LessThan($1,$3, ln())}
+    | simpleDataExpr TNotEqual simpleDataExpr {Systemj.NotEqualTo($1,$3, ln())}
+    | simpleDataExpr TLessEqual simpleDataExpr {Systemj.LessThanEqual($1,$3, ln())}
+    | simpleDataExpr TGreater simpleDataExpr {Systemj.GreaterThan($1,$3, ln())}
+    | simpleDataExpr TGreaterEqual simpleDataExpr {Systemj.GreaterThanEqual($1,$3, ln())}
+    | simpleDataExpr TEqualEqual simpleDataExpr {Systemj.EqualTo($1,$3, ln())}
+;
+
+dataStmts:
+    | allsym TEqual simpleDataExpr TSEMICOLON {Systemj.Assign([$1],$3, ln())}
+    | TFor TOP symbol TColon colonExpr TCP dataStmts {Systemj.For($3,$5,$7, ln())}
+    | TBegin datastmtlist TEnd {Systemj.DataBlock ($2, ln())}
+;
+
+datastmtlist:
+    | datastmtlist dataStmts {$2::$1}
+    | dataStmts {[$1]}
+;
+
+colonExpr:
+    | simpleDataExpr TColon  simpleDataExpr TColon simpleDataExpr {Systemj.ColonExpr($1,$3,$5, ln())}
+;
+
+allsym:
+    | symbol {Systemj.AllSymbol($1)}
+    | varsymbol {Systemj.AllTypedSymbol ($1)}
+    | signal_data {$1}
+;
+
+varsymbol:
+    | dataTypes symbol {Systemj.SimTypedSymbol ($1, $2, ln())}
+;
+
+signal_data:
+    | THash symbol {Systemj.AllSignalorChannelSymbol $2}
+;
+
+simpleDataExpr:
+    | simpleDataExpr TPlus simpleDataExpr {Systemj.Plus ($1, $3, ln())}
+    | simpleDataExpr TMinus simpleDataExpr {Systemj.Minus ($1, $3, ln())}
+    | simpleDataExpr TMod simpleDataExpr {Systemj.Mod ($1, $3, ln())}
+    | simpleDataExpr TTimes simpleDataExpr {Systemj.Times ($1, $3, ln())}
+    | simpleDataExpr TPow simpleDataExpr {Systemj.Pow ($1, $3, ln())}
+    | simpleDataExpr TDiv simpleDataExpr {Systemj.Div ($1, $3, ln())}
+    | simpleDataExpr TRShift simpleDataExpr {Systemj.Rshift ($1, $3, ln())}
+    | simpleDataExpr TLShift simpleDataExpr {Systemj.Lshift ($1, $3, ln())}
+    | THash symbol {Systemj.SignalOrChannelRef($2, ln())}
+    | symbol {Systemj.VarRef ($1, ln())}
+    | TInt {Systemj.Const (Systemj.Int32s,$1, ln())} /*e.g: 8, the type should be found using type inference, what now??*/
+    | TOP dataTypes TCP simpleDataExpr {Systemj.Cast ($2,$4,ln())}
+    | TMinus simpleDataExpr %prec TUminus {Systemj.Opposite($2,ln())}
+;
+
+/*bool_expr:
     | TTrue {Systemj.True}
     | TFalse {Systemj.False}
-;
+;*/
 
 symbol:
     | TSymbol {Systemj.Symbol ($1, ln())} /*e.g.: t*/
+;
+
+dataTypes:
+    | TInt8s {Systemj.Int8s}
+    | TInt16s {Systemj.Int16s}
+    | TInt32s {Systemj.Int32s}
 ;
 
 %%
