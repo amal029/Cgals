@@ -294,7 +294,7 @@ let rec term = function
   | Systemj.Spar (sl,r) -> term_spar r sl
   | Systemj.While (_,s,_) -> False
   | Systemj.Suspend (e,s,_) -> And((Not (expr_to_logic e)), term s)
-  | Systemj.Abort(e,s,_)  -> And((collect_labels s),Or((expr_to_logic e), term s))
+  | Systemj.Abort(e,s,_)  -> Or((term s),And((expr_to_logic e), collect_labels s))
   | Systemj.Trap (e,s,_) -> And((collect_labels s), term s) 	(* You can exit it if the body exits it! *)
   | Systemj.Exit (Systemj.Symbol (s,_),_) -> False
   | Systemj.Signal _ 

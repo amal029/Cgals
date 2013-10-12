@@ -74,7 +74,20 @@ let propagate_guards_from_st nodeset =
 	end
     ) n.incoming
   ) nodeset in 
-  List.iter (fun x -> x.guards <- []; x.node.incoming <- []) sts
+  List.iter (fun s -> 
+    let y = (match s.tlabels with
+      | Proposition x -> (match x with 
+	| Label st -> if st="st" then Some s else None
+	| _ -> None)
+      | Not Proposition x ->  (match x with 
+	| Label st -> if st="st" then Some s else None
+	| _ -> None)
+      | _ -> None
+    ) in
+    match y with
+    | Some y -> y.guards <- []; y.node.incoming <- []
+    | None -> ()
+  ) sts
 
 
 let find_subformula_equivalents model = function

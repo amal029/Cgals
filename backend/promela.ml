@@ -23,6 +23,8 @@ let make_body internal_signals channels o index signals isignals = function
     (* First add the location label *)
     ((n ^ "/*" ^ (string_of_logic tlabel) ^ "*/" ^ ":\n") >> text)
     (* Now add the transitions *)
+    ++ ("atomic {\n" >> text)
+    ++ ("\nif\n" >> text)
     ++ (L.reduce (++) (
       if o <> [] then
 	L.map2 (fun x g ->
@@ -35,9 +37,8 @@ let make_body internal_signals channels o index signals isignals = function
 	  let g = Util.label !to_false internal_signals channels index updates isignals g in
 	  let updates = updates1 in
 	  if g <> "false" then
-	    ("atomic{\n" >> text)
-	    ++ ("\nif\n" >> text)
-	    ++ ((if g <> "" then (":: (" ^ g ^ ") -> ") else (":: true -> ")) >> text)
+	    (* ("atomic{\n" >> text) *)
+	    ((if g <> "" then (":: (" ^ g ^ ") -> ") else (":: true -> ")) >> text)
 	    (* These are the updates to be made here!! *)
 	    ++ L.fold_left (++) empty (L.mapi (fun i x -> 
 	      ((if not (L.exists (fun t -> t = x) channels) then ("CD"^(string_of_int index)^"_"^x) else x)
@@ -46,13 +47,13 @@ let make_body internal_signals channels o index signals isignals = function
 	      ((if not (L.exists (fun t -> t = x) channels) then ("CD"^(string_of_int index)^"_"^x) else x)
 	       ^ " = false;\t" >> text)) !to_false)
 	    ++ (("goto " ^ x ^ ";\n") >> text)
-	    ++ ((":: else skip;\n") >> text)
-	    ++ ("fi;\n" >> text)
-	    ++ ("}\n" >> text)
+	    (* ++ ("}\n" >> text) *)
 	  else empty
 	) o guards
-      else [("goto " ^ n ^ ";\n">> text)]
+      else [(":: goto " ^ n ^ ";\n">> text)]
     )) 
+    ++ ("fi;\n" >> text)
+    ++ ("}\n" >> text)
       
       
 let make_process internal_signals channels o index signals isignals init lgn = 

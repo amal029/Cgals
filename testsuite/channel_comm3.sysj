@@ -10,7 +10,7 @@
   input signal B;
   output channel C;
   /* input channel M; */
-  while(true) {
+  loop {
     emit A;
     pause;
     /* The only reason the liveness property gets verified, is because
@@ -18,15 +18,14 @@
        communication is still point to point.*/
     if (B)
       C!;
-    else C!; 			/*If one removes this else part, the
-				  property won't be satisfied.*/
+    else pause;
   }
 }
 ><
 {
   output signal A;
   output channel C;
-  while(true) {
+  loop {
     C?; 
     emit A;
     pause;

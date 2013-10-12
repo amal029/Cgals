@@ -9,7 +9,7 @@
   output signal A;
   output channel C;
   input channel M;
-  while(true) {
+  loop {
     emit A;
     pause;
     C!;
@@ -23,13 +23,14 @@
   output channel C;
   input signal PIPI;
   /* This abort is the reason for failure!! */
-  abort(PIPI)
-    while(true) {
-      M!;||C?;
+  abort(PIPI) {
+    loop {
+      C?;||M!;
       emit A;
       pause;
     }
+  }
   /* This is one path that will lead to non-completion of the channel
      rendezvous!*/
-  pause;
+ PIPIT:pause;
 }

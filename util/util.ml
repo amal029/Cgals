@@ -21,7 +21,7 @@ let rec label tf internal_signals channels index updates isignals = function
     | ("false",_) | (_,"false") -> "false"
     | ("true","true") -> "true"
     | ("true",(_ as s)) | ((_ as s),"true") -> s
-    | (_,_) -> lv ^ "&&" ^ rv)
+    | (_,_) -> "(" ^ lv ^ "&&" ^ rv ^ ")")
   | Or (x,y) -> 
     let lv = (label tf internal_signals channels index updates isignals x)  in
     let rv = (label tf internal_signals channels index updates isignals y) in
@@ -29,7 +29,7 @@ let rec label tf internal_signals channels index updates isignals = function
     | ("true",_) | (_,"true") -> "true"
     | ("false","false") -> "false"
     | ("false",(_ as s)) | ((_ as s),"false") -> s
-    | (_,_) -> lv ^ "||" ^ rv)
+    | (_,_) -> "(" ^ lv ^ "||" ^ rv ^ ")")
   | Not (Proposition x) as s-> 
     let v = (match x with 
       | Expr x ->
