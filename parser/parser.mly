@@ -1,6 +1,6 @@
 %{
 (* This is the header *)
- (* let _ = Parsing.set_trace true in () *)
+(* let _ = Parsing.set_trace true in () *)
  let counter = ref 0
  let line_nums = Hashtbl.create (1000) 
  let parse_error s = 
@@ -25,7 +25,7 @@
 %token TLbrack TRbrack TColon TPresent TEof TLShift TRShift TElse TExit TEmit
 %token TMain TIn TOut TOtherwise TPar TFor TSignal TChannel TPause TColon
 %token TInt8 TInt16 TInt32 TInt64 TInt8s TInt16s TInt32s TInt64s TFloat8 TFloat32 TFloat64 TFloat16 TInt1s
-%token TAwait Timm TExtern TSplit TAT TSend TReceive TNotEqual TOpPlus TOpTimes TBegin TEnd THash
+%token TAwait Timm TExtern TSplit TAT TSend TReceive TNotEqual TOpPlus TOpTimes TBegin TEnd THash TDo
 
 /* Constructors with an argument */
 %token <string> TInt
@@ -168,9 +168,14 @@ relDataExpr:
 ;
 
 dataStmts:
+    | doblock {$1}
     | allsym TEqual simpleDataExpr TSEMICOLON {Systemj.Assign([$1],$3, ln())}
     | TFor TOP symbol TColon colonExpr TCP dataStmts {Systemj.For($3,$5,$7, ln())}
-    | TBegin datastmtlist TEnd {Systemj.DataBlock ($2, ln())}
+    | doblock TFor TOP symbol TColon colonExpr TCP TSEMICOLON {Systemj.For($4,$6,$1, ln())}
+;
+
+doblock:
+    | TDo TOB datastmtlist TCB {Systemj.DataBlock ($3, ln())}
 ;
 
 datastmtlist:
@@ -193,7 +198,7 @@ varsymbol:
 ;
 
 signal_data:
-    | THash symbol {Systemj.AllSignalorChannelSymbol $2}
+    | TQ symbol {Systemj.AllSignalorChannelSymbol $2}
 ;
 
 simpleDataExpr:
@@ -205,7 +210,7 @@ simpleDataExpr:
     | simpleDataExpr TDiv simpleDataExpr {Systemj.Div ($1, $3, ln())}
     | simpleDataExpr TRShift simpleDataExpr {Systemj.Rshift ($1, $3, ln())}
     | simpleDataExpr TLShift simpleDataExpr {Systemj.Lshift ($1, $3, ln())}
-    | THash symbol {Systemj.SignalOrChannelRef($2, ln())}
+    | TQ symbol {Systemj.SignalOrChannelRef($2, ln())}
     | symbol {Systemj.VarRef ($1, ln())}
     | TInt {Systemj.Const (Systemj.Int32s,$1, ln())} /*e.g: 8, the type should be found using type inference, what now??*/
     | TOP dataTypes TCP simpleDataExpr {Systemj.Cast ($2,$4,ln())}

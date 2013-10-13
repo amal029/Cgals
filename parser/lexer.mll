@@ -40,6 +40,7 @@ rule lexer = parse
   | "emit" {Parser.TEmit}
   | "int" {Parser.TInt32s}
   | "short" {Parser.TInt16s}
+  | "do" {Parser.TDo}
   | "byte" {Parser.TInt8s}
   | "extern" {Parser.TExtern}
   | "bit" {Parser.TInt1s}
