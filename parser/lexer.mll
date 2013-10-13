@@ -47,6 +47,8 @@ rule lexer = parse
   | '+' {Parser.TPlus}
   | '-' {Parser.TMinus}
   | '*' {Parser.TTimes}
+  | "switch" {Parser.TCase}
+  | '_' {Parser.TOtherwise}
   | '/' {Parser.TDiv}
   | '%' {Parser.TMod}
   | '^' {Parser.TXor}

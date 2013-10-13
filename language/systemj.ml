@@ -113,8 +113,16 @@ type stmt =
 and dataStmt = 
 | Assign of allsym list * simpleDataExpr * (line * column)
 | VarDecl of typedSymbol * (line * column) (*create *)
-| For of symbol * colonDataExpr * dataStmt * (line * column)  
+| For of symbol * colonDataExpr * dataStmt * extras option * (line * column)  
+| CaseDef of case * (line * column) 
 | DataBlock of dataStmt list * (line * column)  
+| RNoop
+and case =
+| Case of caseClause list * otherwise * (line * column)
+and caseClause = 
+| Clause of expr * dataStmt * (line * column)
+and otherwise = 
+| Otherwise of dataStmt * (line * column)
 with sexp
 
 type ast =

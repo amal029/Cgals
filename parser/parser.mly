@@ -22,7 +22,7 @@
 /* Constant constructors */
 %token TPlus TMinus TTimes TDiv TPow TOP TSEMICOLON TCP TEqual TOB TCB TComma TLess TLessEqual TGreater TGreaterEqual TEqualEqual TMod TASYNC
 %token And Or Where TXCL TQ TSuspend TAbort TWhile TTrue TFalse TWhile TTrap TXor
-%token TLbrack TRbrack TColon TPresent TEof TLShift TRShift TElse TExit TEmit
+%token TLbrack TRbrack TColon TPresent TEof TLShift TRShift TElse TExit TEmit TCase
 %token TMain TIn TOut TOtherwise TPar TFor TSignal TChannel TPause TColon
 %token TInt8 TInt16 TInt32 TInt64 TInt8s TInt16s TInt32s TInt64s TFloat8 TFloat32 TFloat64 TFloat16 TInt1s
 %token TAwait Timm TExtern TSplit TAT TSend TReceive TNotEqual TOpPlus TOpTimes TBegin TEnd THash TDo
@@ -69,8 +69,6 @@ stmt:
     | typed_signal TSEMICOLON {$1}
     | channel TSEMICOLON {$1}
     | typed_channel TSEMICOLON {$1}
-    | TOB TCB {Systemj.Noop}
-    | TSEMICOLON {Systemj.Noop}
     | TOB stmtlist TCB {Systemj.Block ($2, ln())}
     | par {$1}
     | present {$1}
@@ -168,14 +166,30 @@ relDataExpr:
 ;
 
 dataStmts:
-    | doblock {$1}
+    | TOB TCB {Systemj.RNoop}
+    | TSEMICOLON {Systemj.RNoop}
     | allsym TEqual simpleDataExpr TSEMICOLON {Systemj.Assign([$1],$3, ln())}
-    | TFor TOP symbol TColon colonExpr TCP dataStmts {Systemj.For($3,$5,$7, ln())}
-    | doblock TFor TOP symbol TColon colonExpr TCP TSEMICOLON {Systemj.For($4,$6,$1, ln())}
+    | TFor TOP symbol TColon colonExpr TCP dataStmts {Systemj.For($3,$5,$7,None,ln())}
+    | doblock TFor TOP symbol TColon colonExpr TCP TSEMICOLON {Systemj.For($4,$6,$1,None,ln())}
+    | case {Systemj.CaseDef ($1, ln())}
 ;
 
 doblock:
     | TDo TOB datastmtlist TCB {Systemj.DataBlock ($3, ln())}
+;
+
+case:
+    | TCase TOB caseclauselist otherwise TCB {Systemj.Case($3,$4,ln())}
+;
+caseclauselist:
+    | caseclauselist caseclause {$2::$1}
+    | caseclause {[$1]}
+;
+caseclause:
+    | TOP expr TCP dataStmts {Systemj.Clause ($2,$4,ln())}
+;
+otherwise:
+    | TOtherwise dataStmts {Systemj.Otherwise ($2,ln())}
 ;
 
 datastmtlist:
@@ -184,7 +198,7 @@ datastmtlist:
 ;
 
 colonExpr:
-    | simpleDataExpr TColon  simpleDataExpr TColon simpleDataExpr {Systemj.ColonExpr($1,$3,$5, ln())}
+    | const TColon const TColon simpleDataExpr {Systemj.ColonExpr($1,$3,$5, ln())}
 ;
 
 allsym:
@@ -212,9 +226,13 @@ simpleDataExpr:
     | simpleDataExpr TLShift simpleDataExpr {Systemj.Lshift ($1, $3, ln())}
     | TQ symbol {Systemj.SignalOrChannelRef($2, ln())}
     | symbol {Systemj.VarRef ($1, ln())}
-    | TInt {Systemj.Const (Systemj.Int32s,$1, ln())} /*e.g: 8, the type should be found using type inference, what now??*/
     | TOP dataTypes TCP simpleDataExpr {Systemj.Cast ($2,$4,ln())}
     | TMinus simpleDataExpr %prec TUminus {Systemj.Opposite($2,ln())}
+    | const {$1}
+;
+
+const:
+    | TInt {Systemj.Const (Systemj.Int32s,$1, ln())} /*e.g: 8, the type should be found using type inference, what now??*/
 ;
 
 /*bool_expr:
