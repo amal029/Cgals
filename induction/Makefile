@@ -1,4 +1,4 @@
-CCC ?= ocamlopt -annot
+CCC ?= ocamlopt -annot -warn-error +a+8
 OCAMLOPTS=-a
 LANGUAGELIB=systemj.cmxa
 REPORTLIB=error.cmxa

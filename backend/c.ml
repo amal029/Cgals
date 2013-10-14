@@ -29,22 +29,27 @@ let make_body internal_signals channels o index signals isignals = function
 	L.map2 (fun x g ->
 	  (* let updates = ref [] in *)
 	  let updates = Util.get_updates index g in
-	  let updates1 = List.sort_unique compare (List.map (fun (Update x) ->x) updates) in
+	  (* let updates1 = List.sort_unique compare (List.map (fun (Update x) ->x) updates) in *)
+	  let datastmts = (L.filter (fun x -> (match x with | DataUpdate _ ->true | _ -> false)) updates) in
+	  let updates1 = List.sort_unique compare ((List.map 
+						      (fun x -> (match x with | Update x ->x | _ ->  raise (Internal_error "Cannot happen!!"))))
+						      (List.filter (fun x -> (match x with | Update _ ->true | _ -> false)) updates)) in
 	  let to_false = ref signals in
 	  let () = L.iter (fun x -> to_false := L.filter (fun y -> y <> x) !to_false) updates1 in
 	  let () = L.iter (fun x -> to_false := L.filter (fun y -> y <> x) !to_false) isignals in
-	  let g = Util.label !to_false internal_signals channels index updates [] g in
+	  let g = Util.label "c" !to_false internal_signals channels index updates [] g in
 	  let updates = updates1 in
 	  if g <> "false" then
 	    L.fold_left (++) empty (L.mapi (fun i x ->
 	      ((if not (L.exists (fun t -> t = x) channels) then ("CD"^(string_of_int index)^"_"^x) else x)
-	       ^ " = false;\t" >> text)) !to_false)
+	       ^ " = false;\n" >> text)) !to_false)
 	    ++ ("\nif" >> text)
 	    ++ ((if g <> "" then ("(" ^ g ^ ") {\n") else "") >> text)
 	    (* These are the updates to be made here!! *)
 	    ++ L.fold_left (++) empty (L.mapi (fun i x -> 
 	      ((if not (L.exists (fun t -> t = x) channels) then ("CD"^(string_of_int index)^"_"^x) else x)
-	       ^ " = true;\t printf(\"Emitted: "^x^"\\n\");\t") >> text) updates)
+	       ^ " = true;\n printf(\"Emitted: "^x^"\\n\");\n") >> text) updates)
+	    ++ ((L.fold_left (^) "" (L.map (Util.build_data_stmt "c") datastmts)) >> text)
 	    ++ (("goto " ^ x ^ ";\n") >> text)
 	    ++ ("}\n" >> text)
 	  else empty
@@ -64,9 +69,9 @@ let make_process internal_signals channels o index signals isignals init lgn =
 let make_main index = 
   ("int main(){\n" >> text) ++
     ("while(true){\n" >> text) ++ 
-    L.fold_left (++) empty (L.init index (fun x -> "CD"^(string_of_int x)^"();\n" >> text)) ++
-    ("}\n" >> text) ++
-    ("}\n" >> text)
+    L.fold_left (++) empty (L.init index (fun x -> "CD"^(string_of_int x)^"();\n" >> text))
+  ++ ("}\n" >> text) 
+  ++("}\n" >> text)
 
 let make_c channels internal_signals signals isignals index init lgn = 
   let o = Hashtbl.create 1000 in

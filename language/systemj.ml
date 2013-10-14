@@ -7,6 +7,7 @@
 
 (* The current position for error reporting *)
 open Sexplib.Std
+module List = Batteries.List
 
 type line = int
 with sexp
@@ -54,9 +55,6 @@ type relDataExpr =
 | GreaterThanEqual of simpleDataExpr * simpleDataExpr * (line * column)
 | EqualTo of simpleDataExpr * simpleDataExpr * (line * column)
 | NotEqualTo of simpleDataExpr * simpleDataExpr * (line * column)
-(* | DataAnd of relDataExpr * relDataExpr * (line * column) *)
-(* | DataOr of relDataExpr * relDataExpr * (line * column) *)
-(* | Rackets of relDataExpr * (line * column) *)
 with sexp
 
 type expr =
@@ -109,10 +107,9 @@ type stmt =
 | Receive of symbol * (line * column)
 | While of sysj_bool * stmt * (line * column)
 | Noop
-| Data of dataStmt
+| Data of dataStmt * string option 
 and dataStmt = 
-| Assign of allsym list * simpleDataExpr * (line * column)
-| VarDecl of typedSymbol * (line * column) (*create *)
+| Assign of allsym * simpleDataExpr * (line * column)
 | For of symbol * colonDataExpr * dataStmt * extras option * (line * column)  
 | CaseDef of case * (line * column) 
 | DataBlock of dataStmt list * (line * column)  
@@ -144,6 +141,7 @@ let rec collect_channels = function
   | Abort (_,s,_) -> collect_channels s
   | Suspend (_,s,_) -> collect_channels s
   | While (_,s,_) -> collect_channels s
+  | Data _ -> []
 
 let rec collect_all_signal_declarations = function
   | Pause _ | Emit _ | Exit _ | Noop
@@ -157,6 +155,7 @@ let rec collect_all_signal_declarations = function
   | Abort (_,s,_) -> collect_all_signal_declarations s
   | Suspend (_,s,_) -> collect_all_signal_declarations s
   | While (_,s,_) -> collect_all_signal_declarations s
+  | Data _ -> []
   | Send _ | Receive _ -> raise (Internal_error "Collect signals: Cannot get send/receive after re-write!!")
 
 let rec collect_signal_declarations = function
@@ -171,6 +170,7 @@ let rec collect_signal_declarations = function
   | Abort (_,s,_) -> collect_signal_declarations s
   | Suspend (_,s,_) -> collect_signal_declarations s
   | While (_,s,_) -> collect_signal_declarations s
+  | Data _ -> []
   | Send _ | Receive _ -> raise (Internal_error "Collect signals: Cannot get send/receive after re-write!!")
 
 let rec collect_input_signal_declarations = function
@@ -185,12 +185,13 @@ let rec collect_input_signal_declarations = function
   | Abort (_,s,_) -> collect_input_signal_declarations s
   | Suspend (_,s,_) -> collect_input_signal_declarations s
   | While (_,s,_) -> collect_input_signal_declarations s
+  | Data _ -> []
   | Send _ | Receive _ -> raise (Internal_error "Collect signals: Cannot get send/receive after re-write!!")
 
 
 let rec collect_internal_signal_declarations = function
   | Pause _ | Emit _ | Exit _ | Noop
-  | Channel _ -> []
+  | Channel _ | Data _ -> []
   | Signal (_,io,Symbol (s,_),_) -> (match io with None -> [s] | _ -> [])
   | Present (_,s,None,_) -> collect_internal_signal_declarations s
   | Present (_,s,Some x,_) -> collect_internal_signal_declarations s @ collect_internal_signal_declarations x
@@ -218,3 +219,69 @@ let add_type_and_operator_to_channel t op = function
     let () = Sexplib.Sexp.output_hum stdout (sexp_of_stmt s) in
     raise (Internal_error "Got incorrectly as channel!")
 
+let get_data_type = function
+  | Int8s -> "char"
+  | Int16s -> "short"
+  | Int32s -> "int"
+
+let rec get_simple_data_expr = function
+  | Plus (x,y,_) -> get_simple_data_expr x ^ "+" ^ get_simple_data_expr y
+  | Minus (x,y,_) -> get_simple_data_expr x ^ "-" ^ get_simple_data_expr y
+  | Times (x,y,_) -> get_simple_data_expr x ^ "*" ^ get_simple_data_expr y
+  | Div (x,y,_) -> get_simple_data_expr x ^ "/" ^ get_simple_data_expr y
+  | Mod (x,y,_) -> get_simple_data_expr x ^ "%" ^ get_simple_data_expr y
+  | Rshift (x,y,_) -> get_simple_data_expr x ^ ">>" ^ get_simple_data_expr y
+  | Lshift (x,y,_) -> get_simple_data_expr x ^ "<<" ^ get_simple_data_expr y
+  | Const (_,y,_) -> y 
+  | VarRef (Symbol(x,_),_) -> x
+  | Opposite (x,_) -> "-" ^ get_simple_data_expr x
+  | DataBrackets (x,_) -> "(" ^ get_simple_data_expr x ^ ")"
+  | Cast (x,y,_) -> "(" ^ "(" ^ get_data_type x ^ ")" ^ get_simple_data_expr y ^ ")"
+  | _ as s -> let () = Sexplib.Sexp.output_hum stdout (sexp_of_simpleDataExpr s) in
+	      let () = print_endline "" in
+	      raise (Internal_error "^^^^^^^^^^^^^^^^ currently not supported")
+
+let get_data_expr = function
+  | LessThanEqual (x,y,_) -> get_simple_data_expr x ^ "<= " ^ get_simple_data_expr y 
+  | LessThan (x,y,_) -> get_simple_data_expr x ^ "<" ^ get_simple_data_expr y
+  | GreaterThanEqual (x,y,_) -> get_simple_data_expr x ^ ">=" ^ get_simple_data_expr y
+  | GreaterThan(x,y,_) -> get_simple_data_expr x ^ ">" ^ get_simple_data_expr y
+  | EqualTo (x,y,_) -> get_simple_data_expr x ^ "==" ^ get_simple_data_expr y
+  | NotEqualTo (x,y,_) -> get_simple_data_expr x ^ "!=" ^ get_simple_data_expr y
+
+let get_typedsymbol = function
+  | SimTypedSymbol (x,(Symbol(y,_)),_) -> get_data_type x ^ " " ^ y
+
+let get_allsym = function
+  | AllSymbol (Symbol (x,_)) -> x
+  | AllTypedSymbol x -> get_typedsymbol x
+  | AllSignalorChannelSymbol (Symbol(x,_)) -> x
+
+let rec get_expr = function
+  | And (x,y,_) -> "(" ^ get_expr x ^ "&&" ^ get_expr y ^ ")"
+  | Or (x,y,_) -> "(" ^ get_expr x ^ "||" ^ get_expr y ^ ")"
+  | Brackets (x,_) -> "(" ^ get_expr x ^ ")"
+  | DataExpr x -> get_data_expr x
+  | Not (_,ln) 
+  | Esymbol (_,ln)-> raise (Internal_error ((Reporting.get_line_and_column ln) ^ ": non-data type not allowed in here"))
+
+let get_colon_expr = function
+  | ColonExpr (x,y,z,_) -> (get_simple_data_expr x, get_simple_data_expr y, get_simple_data_expr z)
+
+let rec get_data_stmt = function
+  | RNoop -> ""
+  | DataBlock (s,_) -> "{\n" ^ (List.fold_left (^) "" (List.map get_data_stmt s)) ^ "}\n"
+  | Assign (x,y,_) -> (get_allsym x) ^ " = " ^ (get_simple_data_expr y) ^ ";\n"
+  | CaseDef (x,_) -> get_casedef x
+  | For ((Symbol(x,_)),c,s,_,_) -> 
+    let (sa,e,st) = get_colon_expr c in
+    "for(int "^x^ " = " ^ sa ^ ";" ^ x ^ "<=" ^ e ^ ";" ^ x ^ "=" ^ x ^ "+(" ^ st ^ "))\n"
+    ^ get_data_stmt s ^ "\n"
+and get_casedef = function
+  | Case (x,o,_) -> List.fold_left (^) "" (List.mapi get_clause x) ^ get_otherwise o
+and get_clause i = function
+  | Clause (x,s,_) -> 
+    let st = if i = 0 then "if(" ^(get_expr x)^ ")\n" else "else if(" ^(get_expr x)^ ")\n" in
+    st ^ (get_data_stmt s) ^ "\n"
+and get_otherwise = function
+  | Otherwise (x,_) -> "else{\n" ^ (get_data_stmt x) ^ "}\n"

@@ -30,11 +30,14 @@ let make_body internal_signals channels o index signals isignals = function
 	L.map2 (fun x g ->
 	  (* let updates = ref [] in *)
 	  let updates = Util.get_updates index g in
-	  let updates1 = List.sort_unique compare (List.map (fun (Update x) ->x) updates) in
+	  let datastmts = (L.filter (fun x -> (match x with | DataUpdate _ ->true | _ -> false)) updates) in
+	  let updates1 = L.sort_unique compare ((L.map 
+						      (fun x -> (match x with | Update x ->x | _ ->  raise (Internal_error "Cannot happen!!"))))
+						      (L.filter (fun x -> (match x with | Update _ ->true | _ -> false)) updates)) in
 	  let to_false = ref signals in
 	  let () = L.iter (fun x -> to_false := L.filter (fun y -> y <> x) !to_false) updates1 in
 	  let () = L.iter (fun x -> to_false := L.filter (fun y -> y <> x) !to_false) isignals in
-	  let g = Util.label !to_false internal_signals channels index updates isignals g in
+	  let g = Util.label "promela" !to_false internal_signals channels index updates isignals g in
 	  let updates = updates1 in
 	  if g <> "false" then
 	    (* ("atomic{\n" >> text) *)
@@ -42,10 +45,12 @@ let make_body internal_signals channels o index signals isignals = function
 	    (* These are the updates to be made here!! *)
 	    ++ L.fold_left (++) empty (L.mapi (fun i x -> 
 	      ((if not (L.exists (fun t -> t = x) channels) then ("CD"^(string_of_int index)^"_"^x) else x)
-	       ^ " = true;\t") >> text) updates)
+	       ^ " = true;\n") >> text) updates)
 	    ++ L.fold_left (++) empty (L.mapi (fun i x ->
 	      ((if not (L.exists (fun t -> t = x) channels) then ("CD"^(string_of_int index)^"_"^x) else x)
-	       ^ " = false;\t" >> text)) !to_false)
+	       ^ " = false;\n" >> text)) !to_false)
+	    (* Add the data stmts *)
+	    ++ ((L.fold_left (^) "" (L.map (Util.build_data_stmt "promela") datastmts)) >> text)
 	    ++ (("goto " ^ x ^ ";\n") >> text)
 	    (* ++ ("}\n" >> text) *)
 	  else empty

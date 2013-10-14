@@ -82,7 +82,7 @@ stmt:
     | send TSEMICOLON {$1}
     | receive TSEMICOLON {$1}
     | twhile {$1}
-    | dataStmts {Systemj.Data $1}
+    | dataStmts {Systemj.Data ($1,None)}
     /*| trap {$1}*/
 ;
 
@@ -168,7 +168,7 @@ relDataExpr:
 dataStmts:
     | TOB TCB {Systemj.RNoop}
     | TSEMICOLON {Systemj.RNoop}
-    | allsym TEqual simpleDataExpr TSEMICOLON {Systemj.Assign([$1],$3, ln())}
+    | allsym TEqual simpleDataExpr TSEMICOLON {Systemj.Assign($1,$3, ln())}
     | TFor TOP symbol TColon colonExpr TCP dataStmts {Systemj.For($3,$5,$7,None,ln())}
     | doblock TFor TOP symbol TColon colonExpr TCP TSEMICOLON {Systemj.For($4,$6,$1,None,ln())}
     | case {Systemj.CaseDef ($1, ln())}
@@ -187,9 +187,11 @@ caseclauselist:
 ;
 caseclause:
     | TOP expr TCP dataStmts {Systemj.Clause ($2,$4,ln())}
+    | TOP expr TCP doblock {Systemj.Clause ($2,$4,ln())}
 ;
 otherwise:
     | TOtherwise dataStmts {Systemj.Otherwise ($2,ln())}
+    | TOtherwise doblock {Systemj.Otherwise ($2,ln())}
 ;
 
 datastmtlist:

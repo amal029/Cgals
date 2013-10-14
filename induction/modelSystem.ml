@@ -26,7 +26,7 @@ let replaced = Hashtbl.create 100
 (* let guards = Hashtbl.create 100 *)
 
 let replace = function
-  | {node=n} as s -> 
+  | {node=n} -> 
     n.incoming <- List.mapi (fun i x ->
       (match (Hashtbl.find_option replaced x) with 
       | None -> x 
@@ -91,7 +91,7 @@ let propagate_guards_from_st nodeset =
 
 
 let find_subformula_equivalents model = function
-  | {node=n;tls=llabels;tlabels=labs} as s -> 
+  | {node=n;tls=llabels;tlabels=labs} -> 
     let labels = PropSet.of_enum (List.enum llabels) in
     let new_nodes = List.filter (fun ({node=nn;tls=nllabels}) -> 
       let nlabels = PropSet.of_enum (List.enum nllabels) in

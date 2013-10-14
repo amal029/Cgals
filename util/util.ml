@@ -12,10 +12,26 @@ open TableauBuchiAutomataGeneration
 
 exception Internal_error of string
 
-let rec label tf internal_signals channels index updates isignals = function
+let build_data_stmt from stmt = 
+  let stmt = Systemj.get_data_stmt 
+    (match stmt with DataUpdate x -> x 
+    | _ as s -> 
+      output_hum stdout (sexp_of_proposition s);
+      raise (Internal_error "^^^^^^^^^^^^^^^ is not a data-type statment")) in
+  match from with
+  | "promela" -> "c_code {\n" ^ stmt ^ "};\n"
+  | _ -> stmt
+
+let build_data_expr from expr =
+  let expr = Systemj.get_data_expr expr in
+  match from with
+  | "promela" -> "c_expr{" ^ expr ^ "}"
+  | _ -> expr
+
+let rec label from tf internal_signals channels index updates isignals = function
   | And (x,y) -> 
-    let lv = (label tf internal_signals channels index updates isignals x)  in
-    let rv = (label tf internal_signals channels index updates isignals y) in
+    let lv = (label from tf internal_signals channels index updates isignals x)  in
+    let rv = (label from tf internal_signals channels index updates isignals y) in
     let () = IFDEF DEBUG THEN output_hum stdout (sexp_of_list sexp_of_string [lv;rv]) ELSE () ENDIF in
     (match (lv,rv) with
     | ("false",_) | (_,"false") -> "false"
@@ -23,8 +39,8 @@ let rec label tf internal_signals channels index updates isignals = function
     | ("true",(_ as s)) | ((_ as s),"true") -> s
     | (_,_) -> "(" ^ lv ^ "&&" ^ rv ^ ")")
   | Or (x,y) -> 
-    let lv = (label tf internal_signals channels index updates isignals x)  in
-    let rv = (label tf internal_signals channels index updates isignals y) in
+    let lv = (label from tf internal_signals channels index updates isignals x)  in
+    let rv = (label from tf internal_signals channels index updates isignals y) in
     (match (lv,rv) with
     | ("true",_) | (_,"true") -> "true"
     | ("false","false") -> "false"
@@ -41,13 +57,15 @@ let rec label tf internal_signals channels index updates isignals = function
 	      if not (L.exists (fun t -> t = x) channels) then ("CD"^(string_of_int index)^"_"^x) 
 	      else x
 	  else "false"
+      | DataExpr x -> build_data_expr from x
+      | DataUpdate x -> raise (Internal_error ("Tried to update data " ^ (to_string_hum (Systemj.sexp_of_dataStmt x)) ^ " on a guard!!"))
       | Update x -> raise (Internal_error ("Tried to update " ^ x ^ " on a guard!!"))
       | Label x -> raise (Internal_error ("Tried to put label " ^ x ^ " on a guard!!"))) in 
     (match v with
     | "false" -> "true"
     | "true" -> "false"
     | _ -> "!"^v)
-  | Proposition x as s -> (match x with 
+  | Proposition x -> (match x with 
     | Expr x -> 
 	if (not (L.exists (fun t -> t = x) isignals)) then
 	  if x.[0] = '$' then "true"
@@ -58,6 +76,9 @@ let rec label tf internal_signals channels index updates isignals = function
 	    else x
 	    (* else "true" *)
 	else "true"
+    (* The dataexpr *)
+    | DataExpr x -> build_data_expr from x
+    | DataUpdate x -> raise (Internal_error ("Tried to update data " ^ (to_string_hum (Systemj.sexp_of_dataStmt x)) ^ " on a guard!!"))
     | Update x -> raise (Internal_error ("Tried to update " ^ x ^ " on a guard!!"))
     | Label x -> raise (Internal_error ("Tried to put label " ^ x ^ " on a guard!!"))) 
   | True -> "true"
