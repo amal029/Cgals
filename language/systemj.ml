@@ -132,7 +132,7 @@ let rec collect_channels = function
   | Pause _ | Emit _ | Exit _ | Noop
   | Send _ | Receive _
   | Signal _ -> []
-  | Channel (_,_,(Symbol (x,_)),_) -> [(x^"_req");(x^"_ack")]
+  | Channel (e,_,(Symbol (x,_)),_) -> [([(x^"_req");(x^"_ack")],e)]
   | Present (_,s,None,_) -> collect_channels s
   | Present (_,s,Some x,_) -> collect_channels s @ collect_channels x
   | Trap (_,s,_) -> collect_channels s
@@ -220,7 +220,7 @@ let add_type_and_operator_to_channel t op = function
     raise (Internal_error "Got incorrectly as channel!")
 
 let get_data_type = function
-  | Int8s -> "char"
+  | Int8s -> "unsigned char"
   | Int16s -> "short"
   | Int32s -> "int"
 

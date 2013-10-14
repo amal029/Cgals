@@ -129,13 +129,18 @@ try
         let signals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_signal_declarations x) in
         let isignals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_input_signal_declarations x) in
         let internal_signals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_internal_signal_declarations x) in
-        let promela_model = map7 
+	let channel_strings = List.sort_unique compare (List.flatten (List.map (fun (x,_) -> x) channels)) in
+        let promela_model = map7
           Promela.make_promela 
-          (List.init (List.length labeled_buchi_automatas) (fun x -> channels)) internal_signals signals isignals
+          (List.init (List.length labeled_buchi_automatas) (fun x -> channel_strings)) internal_signals signals isignals
           (List.init (List.length labeled_buchi_automatas) (fun x -> x)) (List.rev !init) labeled_buchi_automatas in
-        (* make the channel declarations in the global space!! *)
-        let promela_channels = List.fold_left Pretty.append Pretty.empty (List.map (fun x -> Pretty.text ("bool "^x^";\n"))channels) in
-        let promela_gsigs = List.fold_left Pretty.append Pretty.empty 
+	(* type-def the signal/channel types *)
+	let t1 = Pretty.text ("typedef int_t {bool status; int value};\n") in
+	let t1 = Pretty.append t1 (Pretty.text ("typedef short_t {bool status; short value};\n")) in
+	let t1 = Pretty.append t1 (Pretty.text ("typedef byte_t {bool status; byte value};\n")) in
+	let promela_channels = List.fold_left Pretty.append Pretty.empty 
+	  (List.map (fun x -> Pretty.text ("bool "^x^";\n"))channel_strings) in
+        let promela_gsigs = List.fold_left Pretty.append t1
           (List.mapi (fun i y -> List.fold_left Pretty.append Pretty.empty (List.map (fun x -> Pretty.text ("bool CD"^(string_of_int i)^"_"^x^";\n")) 
                                               (List.sort_unique compare y)))
              signals) in
@@ -153,13 +158,14 @@ try
         let signals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_signal_declarations x) in
         let isignals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_input_signal_declarations x) in
         let internal_signals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_internal_signal_declarations x) in
+	let channel_strings = List.sort_unique compare (List.flatten (List.map (fun (x,_) -> x) channels)) in
         let c_model = map7 
           C.make_c
-          (List.init (List.length labeled_buchi_automatas) (fun x -> channels)) internal_signals signals isignals
+          (List.init (List.length labeled_buchi_automatas) (fun x -> channel_strings)) internal_signals signals isignals
           (List.init (List.length labeled_buchi_automatas) (fun x -> x)) (List.rev !init) labeled_buchi_automatas in
         let c_headers = Pretty.text ("#include <stdio.h>\n"^"typedef int bool;\n"^"#define true 1\n"^"#define false 0\n") in
         let c_main = C.make_main (List.length labeled_buchi_automatas) in
-        let c_channels = List.fold_left Pretty.append Pretty.empty (List.map (fun x -> Pretty.text ("bool "^x^" = false;\n"))channels) in
+        let c_channels = List.fold_left Pretty.append Pretty.empty (List.map (fun x -> Pretty.text ("bool "^x^" = false;\n"))channel_strings) in
         let signals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_all_signal_declarations x) in
         let c_gsigs = List.fold_left Pretty.append Pretty.empty 
           (List.mapi (fun i y -> List.fold_left Pretty.append Pretty.empty (List.map (fun x -> Pretty.text ("bool CD"^(string_of_int i)^"_"^x^" = false;\n")) 

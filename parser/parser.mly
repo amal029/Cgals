@@ -98,8 +98,7 @@ signal:
 ;
 
 typed_channel:
-    | dataTypes channel TOpPlus {Systemj.add_type_and_operator_to_channel $1 Systemj.OpPlus $2}
-    | dataTypes channel TOpTimes {Systemj.add_type_and_operator_to_channel $1 Systemj.OpTimes $2}
+    | dataTypes channel {Systemj.add_type_and_operator_to_channel $1 Systemj.OpPlus $2}
 ;
 
 channel:
