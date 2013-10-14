@@ -20,10 +20,12 @@ try
   let file_name = ref "" in
   let formula = ref "" in
   let promela = ref "" in
+  let smt = ref "" in
   let outfile = ref "" in
   let () = Arg.parse [
     ("-formula", Arg.Set_string formula, " The propositional linear temporal logic formula to verify (see promela ltl man page)");
     ("-promela", Arg.Set_string promela, " The name of the promela output file");
+    ("-smt", Arg.Set_string smt, " The name of the SMT-LIB output file");
     ("-o", Arg.Set_string outfile, " The name of the [llvm/C/Java] output file (Only C backend implemented)")] 
     (fun x -> file_name := x) usage_msg in
 
@@ -123,7 +125,10 @@ try
   (* Remove the unreachable nodes from the generated graph *)
   let labeled_buchi_automatas = List.map Util.reachability labeled_buchi_automatas in
   let () = 
-    if !promela <> "" then
+      if !smt <> "" then
+        let () = Smt.make_smt labeled_buchi_automatas !smt in 
+        ();
+      else if !promela <> "" then
       try
         let fd = open_out !promela in
         let signals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_signal_declarations x) in
