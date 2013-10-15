@@ -25,12 +25,14 @@ planned.
 
 Install dependencies:
 
+* Ocaml (>= 4.01.0) http://ocaml.org/
 * Batteries: http://batteries.forge.ocamlcore.org/
 * Sexplib: https://github.com/janestreet/sexplib.git
 * ocaml-pretty: https://github.com/toyvo/ocaml-pretty (will need to write the META file)
 * ocaml-find/findlib: http://projects.camlcity.org/projects/findlib.html
 * parmap: https://github.com/rdicosmo/parmap
 * SPIN model-checker: http://spinroot.com/
+* CVC3 (http://www.cs.nyu.edu/acsys/cvc3/)/Z3 (http://z3.codeplex.com/) if you want to perform real-time analysis the output-files in branch smt are produced in the smt-lib format
 
 make clean && make in the source directory.
 
