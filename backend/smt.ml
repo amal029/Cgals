@@ -66,28 +66,18 @@ let rec get_chan_prop logic node cc =
     | _ as t -> raise (Internal_error "Error during channel analysis")
 
 
-let get_refs i1 chan dir isnot =
-    match i1 with
+let getnames n =
+    match n with
     | (s,ss) ->
         match ss with 
         | Proposition (Expr (t)) ->
-                chan := (match String.split t "_" with | (j,k) -> j);
-                dir := (match String.split t "_" with | (j,k) -> k);
-                isnot := false
+                ((match String.split t "_" with | (j,k) -> j), (match String.split t "_" with | (j,k) -> k), false)
         | Not (Proposition (Expr (t))) ->
-                chan := (match String.split t "_" with | (j,k) -> j) ;
-                dir := (match String.split t "_" with | (j,k) -> k) ;
-                isnot := true
+                ((match String.split t "_" with | (j,k) -> j), (match String.split t "_" with | (j,k) -> k), true)
 
 let insert_incoming i1 i2 =
-    let chan1 = ref "" in
-    let dir1 = ref "" in
-    let isnot1 = ref false in
-    let chan2 = ref "" in
-    let dir2 = ref "" in
-    let isnot2 = ref false in
-    let () = get_refs i1 chan1 dir1 isnot1 in
-    let () = get_refs i2 chan2 dir2 isnot2 in
+    let first = getnames i1 in
+    let second = getnames i2 in
 (*     Finish this tomorr *)
     ()
 
