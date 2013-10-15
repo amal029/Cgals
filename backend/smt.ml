@@ -71,15 +71,22 @@ let getnames n =
     | (s,ss) ->
         match ss with 
         | Proposition (Expr (t)) ->
-                ((match String.split t "_" with | (j,k) -> j), (match String.split t "_" with | (j,k) -> k), false)
+                ((match String.split t "_" with | (j,k) -> j), s, (match String.split t "_" with | (j,k) -> k), false)
         | Not (Proposition (Expr (t))) ->
-                ((match String.split t "_" with | (j,k) -> j), (match String.split t "_" with | (j,k) -> k), true)
+                ((match String.split t "_" with | (j,k) -> j), s, (match String.split t "_" with | (j,k) -> k), true)
+        | _ -> raise(Internal_error "Error during channel analysis")
 
 let insert_incoming i1 i2 =
     let first = getnames i1 in
     let second = getnames i2 in
-(*     Finish this tomorr *)
-    ()
+    print_endline ("WWW "^(match first with | (_,_,a,_) -> a));
+    print_endline ("WWW2 "^(match second with | (_,_,a,_) -> a));
+    match first with 
+    | (a,s,"ack",true) -> 
+            match second with | (aa,ss,"req",false) when a = aa ->
+               print_endline "wwww"
+            | (_,_,"",_) -> print_endline "next"
+    | (_,_,"",_) -> print_endline "next"
 
 let make_smt lba filename =
   let cc = ref [] in
