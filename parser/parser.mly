@@ -25,7 +25,7 @@
 %token TLbrack TRbrack TColon TPresent TEof TLShift TRShift TElse TExit TEmit TCase
 %token TMain TIn TOut TOtherwise TPar TFor TSignal TChannel TPause TColon
 %token TInt8 TInt16 TInt32 TInt64 TInt8s TInt16s TInt32s TInt64s TFloat8 TFloat32 TFloat64 TFloat16 TInt1s
-%token TAwait Timm TExtern TSplit TAT TSend TReceive TNotEqual TOpPlus TOpTimes TBegin TEnd THash TDo
+%token TAwait Timm TExtern TSplit TAT TSend TReceive TNotEqual TOpPlus TOpTimes TBegin TEnd THash TDo TSEMISEMI
 
 /* Constructors with an argument */
 %token <string> TInt

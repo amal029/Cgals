@@ -250,7 +250,8 @@ let get_data_expr = function
   | NotEqualTo (x,y,_) -> get_simple_data_expr x ^ "!=" ^ get_simple_data_expr y
 
 let get_typedsymbol = function
-  | SimTypedSymbol (x,(Symbol(y,_)),_) -> get_data_type x ^ " " ^ y
+  (* | SimTypedSymbol (x,(Symbol(y,_)),_) -> get_data_type x ^ " " ^ y *)
+  | SimTypedSymbol (x,(Symbol(y,_)),_) -> y
 
 let get_allsym = function
   | AllSymbol (Symbol (x,_)) -> x
@@ -285,3 +286,34 @@ and get_clause i = function
     st ^ (get_data_stmt s) ^ "\n"
 and get_otherwise = function
   | Otherwise (x,_) -> "else{\n" ^ (get_data_stmt x) ^ "}\n"
+
+
+let rec get_var = function
+  | DataBlock (x,_) -> (List.map get_var x) |> List.flatten |> List.sort_unique compare 
+  | For (_,_,x,_,_) -> get_var x
+  | CaseDef (x,_) -> (get_case_var x) |> List.flatten |> List.sort_unique compare
+  | RNoop -> []
+  | Assign (x,y,ln) -> 
+    (match x with
+    | AllTypedSymbol x -> [x]
+    | _ -> [])
+and get_clause_var = function
+  | Clause (_,x,_) -> get_var x
+and get_case_var = function
+  | Case (l,o,_) -> (List.map get_clause_var l |> List.sort_unique compare) @ (get_o_var o)
+and get_o_var = function
+  | Otherwise (x,_) -> [get_var x]
+
+let rec get_var_declarations = function
+  | Data (x,_) -> get_var x
+  | Pause _ | Emit _ | Exit _ | Noop
+  | Channel _  | Signal _ -> []
+  | Present (_,s,None,_) -> get_var_declarations s
+  | Present (_,s,Some x,_) -> get_var_declarations s @ get_var_declarations x
+  | Trap (_,s,_) -> get_var_declarations s
+  | Block (s,_) 
+  | Spar (s,_) -> List.flatten (List.map get_var_declarations s)
+  | Abort (_,s,_) -> get_var_declarations s
+  | Suspend (_,s,_) -> get_var_declarations s
+  | While (_,s,_) -> get_var_declarations s
+  | Send _ | Receive _ -> raise (Internal_error "Collect signals: Cannot get send/receive after re-write!!")

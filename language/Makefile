@@ -1,6 +1,6 @@
 OCMLOPTS=-a 
 OCMALDEBUG=-g
-CC=ocamlopt -warn-error +a+8
+CC=ocamlopt -annot -warn-error +a+8
 SRC=systemj.ml
 TYPECONV=`ocamlfind query type_conv`
 SEXPLIB=`ocamlfind query sexplib`

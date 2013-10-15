@@ -135,26 +135,30 @@ try
         let isignals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_input_signal_declarations x) in
         let internal_signals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_internal_signal_declarations x) in
 	let channel_strings = List.sort_unique compare (List.flatten (List.map (fun (x,_) -> x) channels)) in
+	let var_decs = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.get_var_declarations x) |> List.flatten in
         let promela_model = map7
           Promela.make_promela 
           (List.init (List.length labeled_buchi_automatas) (fun x -> channel_strings)) internal_signals signals isignals
           (List.init (List.length labeled_buchi_automatas) (fun x -> x)) (List.rev !init) labeled_buchi_automatas in
 	(* type-def the signal/channel types *)
-	let t1 = Pretty.text ("typedef int_t {bool status; int value};\n") in
-	let t1 = Pretty.append t1 (Pretty.text ("typedef short_t {bool status; short value};\n")) in
-	let t1 = Pretty.append t1 (Pretty.text ("typedef byte_t {bool status; byte value};\n")) in
+	let promela_vardecs = List.fold_left Pretty.append Pretty.empty 
+	  (List.map (fun x -> 
+	    let (ttype,name) = (match x with | Systemj.SimTypedSymbol (t,Systemj.Symbol(y,_),_) -> t,y) in
+	    ("c_code {" ^ (Systemj.get_data_type ttype) ^ " " ^ name ^ ";}\n" ^ 
+		"c_track \"&" ^ name ^ "\" " ^ "\"sizeof(" ^(Systemj.get_data_type ttype)^")\"\n") |> Pretty.text) var_decs) in
 	let promela_channels = List.fold_left Pretty.append Pretty.empty 
 	  (List.map (fun x -> Pretty.text ("bool "^x^";\n"))channel_strings) in
-        let promela_gsigs = List.fold_left Pretty.append t1
+        let promela_gsigs = List.fold_left Pretty.append Pretty.empty
           (List.mapi (fun i y -> List.fold_left Pretty.append Pretty.empty (List.map (fun x -> Pretty.text ("bool CD"^(string_of_int i)^"_"^x^";\n")) 
                                               (List.sort_unique compare y)))
              signals) in
         let appf = if !formula = "" then Pretty.empty else (Pretty.text ("ltl {" ^ !formula ^ "}\n")) in
         let () = Pretty.print ~output:(output_string fd) 
-          (Pretty.append promela_gsigs
-             (Pretty.append promela_channels 
-            (Pretty.append appf
-               (List.reduce Pretty.append promela_model)))) in
+	  (Pretty.append promela_vardecs
+             (Pretty.append promela_gsigs
+		(Pretty.append promela_channels 
+		   (Pretty.append appf
+		      (List.reduce Pretty.append promela_model))))) in
         close_out fd;
           with
           | Sys_error _ as s -> raise s 

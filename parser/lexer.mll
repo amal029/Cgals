@@ -8,6 +8,7 @@ rule lexer = parse
   | "//"_*'\n' {let () = new_line lexbuf in lexer lexbuf}
   | '\n' {let () = new_line lexbuf in lexer lexbuf}
   | ';'  {Parser.TSEMICOLON}
+  | ";;"  {Parser.TSEMISEMI}
   | '('  {Parser.TOP}
   | ')'  {Parser.TCP}
   | '{'  {Parser.TOB}
