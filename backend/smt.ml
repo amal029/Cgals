@@ -1,5 +1,12 @@
-module List = Batteries.List module SS = Sexplib.Sexp module SSL = Sexplib.Std module String = Batteries.String open Pretty open TableauBuchiAutomataGeneration open PropositionalLogic let (++) =
-    append let (>>) x f = f x
+module List = Batteries.List 
+module SS = Sexplib.Sexp 
+module SSL = Sexplib.Std 
+module String = Batteries.String 
+open Pretty 
+open TableauBuchiAutomataGeneration 
+open PropositionalLogic 
+let (++) = append 
+let (>>) x f = f x
 
 exception Internal_error of string
 
@@ -64,16 +71,15 @@ let get_refs i1 chan dir isnot =
     | (s,ss) ->
         match ss with 
         | Proposition (Expr (t)) ->
-                chan := match String.split t "_" with | (j,k) -> j;
-                dir := match String.split t "_" with | (j,k) -> k;
+                chan := (match String.split t "_" with | (j,k) -> j);
+                dir := (match String.split t "_" with | (j,k) -> k);
                 isnot := false
         | Not (Proposition (Expr (t))) ->
-                chan := match String.split t "_" with | (j,k) -> j ;
-                dir := match String.split t "_" with | (j,k) -> k ;
+                chan := (match String.split t "_" with | (j,k) -> j) ;
+                dir := (match String.split t "_" with | (j,k) -> k) ;
                 isnot := true
 
 let insert_incoming i1 i2 =
-(*     Finish this tomorr *)
     let chan1 = ref "" in
     let dir1 = ref "" in
     let isnot1 = ref false in
@@ -82,8 +88,8 @@ let insert_incoming i1 i2 =
     let isnot2 = ref false in
     let () = get_refs i1 chan1 dir1 isnot1 in
     let () = get_refs i2 chan2 dir2 isnot2 in
+(*     Finish this tomorr *)
     ()
-                
 
 let make_smt lba filename =
   let cc = ref [] in
