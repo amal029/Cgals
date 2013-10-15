@@ -16,7 +16,7 @@ open Pretty
 let (++) = append
 let (>>) x f = f x
 
-let make_body internal_signals channels o index signals isignals = function
+let make_body asignals internal_signals channels o index signals isignals = function
   (* Make the body of the process!! *)
   | ({name=n},tlabel,_) -> 
     let o = (match Hashtbl.find_option o n with Some x -> x | None -> []) in
@@ -49,7 +49,7 @@ let make_body internal_signals channels o index signals isignals = function
 	    ++ L.fold_left (++) empty (L.mapi (fun i x -> 
 	      ((if not (L.exists (fun t -> t = x) channels) then ("CD"^(string_of_int index)^"_"^x) else x)
 	       ^ " = true;\n printf(\"Emitted: "^x^"\\n\");\n") >> text) updates)
-	    ++ ((L.fold_left (^) "" (L.map (Util.build_data_stmt "c") datastmts)) >> text)
+	    ++ ((L.fold_left (^) "" (L.map (Util.build_data_stmt asignals index "c") datastmts)) >> text)
 	    ++ (("goto " ^ x ^ ";\n") >> text)
 	    ++ ("}\n" >> text)
 	  else empty
@@ -57,12 +57,12 @@ let make_body internal_signals channels o index signals isignals = function
       else [("goto " ^ n ^ ";\n">> text)]
     )) 
 
-let make_process internal_signals channels o index signals isignals init lgn = 
+let make_process internal_signals channels o index signals isignals init asignals lgn = 
   (("void CD" ^ (string_of_int index) ^ "(") >> text) 
   (* ++ (L.fold_left (++) empty) (L.mapi (make_args (L.length !ss)) !ss) *)
   ++ ("){\n" >> text)
   ++ (("goto " ^ init ^ ";\n") >> text)
-  ++ ((L.reduce (++) (L.map (fun x -> make_body internal_signals channels o index signals isignals (x.node,x.tlabels,x.guards)) lgn)) >> (4 >> indent))
+  ++ ((L.reduce (++) (L.map (fun x -> make_body asignals internal_signals channels o index signals isignals (x.node,x.tlabels,x.guards)) lgn)) >> (4 >> indent))
   ++ ("}\n" >> text)
   ++ (" " >> line)
 
@@ -73,8 +73,8 @@ let make_main index =
   ++ ("}\n" >> text) 
   ++("}\n" >> text)
 
-let make_c channels internal_signals signals isignals index init lgn = 
+let make_c channels internal_signals signals isignals index init asignals lgn = 
   let o = Hashtbl.create 1000 in
   let () = L.iter (fun x -> Util.get_outgoings o (x.node,x.guards)) lgn in
-  group ((make_process internal_signals channels o index signals isignals init lgn) ++ (" " >> line))
+  group ((make_process internal_signals channels o index signals isignals init asignals lgn) ++ (" " >> line))
     

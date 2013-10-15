@@ -77,6 +77,10 @@ type operators =
 | OpTimes
 with sexp
 
+let get_operators = function
+  | OpPlus -> " += "
+  | OpTimes -> " *= "
+
 type extras = {operator:operators;data:datatype}
 with sexp
 
@@ -146,7 +150,7 @@ let rec collect_channels = function
 let rec collect_all_signal_declarations = function
   | Pause _ | Emit _ | Exit _ | Noop
   | Channel _ -> []
-  | Signal (_,io,Symbol (s,_),_) -> [s]
+  | Signal (x,io,Symbol (s,_),_) -> [(s,x)]
   | Present (_,s,None,_) -> collect_all_signal_declarations s
   | Present (_,s,Some x,_) -> collect_all_signal_declarations s @ collect_all_signal_declarations x
   | Trap (_,s,_) -> collect_all_signal_declarations s
@@ -161,7 +165,7 @@ let rec collect_all_signal_declarations = function
 let rec collect_signal_declarations = function
   | Pause _ | Emit _ | Exit _ | Noop
   | Channel _ -> []
-  | Signal (_,io,Symbol (s,_),_) -> (match io with Some Input -> [] | _ -> [s])
+  | Signal (x,io,Symbol (s,_),_) -> (match io with Some Input -> [] | _ -> [(s,x)])
   | Present (_,s,None,_) -> collect_signal_declarations s
   | Present (_,s,Some x,_) -> collect_signal_declarations s @ collect_signal_declarations x
   | Trap (_,s,_) -> collect_signal_declarations s
@@ -224,68 +228,89 @@ let get_data_type = function
   | Int16s -> "short"
   | Int32s -> "int"
 
-let rec get_simple_data_expr = function
-  | Plus (x,y,_) -> get_simple_data_expr x ^ "+" ^ get_simple_data_expr y
-  | Minus (x,y,_) -> get_simple_data_expr x ^ "-" ^ get_simple_data_expr y
-  | Times (x,y,_) -> get_simple_data_expr x ^ "*" ^ get_simple_data_expr y
-  | Div (x,y,_) -> get_simple_data_expr x ^ "/" ^ get_simple_data_expr y
-  | Mod (x,y,_) -> get_simple_data_expr x ^ "%" ^ get_simple_data_expr y
-  | Rshift (x,y,_) -> get_simple_data_expr x ^ ">>" ^ get_simple_data_expr y
-  | Lshift (x,y,_) -> get_simple_data_expr x ^ "<<" ^ get_simple_data_expr y
+let rec get_simple_data_expr index asignals = function
+  | Plus (x,y,_) -> get_simple_data_expr index asignals x ^ "+" ^ get_simple_data_expr index asignals y
+  | Minus (x,y,_) -> get_simple_data_expr index asignals x ^ "-" ^ get_simple_data_expr index asignals y
+  | Times (x,y,_) -> get_simple_data_expr index asignals x ^ "*" ^ get_simple_data_expr index asignals y
+  | Div (x,y,_) -> get_simple_data_expr index asignals x ^ "/" ^ get_simple_data_expr index asignals y
+  | Mod (x,y,_) -> get_simple_data_expr index asignals x ^ "%" ^ get_simple_data_expr index asignals y
+  | Rshift (x,y,_) -> get_simple_data_expr index asignals x ^ ">>" ^ get_simple_data_expr index asignals y
+  | Lshift (x,y,_) -> get_simple_data_expr index asignals x ^ "<<" ^ get_simple_data_expr index asignals y
   | Const (_,y,_) -> y 
   | VarRef (Symbol(x,_),_) -> x
-  | Opposite (x,_) -> "-" ^ get_simple_data_expr x
-  | DataBrackets (x,_) -> "(" ^ get_simple_data_expr x ^ ")"
-  | Cast (x,y,_) -> "(" ^ "(" ^ get_data_type x ^ ")" ^ get_simple_data_expr y ^ ")"
+  | Opposite (x,_) -> "-" ^ get_simple_data_expr index asignals x
+  | DataBrackets (x,_) -> "(" ^ get_simple_data_expr index asignals x ^ ")"
+  | Cast (x,y,_) -> "(" ^ "(" ^ get_data_type x ^ ")" ^ get_simple_data_expr index asignals y ^ ")"
+  | SignalOrChannelRef (Symbol(x,_),ln) as s ->
+    let signals = List.split asignals |> (fun (x,_) -> x) in
+    if List.exists (fun y -> y = x) signals then "CD"^(string_of_int index)^"_"^x^"_val_pre"
+    else 
+      let () = Sexplib.Sexp.output_hum stdout (sexp_of_simpleDataExpr s) in
+      let () = print_endline "" in
+      raise (Internal_error "^^^^^^^^^^^^^^^^ currently not supported")
   | _ as s -> let () = Sexplib.Sexp.output_hum stdout (sexp_of_simpleDataExpr s) in
-	      let () = print_endline "" in
-	      raise (Internal_error "^^^^^^^^^^^^^^^^ currently not supported")
+  	      let () = print_endline "" in
+  	      raise (Internal_error "^^^^^^^^^^^^^^^^ currently not supported")
 
-let get_data_expr = function
-  | LessThanEqual (x,y,_) -> get_simple_data_expr x ^ "<= " ^ get_simple_data_expr y 
-  | LessThan (x,y,_) -> get_simple_data_expr x ^ "<" ^ get_simple_data_expr y
-  | GreaterThanEqual (x,y,_) -> get_simple_data_expr x ^ ">=" ^ get_simple_data_expr y
-  | GreaterThan(x,y,_) -> get_simple_data_expr x ^ ">" ^ get_simple_data_expr y
-  | EqualTo (x,y,_) -> get_simple_data_expr x ^ "==" ^ get_simple_data_expr y
-  | NotEqualTo (x,y,_) -> get_simple_data_expr x ^ "!=" ^ get_simple_data_expr y
+let get_data_expr index asignals = function
+  | LessThanEqual (x,y,_) -> get_simple_data_expr index asignals x ^ "<= " ^ get_simple_data_expr index asignals y 
+  | LessThan (x,y,_) -> get_simple_data_expr index asignals x ^ "<" ^ get_simple_data_expr index asignals y
+  | GreaterThanEqual (x,y,_) -> get_simple_data_expr index asignals x ^ ">=" ^ get_simple_data_expr index asignals y
+  | GreaterThan(x,y,_) -> get_simple_data_expr index asignals x ^ ">" ^ get_simple_data_expr index asignals y
+  | EqualTo (x,y,_) -> get_simple_data_expr index asignals x ^ "==" ^ get_simple_data_expr index asignals y
+  | NotEqualTo (x,y,_) -> get_simple_data_expr index asignals x ^ "!=" ^ get_simple_data_expr index asignals y
 
 let get_typedsymbol = function
   (* | SimTypedSymbol (x,(Symbol(y,_)),_) -> get_data_type x ^ " " ^ y *)
   | SimTypedSymbol (x,(Symbol(y,_)),_) -> y
 
-let get_allsym = function
-  | AllSymbol (Symbol (x,_)) -> x
-  | AllTypedSymbol x -> get_typedsymbol x
-  | AllSignalorChannelSymbol (Symbol(x,_)) -> x
+let get_allsym index asignals = function
+  | AllSymbol (Symbol (x,_)) -> x ^ " = "
+  | AllTypedSymbol x -> get_typedsymbol x ^ " = "
+  | AllSignalorChannelSymbol (Symbol(x,ln)) as s -> 
+    let signals = List.split asignals |> (fun (x,_) -> x) in
+    let ops = List.split asignals |> (fun (_,y) -> y) in
+    if List.exists (fun y -> y = x) signals then 
+      let (x1,_) = List.findi (fun i y -> x = y) signals in
+      "CD"^(string_of_int index)^"_"^x^"_val " ^ (((List.at ops x1) 
+						|> (fun x ->
+						  match x with 
+						  | Some x -> x.operator 
+						  | None -> raise (Internal_error ((Reporting.get_line_and_column ln)^ ": signal has no type and operator"))) 
+						|> get_operators))
+    else 
+      let () = Sexplib.Sexp.output_hum stdout (sexp_of_allsym s) in
+      let () = print_endline "" in
+      raise (Internal_error "^^^^^^^^^^^^^^^^ currently not supported")
 
-let rec get_expr = function
-  | And (x,y,_) -> "(" ^ get_expr x ^ "&&" ^ get_expr y ^ ")"
-  | Or (x,y,_) -> "(" ^ get_expr x ^ "||" ^ get_expr y ^ ")"
-  | Brackets (x,_) -> "(" ^ get_expr x ^ ")"
-  | DataExpr x -> get_data_expr x
+let rec get_expr index asignals = function
+  | And (x,y,_) -> "(" ^ get_expr index asignals x ^ "&&" ^ get_expr index asignals y ^ ")"
+  | Or (x,y,_) -> "(" ^ get_expr index asignals x ^ "||" ^ get_expr index asignals y ^ ")"
+  | Brackets (x,_) -> "(" ^ get_expr index asignals x ^ ")"
+  | DataExpr x -> get_data_expr index asignals x
   | Not (_,ln) 
   | Esymbol (_,ln)-> raise (Internal_error ((Reporting.get_line_and_column ln) ^ ": non-data type not allowed in here"))
 
-let get_colon_expr = function
-  | ColonExpr (x,y,z,_) -> (get_simple_data_expr x, get_simple_data_expr y, get_simple_data_expr z)
+let get_colon_expr index asignals = function
+  | ColonExpr (x,y,z,_) -> (get_simple_data_expr index asignals x, get_simple_data_expr index asignals y, get_simple_data_expr index asignals z)
 
-let rec get_data_stmt = function
+let rec get_data_stmt index asignals = function
   | RNoop -> ""
-  | DataBlock (s,_) -> "{\n" ^ (List.fold_left (^) "" (List.map get_data_stmt s)) ^ "}\n"
-  | Assign (x,y,_) -> (get_allsym x) ^ " = " ^ (get_simple_data_expr y) ^ ";\n"
-  | CaseDef (x,_) -> get_casedef x
+  | DataBlock (s,_) -> "{\n" ^ (List.fold_left (^) "" (List.map (get_data_stmt index asignals) s)) ^ "}\n"
+  | Assign (x,y,_) -> (get_allsym index asignals x) ^ (get_simple_data_expr index asignals y) ^ ";\n"
+  | CaseDef (x,_) -> get_casedef index asignals x
   | For ((Symbol(x,_)),c,s,_,_) -> 
-    let (sa,e,st) = get_colon_expr c in
+    let (sa,e,st) = get_colon_expr index asignals c in
     "for(int "^x^ " = " ^ sa ^ ";" ^ x ^ "<=" ^ e ^ ";" ^ x ^ "=" ^ x ^ "+(" ^ st ^ "))\n"
-    ^ get_data_stmt s ^ "\n"
-and get_casedef = function
-  | Case (x,o,_) -> List.fold_left (^) "" (List.mapi get_clause x) ^ get_otherwise o
-and get_clause i = function
+    ^ get_data_stmt index asignals s ^ "\n"
+and get_casedef index asignals = function
+  | Case (x,o,_) -> List.fold_left (^) "" (List.mapi (fun i x -> get_clause i index asignals x) x) ^ get_otherwise index asignals o
+and get_clause i index asignals = function
   | Clause (x,s,_) -> 
-    let st = if i = 0 then "if(" ^(get_expr x)^ ")\n" else "else if(" ^(get_expr x)^ ")\n" in
-    st ^ (get_data_stmt s) ^ "\n"
-and get_otherwise = function
-  | Otherwise (x,_) -> "else{\n" ^ (get_data_stmt x) ^ "}\n"
+    let st = if i = 0 then "if(" ^(get_expr index asignals x)^ ")\n" else "else if(" ^(get_expr index asignals x)^ ")\n" in
+    st ^ (get_data_stmt index asignals s) ^ "\n"
+and get_otherwise index asignals = function
+  | Otherwise (x,_) -> "else{\n" ^ (get_data_stmt index asignals x) ^ "}\n"
 
 
 let rec get_var = function

@@ -12,8 +12,8 @@ open TableauBuchiAutomataGeneration
 
 exception Internal_error of string
 
-let build_data_stmt from stmt = 
-  let stmt = Systemj.get_data_stmt 
+let build_data_stmt asignals index from stmt = 
+  let stmt = Systemj.get_data_stmt index asignals
     (match stmt with DataUpdate x -> x 
     | _ as s -> 
       output_hum stdout (sexp_of_proposition s);
@@ -22,11 +22,11 @@ let build_data_stmt from stmt =
   | "promela" -> "c_code {\n" ^ stmt ^ "};\n"
   | _ -> stmt
 
-let build_data_expr from expr =
-  let expr = Systemj.get_data_expr expr in
-  match from with
-  | "promela" -> "c_expr{" ^ expr ^ "}"
-  | _ -> expr
+(* let build_data_expr from expr = *)
+(*   let expr = Systemj.get_data_expr expr in *)
+(*   match from with *)
+(*   | "promela" -> "c_expr{" ^ expr ^ "}" *)
+(*   | _ -> expr *)
 
 let rec label from tf internal_signals channels index updates isignals = function
   | And (x,y) -> 

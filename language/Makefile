@@ -18,4 +18,4 @@ check:
 	$(BATDIR) -I $(SEXPLIB) -I ../error -c $(SRC)
 	cp systemj.cmi ../parser/systemj.cmi
 clean:
-	rm -rf *cm* *o *a *mli
+	rm -rf *cm* *o *a *mli *.annot
