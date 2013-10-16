@@ -15,6 +15,7 @@ open Pretty
 
 let (++) = append
 let (>>) x f = f x
+let (|>) x f = f x
 
 let make_body asignals internal_signals channels o index signals isignals = function
   (* Make the body of the process!! *)
@@ -68,7 +69,6 @@ let make_body asignals internal_signals channels o index signals isignals = func
 
 let make_process internal_signals channels o index signals isignals init asignals lgn = 
   (("void CD" ^ (string_of_int index) ^ "(") >> text) 
-  (* ++ (L.fold_left (++) empty) (L.mapi (make_args (L.length !ss)) !ss) *)
   ++ ("){\n" >> text)
   ++ (("goto " ^ init ^ ";\n") >> text)
   ++ ((L.reduce (++) (L.map (fun x -> make_body asignals internal_signals channels o index signals isignals (x.node,x.tlabels,x.guards)) lgn)) >> (4 >> indent))

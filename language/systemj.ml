@@ -11,6 +11,8 @@ module List = Batteries.List
 
 let backend = ref ""
 
+let (|>) x f = f x
+
 type line = int
 with sexp
 type column = int

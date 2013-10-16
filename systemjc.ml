@@ -8,7 +8,10 @@ module SSL = Sexplib.Std
 module PL = PropositionalLogic
 open TableauBuchiAutomataGeneration
 
+let (|>) x f = f x
+
 let usage_msg = "Usage: systemjc [options] <filename>\nsee -help for more options" in
+
 
 try
   let file_name = ref "" in

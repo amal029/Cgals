@@ -14,6 +14,7 @@ open Pretty
 
 let (++) = append
 let (>>) x f = f x
+let (|>) x f = f x
 
 let make_body asignals internal_signals channels o index signals isignals = function
   (* Make the body of the process!! *)
