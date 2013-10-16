@@ -87,8 +87,8 @@ stmt:
 ;
 
 typed_signal:
-    | dataTypes signal TOpPlus {Systemj.add_type_and_operator_to_signal $1 Systemj.OpPlus $2}
-    | dataTypes signal TOpTimes {Systemj.add_type_and_operator_to_signal $1 Systemj.OpTimes $2}
+    | dataTypes signal TOpPlus TEqual TInt {Systemj.add_type_and_operator_to_signal $1 Systemj.OpPlus $5 $2 }
+    | dataTypes signal TOpTimes TEqual TInt {Systemj.add_type_and_operator_to_signal $1 Systemj.OpTimes $5 $2}
 ;
 
 signal:
@@ -98,7 +98,7 @@ signal:
 ;
 
 typed_channel:
-    | dataTypes channel {Systemj.add_type_and_operator_to_channel $1 Systemj.OpPlus $2}
+    | dataTypes channel TEqual TInt {Systemj.add_type_and_operator_to_channel $1 Systemj.OpPlus $4 $2}
 ;
 
 channel:

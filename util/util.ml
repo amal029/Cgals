@@ -13,6 +13,7 @@ open TableauBuchiAutomataGeneration
 exception Internal_error of string
 
 let build_data_stmt asignals index from stmt = 
+  Systemj.backend := from; 
   let stmt = Systemj.get_data_stmt index asignals
     (match stmt with DataUpdate x -> x 
     | _ as s -> 
@@ -22,30 +23,31 @@ let build_data_stmt asignals index from stmt =
   | "promela" -> "c_code {\n" ^ stmt ^ "};\n"
   | _ -> stmt
 
-(* let build_data_expr from expr = *)
-(*   let expr = Systemj.get_data_expr expr in *)
-(*   match from with *)
-(*   | "promela" -> "c_expr{" ^ expr ^ "}" *)
-(*   | _ -> expr *)
+let build_data_expr from index asignals expr =
+  Systemj.backend := from; 
+  let expr = Systemj.get_data_expr index asignals expr in
+  match from with
+  | "promela" -> "c_expr{" ^ expr ^ "}"
+  | _ -> expr
 
-let rec label from tf internal_signals channels index updates isignals = function
+let rec label from tf internal_signals channels index updates isignals asignals = function
   | And (x,y) -> 
-    let lv = (label from tf internal_signals channels index updates isignals x)  in
-    let rv = (label from tf internal_signals channels index updates isignals y) in
+    let lv = (label from tf internal_signals channels index updates isignals asignals x)  in
+    let rv = (label from tf internal_signals channels index updates isignals asignals y) in
     let () = IFDEF DEBUG THEN output_hum stdout (sexp_of_list sexp_of_string [lv;rv]) ELSE () ENDIF in
     (match (lv,rv) with
     | ("false",_) | (_,"false") -> "false"
     | ("true","true") -> "true"
     | ("true",(_ as s)) | ((_ as s),"true") -> s
-    | (_,_) -> "(" ^ lv ^ "&&" ^ rv ^ ")")
+    | (_,_) -> "(" ^ lv ^ ")&&(" ^ rv ^ ")")
   | Or (x,y) -> 
-    let lv = (label from tf internal_signals channels index updates isignals x)  in
-    let rv = (label from tf internal_signals channels index updates isignals y) in
+    let lv = (label from tf internal_signals channels index updates isignals asignals x)  in
+    let rv = (label from tf internal_signals channels index updates isignals asignals y) in
     (match (lv,rv) with
     | ("true",_) | (_,"true") -> "true"
     | ("false","false") -> "false"
     | ("false",(_ as s)) | ((_ as s),"false") -> s
-    | (_,_) -> "(" ^ lv ^ "||" ^ rv ^ ")")
+    | (_,_) -> "(" ^ lv ^ ")||(" ^ rv ^ ")")
   | Not (Proposition x) as s-> 
     let v = (match x with 
       | Expr x ->
@@ -55,16 +57,16 @@ let rec label from tf internal_signals channels index updates isignals = functio
 	      raise (Internal_error "^^^^^^^^^^^^ Not emit proposition impossible!")
 	    else 
 	      if not (L.exists (fun t -> t = x) channels) then ("CD"^(string_of_int index)^"_"^x) 
-	      else x
+	      else "(" ^ x ^ ")"
 	  else "false"
-      | DataExpr x -> raise (Internal_error ("DataExpr: " ^ to_string_hum (Systemj.sexp_of_relDataExpr x) ^ " not allowed to change state"))
+      | DataExpr x -> build_data_expr from index asignals x
       | DataUpdate x -> raise (Internal_error ("Tried to update data " ^ (to_string_hum (Systemj.sexp_of_dataStmt x)) ^ " on a guard!!"))
       | Update x -> raise (Internal_error ("Tried to update " ^ x ^ " on a guard!!"))
       | Label x -> raise (Internal_error ("Tried to put label " ^ x ^ " on a guard!!"))) in 
     (match v with
     | "false" -> "true"
     | "true" -> "false"
-    | _ -> "!"^v)
+    | _ -> "!("^v^")")
   | Proposition x -> (match x with 
     | Expr x -> 
 	if (not (L.exists (fun t -> t = x) isignals)) then
@@ -73,12 +75,10 @@ let rec label from tf internal_signals channels index updates isignals = functio
 	  (* This can only ever happen here! *)
 	    (* if not (List.exists (fun (Update t) -> t = x) updates) then *)
 	    if not (L.exists (fun t -> t = x) channels) then ("CD"^(string_of_int index)^"_"^x) 
-	    else x
+	    else "(" ^ x ^ ")"
 	    (* else "true" *)
 	else "true"
-    (* The dataexpr *)
-    (* | DataExpr x -> build_data_expr from x *)
-    | DataExpr x -> raise (Internal_error ("DataExpr: " ^ to_string_hum (Systemj.sexp_of_relDataExpr x) ^ " not allowed to change state"))
+    | DataExpr x -> build_data_expr from index asignals x
     | DataUpdate x -> raise (Internal_error ("Tried to update data " ^ (to_string_hum (Systemj.sexp_of_dataStmt x)) ^ " on a guard!!"))
     | Update x -> raise (Internal_error ("Tried to update " ^ x ^ " on a guard!!"))
     | Label x -> raise (Internal_error ("Tried to put label " ^ x ^ " on a guard!!"))) 
@@ -149,3 +149,19 @@ let reachability lgn =
   (* Finally the list is returned *)
   L.sort_unique compare !ret
 
+
+let rec map8 f a b c d e g i j = 
+  match (a,b,c,d,e,g,i,j) with
+  | ((h1::t1),(h2::t2),(h3::t3),(h4::t4),(h5::t5),(h6::t6),(h7::t7),(h8::t8)) -> 
+    (f h1 h2 h3 h4 h5 h6 h7 h8) :: map8 f t1 t2 t3 t4 t5 t6 t7 t8
+  | ([],[],[],[],[],[],[],[]) -> []
+  | _ -> failwith "Lists not of equal length"
+
+
+let map2i f l1 l2 = 
+  let rec ff f i (l1,l2) = 
+    match (l1,l2) with
+    | (h::t, h2::t2) -> f i h h2 :: ff f (i+1) (t,t2)
+    | ([],[]) -> []
+    | _ -> failwith "Lists not of equal length"  in
+  ff f 0 (l1,l2)

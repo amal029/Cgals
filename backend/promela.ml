@@ -37,8 +37,10 @@ let make_body asignals internal_signals channels o index signals isignals = func
 	  let to_false = ref signals in
 	  let () = L.iter (fun x -> to_false := L.filter (fun y -> y <> x) !to_false) updates1 in
 	  let () = L.iter (fun x -> to_false := L.filter (fun y -> y <> x) !to_false) isignals in
-	  let g = Util.label "promela" !to_false internal_signals channels index updates isignals g in
+	  let g = Util.label "promela" !to_false internal_signals channels index updates isignals asignals g in
 	  let updates = updates1 in
+	  let asignals_names = List.split asignals |> (fun (x,_) -> x) in
+	  let asignals_options = List.split asignals |> (fun (_,y) -> y) in
 	  if g <> "false" then
 	    (* ("atomic{\n" >> text) *)
 	    ((if g <> "" then (":: (" ^ g ^ ") -> ") else (":: true -> ")) >> text)
@@ -51,8 +53,14 @@ let make_body asignals internal_signals channels o index signals isignals = func
 	       ^ " = false;\n" >> text)) !to_false)
 	    (* Add the data stmts *)
 	    ++ ((L.fold_left (^) "" (L.map (Util.build_data_stmt asignals index "promela") datastmts)) >> text)
+	    ++ L.fold_left (++) empty (Util.map2i (fun i x y -> 
+	      (match y with
+	      | None -> Pretty.empty
+	      | Some r -> 
+		("CD"^(string_of_int i)^"_"^x^"_val_pre = CD" ^ (string_of_int i)^"_"^x^"_val;\n" >> Pretty.text)
+		++ ("CD"^(string_of_int i)^"_"^x^"_val = "^r.Systemj.v^";\n"  >> Pretty.text)
+	      ))asignals_names asignals_options)
 	    ++ (("goto " ^ x ^ ";\n") >> text)
-	    (* ++ ("}\n" >> text) *)
 	  else empty
 	) o guards
       else [(":: goto " ^ n ^ ";\n">> text)]

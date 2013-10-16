@@ -8,13 +8,6 @@ module SSL = Sexplib.Std
 module PL = PropositionalLogic
 open TableauBuchiAutomataGeneration
 
-let rec map8 f a b c d e g i j = 
-  match (a,b,c,d,e,g,i,j) with
-  | ((h1::t1),(h2::t2),(h3::t3),(h4::t4),(h5::t5),(h6::t6),(h7::t7),(h8::t8)) -> 
-    (f h1 h2 h3 h4 h5 h6 h7 h8) :: map8 f t1 t2 t3 t4 t5 t6 t7 t8
-  | ([],[],[],[],[],[],[],[]) -> []
-  | _ -> failwith "Lists not of equal length"
-
 let usage_msg = "Usage: systemjc [options] <filename>\nsee -help for more options" in
 
 try
@@ -133,13 +126,15 @@ try
       try
         let fd = open_out !promela in
         let asignals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_signal_declarations x) in
+        let asignals = List.map (fun x -> List.sort_unique compare x) asignals in
         (* let signals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_signal_declarations x) in *)
 	let signals = List.map (fun x -> List.split x) asignals |> List.split |> (fun (x,_) -> x) in
+	let signals_options = List.map (fun x -> List.split x) asignals |> List.split |> (fun (_,y) -> y) in
         let isignals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_input_signal_declarations x) in
         let internal_signals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_internal_signal_declarations x) in
 	let channel_strings = List.sort_unique compare (List.flatten (List.map (fun (x,_) -> x) channels)) in
 	let var_decs = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.get_var_declarations x) |> List.flatten in
-        let promela_model = map8
+        let promela_model = Util.map8
           Promela.make_promela 
           (List.init (List.length labeled_buchi_automatas) (fun x -> channel_strings)) internal_signals signals isignals
           (List.init (List.length labeled_buchi_automatas) (fun x -> x)) (List.rev !init) asignals labeled_buchi_automatas in
@@ -152,9 +147,15 @@ try
 	let promela_channels = List.fold_left Pretty.append Pretty.empty 
 	  (List.map (fun x -> Pretty.text ("bool "^x^";\n"))channel_strings) in
         let promela_gsigs = List.fold_left Pretty.append Pretty.empty
-          (List.mapi (fun i y -> List.fold_left Pretty.append Pretty.empty (List.map (fun x -> Pretty.text ("bool CD"^(string_of_int i)^"_"^x^";\n")) 
-                                              (List.sort_unique compare y)))
-             signals) in
+          (Util.map2i (fun i y z -> 
+	    List.fold_left Pretty.append Pretty.empty 
+	    (List.map2 (fun x y -> 
+	      Pretty.append (Pretty.text ("bool CD"^(string_of_int i)^"_"^x^";\n"))
+		(match y with
+		| None -> Pretty.empty
+		| Some r -> Pretty.append (Systemj.get_data_type_promela r.Systemj.data ^ " CD"^(string_of_int i)^"_"^x^"_val = "^r.Systemj.v^";\n"  |> Pretty.text)
+		  (Systemj.get_data_type_promela r.Systemj.data ^ " CD"^(string_of_int i)^"_"^x^"_val_pre;\n"  |> Pretty.text)
+		))y z))signals signals_options) in
         let appf = if !formula = "" then Pretty.empty else (Pretty.text ("ltl {" ^ !formula ^ "}\n")) in
         let () = Pretty.print ~output:(output_string fd) 
 	  (Pretty.append promela_vardecs
@@ -168,22 +169,31 @@ try
     else if MyString.ends_with !outfile ".c" then
         let fd = open_out !outfile in
         let asignals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_signal_declarations x) in
+        let asignals = List.map (fun x -> List.sort_unique compare x) asignals in
 	let signals = List.map (fun x -> List.split x) asignals |> List.split |> (fun (x,_) -> x) in
         let isignals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_input_signal_declarations x) in
         let internal_signals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_internal_signal_declarations x) in
 	let channel_strings = List.sort_unique compare (List.flatten (List.map (fun (x,_) -> x) channels)) in
-        let c_model = map8 
+        let c_model = Util.map8 
           C.make_c
           (List.init (List.length labeled_buchi_automatas) (fun x -> channel_strings)) internal_signals signals isignals
           (List.init (List.length labeled_buchi_automatas) (fun x -> x)) (List.rev !init) asignals labeled_buchi_automatas in
         let c_headers = Pretty.text ("#include <stdio.h>\n"^"typedef int bool;\n"^"#define true 1\n"^"#define false 0\n") in
         let c_main = C.make_main (List.length labeled_buchi_automatas) in
         let c_channels = List.fold_left Pretty.append Pretty.empty (List.map (fun x -> Pretty.text ("bool "^x^" = false;\n"))channel_strings) in
-        let signals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_all_signal_declarations x) in
-        let c_gsigs = List.fold_left Pretty.append Pretty.empty 
-          (List.mapi (fun i y -> List.fold_left Pretty.append Pretty.empty (List.map (fun x -> Pretty.text ("bool CD"^(string_of_int i)^"_"^x^" = false;\n")) 
-									      (List.sort_unique compare y)))
-             (List.map (fun x -> List.split x) signals |> List.split |> (fun (x,_) -> x))) in
+        let asignals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_all_signal_declarations x) in
+	let signals_options = List.map (fun x -> List.split x) asignals |> List.split |> (fun (_,y) -> y) in
+	let signals = List.map (fun x -> List.split x) asignals |> List.split |> (fun (x,_) -> x) in
+        let c_gsigs = List.fold_left Pretty.append Pretty.empty
+          (Util.map2i (fun i y z -> 
+	    List.fold_left Pretty.append Pretty.empty 
+	      (List.map2 (fun x y -> 
+		Pretty.append (Pretty.text ("bool CD"^(string_of_int i)^"_"^x^";\n"))
+		  (match y with
+		  | None -> Pretty.empty
+		  | Some r -> Pretty.append (Systemj.get_data_type_promela r.Systemj.data ^ " CD"^(string_of_int i)^"_"^x^"_val = "^r.Systemj.v^";\n"  |> Pretty.text)
+		    (Systemj.get_data_type_promela r.Systemj.data ^ " CD"^(string_of_int i)^"_"^x^"_val_pre;\n"  |> Pretty.text)
+		  ))y z))signals signals_options) in
         let () = Pretty.print ~output:(output_string fd) 
           (Pretty.append c_headers
             (Pretty.append c_gsigs

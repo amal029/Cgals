@@ -9,6 +9,8 @@
 open Sexplib.Std
 module List = Batteries.List
 
+let backend = ref ""
+
 type line = int
 with sexp
 type column = int
@@ -81,7 +83,7 @@ let get_operators = function
   | OpPlus -> " += "
   | OpTimes -> " *= "
 
-type extras = {operator:operators;data:datatype}
+type 'a extras = {operator:operators;data:datatype;v:'a}
 with sexp
 
 type sysj_bool =
@@ -101,8 +103,8 @@ type stmt =
 | Emit of symbol * string option * (line * column)
 | Present of expr * stmt * stmt option * (line * column)
 | Trap of symbol * stmt * (line * column)
-| Signal of extras option * io option * symbol * (line * column)
-| Channel of extras option * io * symbol * (line * column)
+| Signal of string extras option * io option * symbol * (line * column)
+| Channel of string extras option * io * symbol * (line * column)
 | Spar of stmt list * (line * column)
 | Exit of symbol * (line * column)
 | Abort of expr * stmt * (line * column)
@@ -114,7 +116,7 @@ type stmt =
 | Data of dataStmt * string option 
 and dataStmt = 
 | Assign of allsym * simpleDataExpr * (line * column)
-| For of symbol * colonDataExpr * dataStmt * extras option * (line * column)  
+| For of symbol * colonDataExpr * dataStmt * string extras option * (line * column)  
 | CaseDef of case * (line * column) 
 | DataBlock of dataStmt list * (line * column)  
 | RNoop
@@ -208,16 +210,16 @@ let rec collect_internal_signal_declarations = function
   | Send _ | Receive _ -> raise (Internal_error "Collect signals: Cannot get send/receive after re-write!!")
 
 
-let add_type_and_operator_to_signal t op = function
-  | Signal (None,x,y,z) -> Signal (Some {operator=op;data=t},x,y,z)
+let add_type_and_operator_to_signal t op init = function
+  | Signal (None,x,y,z) -> Signal (Some {operator=op;data=t;v=init},x,y,z)
   | Signal (_,_,_,ln) -> raise (Internal_error ((Reporting.get_line_and_column ln) ^ ": signal already has a type and operator"))
   | _ as s -> 
     let () = Sexplib.Sexp.output_hum stdout (sexp_of_stmt s) in
     raise (Internal_error "Got incorrectly as signal!")
 
 
-let add_type_and_operator_to_channel t op = function
-  | Channel (None,x,y,z) -> Channel (Some {operator=op;data=t},x,y,z)
+let add_type_and_operator_to_channel t op init = function
+  | Channel (None,x,y,z) -> Channel (Some {operator=op;data=t;v=init},x,y,z)
   | Channel (_,_,_,ln) -> raise (Internal_error ((Reporting.get_line_and_column ln) ^ ": channel already has a type and operator"))
   | _ as s -> 
     let () = Sexplib.Sexp.output_hum stdout (sexp_of_stmt s) in
@@ -227,6 +229,10 @@ let get_data_type = function
   | Int8s -> "unsigned char"
   | Int16s -> "short"
   | Int32s -> "int"
+
+let get_data_type_promela = function
+  | Int8s -> "byte"
+  | _ as x -> get_data_type x
 
 let rec get_simple_data_expr index asignals = function
   | Plus (x,y,_) -> get_simple_data_expr index asignals x ^ "+" ^ get_simple_data_expr index asignals y
@@ -243,7 +249,11 @@ let rec get_simple_data_expr index asignals = function
   | Cast (x,y,_) -> "(" ^ "(" ^ get_data_type x ^ ")" ^ get_simple_data_expr index asignals y ^ ")"
   | SignalOrChannelRef (Symbol(x,_),ln) as s ->
     let signals = List.split asignals |> (fun (x,_) -> x) in
-    if List.exists (fun y -> y = x) signals then "CD"^(string_of_int index)^"_"^x^"_val_pre"
+    if List.exists (fun y -> y = x) signals then 
+      if !backend = "promela" then
+	"now.CD"^(string_of_int index)^"_"^x^"_val_pre"
+      else
+	"CD"^(string_of_int index)^"_"^x^"_val_pre"
     else 
       let () = Sexplib.Sexp.output_hum stdout (sexp_of_simpleDataExpr s) in
       let () = print_endline "" in
@@ -272,12 +282,17 @@ let get_allsym index asignals = function
     let ops = List.split asignals |> (fun (_,y) -> y) in
     if List.exists (fun y -> y = x) signals then 
       let (x1,_) = List.findi (fun i y -> x = y) signals in
-      "CD"^(string_of_int index)^"_"^x^"_val " ^ (((List.at ops x1) 
-						|> (fun x ->
-						  match x with 
-						  | Some x -> x.operator 
-						  | None -> raise (Internal_error ((Reporting.get_line_and_column ln)^ ": signal has no type and operator"))) 
-						|> get_operators))
+      let ttt = 
+	if !backend = "promela" then
+	"now.CD"^(string_of_int index)^"_"^x^"_val"
+      else
+	  "CD"^(string_of_int index)^"_"^x^"_val" in
+      ttt ^ (((List.at ops x1) 
+		 |> (fun x ->
+		   match x with 
+		   | Some x -> x.operator 
+		   | None -> raise (Internal_error ((Reporting.get_line_and_column ln)^ ": signal has no type and operator"))) 
+		 |> get_operators))
     else 
       let () = Sexplib.Sexp.output_hum stdout (sexp_of_allsym s) in
       let () = print_endline "" in

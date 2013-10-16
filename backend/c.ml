@@ -37,19 +37,28 @@ let make_body asignals internal_signals channels o index signals isignals = func
 	  let to_false = ref signals in
 	  let () = L.iter (fun x -> to_false := L.filter (fun y -> y <> x) !to_false) updates1 in
 	  let () = L.iter (fun x -> to_false := L.filter (fun y -> y <> x) !to_false) isignals in
-	  let g = Util.label "c" !to_false internal_signals channels index updates [] g in
+	  let g = Util.label "c" !to_false internal_signals channels index updates [] asignals g in
 	  let updates = updates1 in
+	  let asignals_names = List.split asignals |> (fun (x,_) -> x) in
+	  let asignals_options = List.split asignals |> (fun (_,y) -> y) in
 	  if g <> "false" then
-	    L.fold_left (++) empty (L.mapi (fun i x ->
-	      ((if not (L.exists (fun t -> t = x) channels) then ("CD"^(string_of_int index)^"_"^x) else x)
-	       ^ " = false;\n" >> text)) !to_false)
-	    ++ ("\nif" >> text)
+	    ("\nif" >> text)
 	    ++ ((if g <> "" then ("(" ^ g ^ ") {\n") else "") >> text)
 	    (* These are the updates to be made here!! *)
 	    ++ L.fold_left (++) empty (L.mapi (fun i x -> 
 	      ((if not (L.exists (fun t -> t = x) channels) then ("CD"^(string_of_int index)^"_"^x) else x)
 	       ^ " = true;\n printf(\"Emitted: "^x^"\\n\");\n") >> text) updates)
 	    ++ ((L.fold_left (^) "" (L.map (Util.build_data_stmt asignals index "c") datastmts)) >> text)
+	    ++ L.fold_left (++) empty (Util.map2i (fun i x y -> 
+	      (match y with
+	      | None -> Pretty.empty
+	      | Some r -> 
+		("CD"^(string_of_int i)^"_"^x^"_val_pre = CD" ^ (string_of_int i)^"_"^x^"_val;\n" >> Pretty.text)
+		++ ("CD"^(string_of_int i)^"_"^x^"_val = "^r.Systemj.v^";\n"  >> Pretty.text)
+	      ))asignals_names asignals_options)
+	    ++ L.fold_left (++) empty (L.mapi (fun i x ->
+	      ((if not (L.exists (fun t -> t = x) channels) then ("CD"^(string_of_int index)^"_"^x) else x)
+	       ^ " = false;\n" >> text)) !to_false)
 	    ++ (("goto " ^ x ^ ";\n") >> text)
 	    ++ ("}\n" >> text)
 	  else empty

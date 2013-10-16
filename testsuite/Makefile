@@ -45,10 +45,10 @@ await: FILE=a
 await: FORMULA=[]<> CD0_B
 
 %:
-	$(SYSTEMJC) -promela $(FILE).pml $(FILE).sysj -formula '$(FORMULA)'
+	$(SYSTEMJC) -promela $(FILE).pml $(FILE).cg -formula '$(FORMULA)'
 	spin -a $(FILE).pml
 	@echo 'Checking the property $(FORMULA)'
 	cc -DMEMLIM=1024 -O2 -DXUSAFE -w -o pan pan.c
 	./pan -m10000 -a -f
 clean:
-	rm -vf !(*.sysj|Makefile)
+	rm -vf !(*.sysj|Makefile|*.cg)
