@@ -69,11 +69,11 @@ let make_body asignals internal_signals channels o index signals isignals = func
     ++ ("}\n" >> text)
       
       
-let make_process internal_signals channels o index signals isignals init asignals lgn = 
-  (("active proctype CD" ^ (string_of_int index) ^ "(") >> text) 
+let make_process internal_signals channels o index signals isignals init asignals lgn =
+  (("active proctype CD" ^ (string_of_int index) ^ "(") >> text)
   ++ ("){\n" >> text)
   ++ (("goto " ^ init ^ ";\n") >> text)
-  ++ ((L.reduce (++) (L.map (fun x -> make_body asignals internal_signals channels o index signals isignals (x.node,x.tlabels,x.guards)) lgn)) 
+  ++ ((L.reduce (++) (L.map (fun x -> make_body asignals internal_signals channels o index signals isignals (x.node,x.tlabels,x.guards)) lgn))
 	 |> (4 |> indent))
   ++ ("}\n" >> text)
   ++ (" " >> line)
