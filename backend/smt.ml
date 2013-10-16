@@ -22,10 +22,15 @@ let print_sequentiality lba =
           ("(>= CD"^(string_of_int y)^"_"^x.node.name^" 0) ")
         else
           List.reduce (^) (List.map (fun k -> 
-	    if List.exists (fun tt -> tt.node.name = k) f then
-              ("(>= CD"^(string_of_int y)^"_"^x.node.name^" (+ CD"^(string_of_int y)^"_"^k^" 1)) ")
-	    else ""
-	  ) x.node.incoming)) f) in
+                let str = ref "" in
+                (if List.exists (fun tt -> tt.node.name = k) f then
+                    str := ("(>= CD"^(string_of_int y)^"_"^x.node.name^" (+ CD"^(string_of_int y)^"_"^k^" 1)) ")
+                else str := "");
+                (if (x.node.incoming_chan <> "") then
+                    str := (!str ^"(>= CD"^(string_of_int y)^"_"^x.node.name^" (+ "^x.node.incoming_chan^" 1)) ")
+                );
+                !str
+              ) x.node.incoming)) f) in
 
     doc ^ "))\n"
   ) lba) in
@@ -53,7 +58,7 @@ let rec get_chan_prop logic node cc =
     | Not (Proposition (Expr (t))) as s->
             if((String.ends_with t "_req") || (String.ends_with t "_ack")) then
                 cc := (node,s) :: !cc
-(*                 ;print_endline ("Here is Not expr "^t) *)
+(*                 ;print_endline ("Insering "^node.node.name^" Not "^t) *)
     | Not (t) -> get_chan_prop t node cc
     | And (t,l) -> get_chan_prop t node cc; get_chan_prop  l node cc
     | Brackets (t) -> get_chan_prop t node cc
@@ -61,7 +66,7 @@ let rec get_chan_prop logic node cc =
     | Proposition (Expr (t)) as s ->
             if((String.ends_with t "_req") || (String.ends_with t "_ack")) then
                 cc := (node,s) :: !cc
-(*                 ;print_endline ("Here is Expr ::: "^t) *)
+(*                 ;print_endline ("Insering "^node.node.name^" "^t) *)
     | Proposition (Label (t) | Update (t)) -> ()
     | _ as t -> raise (Internal_error "Error during channel analysis")
 
@@ -69,30 +74,56 @@ let rec get_chan_prop logic node cc =
 let getnames n =
     match n with
     | (s,ss) ->
+    let () = List.iter (fun x -> 
+        if (x = s.node.name) then s.node.incoming <- (List.remove s.node.incoming s.node.name) ) s.node.incoming in
         match ss with 
         | Proposition (Expr (t)) ->
-                ((match String.split t "_" with | (j,k) -> j), s, (match String.split t "_" with | (j,k) -> k), false)
-        | Not (Proposition (Expr (t))) ->
                 ((match String.split t "_" with | (j,k) -> j), s, (match String.split t "_" with | (j,k) -> k), true)
+        | Not (Proposition (Expr (t))) ->
+                ((match String.split t "_" with | (j,k) -> j), s, (match String.split t "_" with | (j,k) -> k), false)
         | _ -> raise(Internal_error "Error during channel analysis")
 
-let insert_incoming i1 i2 =
+let insert_incoming i1 cdn1 i2 cdn2 =
     let first = getnames i1 in
     let second = getnames i2 in
-    print_endline ("WWW "^(match first with | (_,_,a,_) -> a));
-    print_endline ("WWW2 "^(match second with | (_,_,a,_) -> a));
+(*
+    (match first with | (a,b,c,d) -> print_endline (a^" "^b.node.name^" "^c^" "^(string_of_bool d)));
+    (match second with | (a,b,c,d) -> print_endline (a^" "^b.node.name^" "^c^" "^(string_of_bool d)));
+    print_endline "----";
+*)
     match first with 
     | (a,s,"ack",true) -> 
-            match second with | (aa,ss,"req",false) when a = aa ->
-               print_endline "wwww"
-            | (_,_,"",_) -> print_endline "next"
-    | (_,_,"",_) -> print_endline "next"
+            (match second with 
+            | (aa,ss,"req",false) when a = aa ->
+                    s.node.incoming_chan <- ("CD"^(string_of_int cdn2)^"_"^ss.node.name);
+            | (aa,ss,"req",true) when a = aa ->
+                    ss.node.incoming_chan <- ("CD"^(string_of_int cdn1)^"_"^s.node.name);
+            | _ -> ())
+    | (a,s,"ack",false) ->
+            (match second with 
+            | (aa,ss,"req",true) when a = aa ->
+                    s.node.incoming_chan <- ("CD"^(string_of_int cdn2)^"_"^ss.node.name);
+            | _ -> ())
+    | (a,s,"req",true) ->
+            (match second with
+            | (aa,ss,"ack",true) when a = aa ->
+                    s.node.incoming_chan <- ("CD"^(string_of_int cdn2)^"_"^ss.node.name);
+            | (aa,ss,"ack",false) when a = aa ->
+                    ss.node.incoming_chan <- ("CD"^(string_of_int cdn1)^"_"^s.node.name);
+            | _ -> ())
+    | (a,s,"req",false) ->
+            (match second with
+            | (aa,ss,"ack",true) when a = aa ->
+                    ss.node.incoming_chan <- ("CD"^(string_of_int cdn1)^"_"^s.node.name);
+            | _ -> ())
+    | _ -> ()
 
 let make_smt lba filename =
   let cc = ref [] in
   let () = List.iter (fun x -> let cc2 = ref [] in List.iter (fun y ->  
                       List.iter (fun k -> get_chan_prop k y cc2 ) y.node.next) x ; cc := !cc2 :: !cc) lba in
-
+  cc := List.rev !cc;
+(*
   print_int (List.length !cc);
   print_endline "";
   let () = List.iteri (fun y x -> 
@@ -106,13 +137,12 @@ let make_smt lba filename =
           ()
       ) x
   ) !cc in
-
+*)
   let () = List.iteri (fun i x ->
       if (((List.length !cc) - 1) <> i) then
           List.iter (fun i1 ->
               List.iter (fun i2 ->
-                  print_endline "entered ";
-                  insert_incoming i1 i2
+                  insert_incoming i1 i i2 (i+1)
       ) (List.nth !cc (i+1)) 
       ) (List.nth !cc i)
       ) !cc in
