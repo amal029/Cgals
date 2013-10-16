@@ -32,8 +32,8 @@ let make_body asignals internal_signals channels o index signals isignals = func
 	  let updates = Util.get_updates index g in
 	  let datastmts = (L.filter (fun x -> (match x with | DataUpdate _ ->true | _ -> false)) updates) in
 	  let updates1 = L.sort_unique compare ((L.map 
-						      (fun x -> (match x with | Update x ->x | _ ->  raise (Internal_error "Cannot happen!!"))))
-						      (L.filter (fun x -> (match x with | Update _ ->true | _ -> false)) updates)) in
+						   (fun x -> (match x with | Update x ->x | _ ->  raise (Internal_error "Cannot happen!!"))))
+						   (L.filter (fun x -> (match x with | Update _ ->true | _ -> false)) updates)) in
 	  let to_false = ref signals in
 	  let () = L.iter (fun x -> to_false := L.filter (fun y -> y <> x) !to_false) updates1 in
 	  let () = L.iter (fun x -> to_false := L.filter (fun y -> y <> x) !to_false) isignals in
@@ -71,10 +71,10 @@ let make_body asignals internal_signals channels o index signals isignals = func
       
 let make_process internal_signals channels o index signals isignals init asignals lgn = 
   (("active proctype CD" ^ (string_of_int index) ^ "(") >> text) 
-  (* ++ (L.fold_left (++) empty) (L.mapi (make_args (L.length !ss)) !ss) *)
   ++ ("){\n" >> text)
   ++ (("goto " ^ init ^ ";\n") >> text)
-  ++ ((L.reduce (++) (L.map (fun x -> make_body asignals internal_signals channels o index signals isignals (x.node,x.tlabels,x.guards)) lgn)) >> (4 >> indent))
+  ++ ((L.reduce (++) (L.map (fun x -> make_body asignals internal_signals channels o index signals isignals (x.node,x.tlabels,x.guards)) lgn)) 
+	 |> (4 |> indent))
   ++ ("}\n" >> text)
   ++ (" " >> line)
 

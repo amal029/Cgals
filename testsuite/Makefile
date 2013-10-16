@@ -45,7 +45,7 @@ await: FILE=a
 await: FORMULA=[]<> CD0_B
 
 %:
-	$(SYSTEMJC) -promela $(FILE).pml $(FILE).cg -formula '$(FORMULA)'
+	$(SYSTEMJC) -promela $(FILE).pml $(FILE).sysj -formula '$(FORMULA)'
 	spin -a $(FILE).pml
 	@echo 'Checking the property $(FORMULA)'
 	cc -DMEMLIM=1024 -O2 -DXUSAFE -w -o pan pan.c

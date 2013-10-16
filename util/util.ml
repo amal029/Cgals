@@ -159,8 +159,7 @@ let rec map8 f a b c d e g i j =
 
 
 let map2i f l1 l2 = 
-  let rec ff f i (l1,l2) = 
-    match (l1,l2) with
+  let rec ff f i  = function
     | (h::t, h2::t2) -> f i h h2 :: ff f (i+1) (t,t2)
     | ([],[]) -> []
     | _ -> failwith "Lists not of equal length"  in
