@@ -25,7 +25,7 @@ planned.
 
 Install dependencies:
 
-* Ocaml (>= 4.01.0) http://ocaml.org/
+* Ocaml (>= 3.12.0) http://ocaml.org/
 * Batteries: http://batteries.forge.ocamlcore.org/
 * Sexplib: https://github.com/janestreet/sexplib.git
 * ocaml-pretty: https://github.com/toyvo/ocaml-pretty (will need to write the META file)
