@@ -124,7 +124,12 @@ let make_smt lba filename =
     List.iter (fun y ->  
       print_endline y.node.name;
       List.iter (fun k -> get_chan_prop k y cc2 ) 
-	[List.hd ((match Hashtbl.find_option o y.node.name with Some x -> x | None -> [("",True)]) >> List.split >> (fun (_,y) -> y))]) x; 
+	(List.map (fun x -> 
+       (match x with
+        | (name,logic) when name <> y.node.name ->
+                logic
+        | _ -> True)
+      ) (match Hashtbl.find_option o y.node.name with Some x -> x | None -> [("",True)])) ) x; 
     cc := !cc2 :: !cc) lba in
   cc := List.rev !cc;
   (*
