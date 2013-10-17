@@ -55,24 +55,30 @@ let print_constraint lba =
 let rec get_chan_prop logic node cc =
   match logic with
   | Or (t,l) -> get_chan_prop t node cc; get_chan_prop l node cc
-  | Not (Proposition (Expr (t),_)) as s->
-    if((String.ends_with t "_req") || (String.ends_with t "_ack")) then
+  | Not (Proposition (Expr (t),p)) as s->
+          (match p with
+          | [Some (Systemj.ChanPause ((Systemj.Ack|Systemj.Req), _))] ->
+            cc := (node,s) :: !cc;
+          | [None] -> ()
+          | [_] as t -> print_endline ""; print_int (List.length t); print_endline ""; raise(Internal_error "Unexpected channel list")
+          | _ -> ())
 (*     let () = print_endline ("Inserting "^node.node.name^" Not "^t) in *)
-        cc := (node,s) :: !cc;
+(*
         print_endline ("--- NODE "^node.node.name^" ----");
         let () = SS.output_hum Pervasives.stdout (PropositionalLogic.sexp_of_logic s) in
         print_endline "-----------";
+*)
   | Not (t) -> get_chan_prop t node cc
   | And (t,l) -> get_chan_prop  t node cc; get_chan_prop l node cc
   | Brackets (t) -> get_chan_prop  t node cc
   | NextTime (t) -> get_chan_prop  t node cc
-  | Proposition (Expr (t),_) as s ->
-    if((String.ends_with t "_req") || (String.ends_with t "_ack")) then
-(*     let () = print_endline ("Inserting "^node.node.name^" "^t) in *)
-        cc := (node,s) :: !cc;
-        print_endline ("--- NODE "^node.node.name^" ----");
-        let () = SS.output_hum Pervasives.stdout (PropositionalLogic.sexp_of_logic s) in
-        print_endline "-----------";
+  | Proposition (Expr (t),p) as s ->
+          (match p with
+          | [Some (Systemj.ChanPause ((Systemj.Ack|Systemj.Req), _))] ->
+            cc := (node,s) :: !cc;
+          | [None] -> ()
+          | [_] as t -> print_endline ""; print_int (List.length t); print_endline ""; raise(Internal_error "Unexpected channel list")
+          | _ -> ())
   | Proposition ((Label _ | Update _), _) -> ()
   | True | False -> ()
   | _ as t -> raise (Internal_error ((SS.to_string_hum (sexp_of_logic t)) ^ "Error during channel analysis"))
@@ -83,11 +89,11 @@ let getnames = function
     let tt = List.filter (fun x -> x <> s.node.name) s.node.incoming in
     s.node.incoming <- tt;
     match ss with 
-    | Proposition (Expr (t),_) ->
-      ((match String.split t "_" with | (j,k) -> j), s, (match String.split t "_" with | (j,k) -> k), true)
-    | Not (Proposition (Expr (t),_)) ->
-      ((match String.split t "_" with | (j,k) -> j), s, (match String.split t "_" with | (j,k) -> k), false)
-    | _ -> raise(Internal_error "Error during channel analysis")
+    | Proposition (Expr (t),[Some (Systemj.ChanPause _ as p )]) ->
+      ((match String.split t "_" with | (j,k) -> j), s, p)
+    | Not (Proposition (Expr (t),[Some(Systemj.ChanPause _ as p )])) ->
+      ((match String.split t "_" with | (j,k) -> j), s, p)
+    | _ as t -> raise(Internal_error ("Unexpected channel proposition : "^(SS.to_string_hum (sexp_of_logic t))))
 
 let insert_incoming i1 cdn1 i2 cdn2 =
   let first = getnames i1 in
@@ -96,28 +102,28 @@ let insert_incoming i1 cdn1 i2 cdn2 =
   (* (match second with | (a,b,c,d) -> print_endline (a^" "^b.node.name^" "^c^" "^(string_of_bool d))); *)
   (* print_endline "----"; *)
   match first with 
-  | (a,s,"ack",true) -> 
+  | (a,s,Systemj.ChanPause (Systemj.Ack, Systemj.Start) (*"ack",true*) ) -> 
     (match second with 
-    | (aa,ss,"req",false) when a = aa ->
+    | (aa,ss,Systemj.ChanPause (Systemj.Req, Systemj.Start) (*"req",false*) ) when a = aa ->
       s.node.incoming_chan <- ("CD"^(string_of_int cdn2)^"_"^ss.node.name) :: s.node.incoming_chan;
-    | (aa,ss,"req",true) when a = aa ->
+    | (aa,ss,Systemj.ChanPause (Systemj.Req, Systemj.End) (*"req",true*) ) when a = aa ->
       ss.node.incoming_chan <- ("CD"^(string_of_int cdn1)^"_"^s.node.name):: s.node.incoming_chan;
     | _ -> ())
-  | (a,s,"ack",false) ->
+  | (a,s,Systemj.ChanPause (Systemj.Ack, Systemj.End) (*"ack",false*) ) ->
     (match second with 
-    | (aa,ss,"req",true) when a = aa ->
+    | (aa,ss,Systemj.ChanPause (Systemj.Req, Systemj.End) (*"req",true*) ) when a = aa ->
       s.node.incoming_chan <- ("CD"^(string_of_int cdn2)^"_"^ss.node.name):: s.node.incoming_chan;
     | _ -> ())
-  | (a,s,"req",true) ->
+  | (a,s,Systemj.ChanPause (Systemj.Req, Systemj.End) (*"req",true*) ) ->
     (match second with
-    | (aa,ss,"ack",true) when a = aa ->
+    | (aa,ss,Systemj.ChanPause (Systemj.Ack, Systemj.Start) (*"ack",true*) ) when a = aa ->
       s.node.incoming_chan <- ("CD"^(string_of_int cdn2)^"_"^ss.node.name):: s.node.incoming_chan;
-    | (aa,ss,"ack",false) when a = aa ->
+    | (aa,ss,Systemj.ChanPause (Systemj.Ack, Systemj.End) (*"ack",false*) ) when a = aa ->
       ss.node.incoming_chan <- ("CD"^(string_of_int cdn1)^"_"^s.node.name):: s.node.incoming_chan;
     | _ -> ())
-  | (a,s,"req",false) ->
+  | (a,s,Systemj.ChanPause (Systemj.Req, Systemj.Start) (*"req",false*) ) ->
     (match second with
-    | (aa,ss,"ack",true) when a = aa ->
+    | (aa,ss,Systemj.ChanPause (Systemj.Ack, Systemj.Start) (*"ack",true*) ) when a = aa ->
       ss.node.incoming_chan <- ("CD"^(string_of_int cdn1)^"_"^s.node.name):: s.node.incoming_chan;
     | _ -> ())
   | _ -> ()
