@@ -25,7 +25,7 @@ let rec label tf internal_signals channels index updates isignals = function
     (match (lv,rv) with
     | ("true",_) | (_,"true") -> "true"
     | (_,_) -> lv ^ "||" ^ rv)
-  | Not (Proposition x) as s-> 
+  | Not (Proposition (x,_)) as s-> 
     let v = (match x with 
       | Expr x ->
 	if ((L.exists (fun t -> t = x) tf)) then "false"
@@ -44,7 +44,7 @@ let rec label tf internal_signals channels index updates isignals = function
     | "false" -> "true"
     | "true" -> "false"
     | _ -> "!"^v)
-  | Proposition x as s -> (match x with 
+  | Proposition (x,_) as s -> (match x with 
     | Expr x -> 
       if ((L.exists (fun t -> t = x) tf)) then
       	let () = print_endline ("[WARNING] ********Possible Causal cycle detected on signal********: " ^ x) in
@@ -71,7 +71,7 @@ let rec label tf internal_signals channels index updates isignals = function
 let rec get_updates index = function
   | And(x,y) 
   | Or(x,y) -> (get_updates index x) @ (get_updates index y)
-  | Not (Proposition x) | Proposition x as s ->
+  | Not (Proposition (x,_)) | Proposition (x,_) as s ->
     (match x with 
     | Expr x -> 
       if x.[0] = '$' then 
@@ -125,7 +125,7 @@ let reachability lgn =
   let o = Hashtbl.create 1000 in
   let () = L.iter (fun x -> get_outgoings o (x.node,x.guards)) lgn in
   (* Added the starting node *)
-  let () = Q.push (L.find (fun {tlabels=t} -> (match t with | Proposition (Label x) -> x = "st" | _ -> false)) lgn) q in
+  let () = Q.push (L.find (fun {tlabels=t} -> (match t with | Proposition (Label x,_) -> x = "st" | _ -> false)) lgn) q in
   let () = solve q o ret lgn in
   (* Finally the list is returned *)
   L.sort_unique compare !ret

@@ -17,7 +17,7 @@ let print_sequentiality lba =
   let ss = List.reduce (^) (List.mapi (fun y f ->
     let doc = List.fold_left (^) ("(assert (and " ) 
       (List.map (fun x -> 
-        if (x.tlabels = Proposition (Label "st")) then
+        if (x.tlabels = Proposition (Label "st",[None])) then
           ("(>= CD"^(string_of_int y)^"_"^x.node.name^" 0) ")
         else
           List.reduce (^) (List.map (fun k -> 
@@ -55,19 +55,25 @@ let print_constraint lba =
 let rec get_chan_prop logic node cc =
   match logic with
   | Or (t,l) -> get_chan_prop t node cc; get_chan_prop l node cc
-  | Not (Proposition (Expr (t))) as s->
+  | Not (Proposition (Expr (t),_)) as s->
     if((String.ends_with t "_req") || (String.ends_with t "_ack")) then
-    let () = print_endline ("Inserting "^node.node.name^" Not "^t) in
-    cc := (node,s) :: !cc;
+(*     let () = print_endline ("Inserting "^node.node.name^" Not "^t) in *)
+        cc := (node,s) :: !cc;
+        print_endline ("--- NODE "^node.node.name^" ----");
+        let () = SS.output_hum Pervasives.stdout (PropositionalLogic.sexp_of_logic s) in
+        print_endline "-----------";
   | Not (t) -> get_chan_prop t node cc
   | And (t,l) -> get_chan_prop  t node cc; get_chan_prop l node cc
   | Brackets (t) -> get_chan_prop  t node cc
   | NextTime (t) -> get_chan_prop  t node cc
-  | Proposition (Expr (t)) as s ->
+  | Proposition (Expr (t),_) as s ->
     if((String.ends_with t "_req") || (String.ends_with t "_ack")) then
-    let () = print_endline ("Inserting "^node.node.name^" "^t) in
-    cc := (node,s) :: !cc;
-  | Proposition (Label _ | Update _) -> ()
+(*     let () = print_endline ("Inserting "^node.node.name^" "^t) in *)
+        cc := (node,s) :: !cc;
+        print_endline ("--- NODE "^node.node.name^" ----");
+        let () = SS.output_hum Pervasives.stdout (PropositionalLogic.sexp_of_logic s) in
+        print_endline "-----------";
+  | Proposition ((Label _ | Update _), _) -> ()
   | True | False -> ()
   | _ as t -> raise (Internal_error ((SS.to_string_hum (sexp_of_logic t)) ^ "Error during channel analysis"))
 
@@ -77,9 +83,9 @@ let getnames = function
     let tt = List.filter (fun x -> x <> s.node.name) s.node.incoming in
     s.node.incoming <- tt;
     match ss with 
-    | Proposition (Expr (t)) ->
+    | Proposition (Expr (t),_) ->
       ((match String.split t "_" with | (j,k) -> j), s, (match String.split t "_" with | (j,k) -> k), true)
-    | Not (Proposition (Expr (t))) ->
+    | Not (Proposition (Expr (t),_)) ->
       ((match String.split t "_" with | (j,k) -> j), s, (match String.split t "_" with | (j,k) -> k), false)
     | _ -> raise(Internal_error "Error during channel analysis")
 
@@ -123,7 +129,6 @@ let make_smt lba filename =
     let () = List.iter (fun x -> Util.get_outgoings o (x.node,x.guards)) x in
     let cc2 = ref [] in 
     List.iter (fun y ->  
-      print_endline y.node.name;
       List.iter (fun k -> get_chan_prop k y cc2 ) 
 	(List.map (fun x -> 
        (match x with

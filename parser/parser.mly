@@ -129,7 +129,7 @@ twhile:
 ;
 
 expr:
-    | symbol {Systemj.Esymbol($1,ln())}
+    | symbol {Systemj.Esymbol($1,ln(),None)}
     | TXCL expr {Systemj.Not($2,ln())}
     | expr Or expr {Systemj.Or($1,$3,ln())}
     | expr And expr {Systemj.And($1,$3,ln())}

@@ -17,12 +17,26 @@ type column = int
 with sexp
 
 
+type direction =
+| Ack
+| Req
+with sexp
+
+type location =
+| Start
+| End
+with sexp
+
+type tchan =
+| ChanPause of direction * location
+with sexp
+
 type symbol =
 | Symbol of string * (line * column)
 with sexp
 
 type expr =
-| Esymbol of symbol * (line * column)
+| Esymbol of symbol * (line * column) * tchan option
 | And of expr * expr * (line * column)
 | Or of expr * expr * (line * column)
 | Not of expr * (line * column)

@@ -25,10 +25,10 @@ let rewrite_send cnt = function
     let ack_sym = Systemj.Symbol ((sym ^ "_ack"),lc1) in
     let req_sym = Systemj.Symbol ((sym ^ "_req"),lc1) in
     cnt := !cnt + 1;
-    let a1 = Systemj.Abort (Systemj.Esymbol (ack_sym,lc),
+    let a1 = Systemj.Abort (Systemj.Esymbol (ack_sym,lc,Some(Systemj.ChanPause (Systemj.Ack, Systemj.Start)) ),
 			    Systemj.While(Systemj.True,Systemj.Pause(Some ("$" ^ (string_of_int !cnt)),lc),lc),lc) in
     cnt := !cnt + 1;
-    let a2 = Systemj.Abort (Systemj.Not(Systemj.Esymbol (ack_sym,lc),lc),
+    let a2 = Systemj.Abort (Systemj.Not(Systemj.Esymbol (ack_sym,lc,Some(Systemj.ChanPause (Systemj.Ack, Systemj.End))),lc),
 			    Systemj.While(Systemj.True,
 					  Systemj.Block([Systemj.Emit (req_sym,None,lc);
 							 Systemj.Pause(Some ("$" ^ (string_of_int !cnt)),lc)],lc),lc),lc) in
@@ -41,10 +41,10 @@ let rewrite_receive cnt = function
     let ack_sym = Systemj.Symbol ((sym ^ "_ack"),lc1) in
     let req_sym = Systemj.Symbol ((sym ^ "_req"),lc1) in
     cnt := !cnt + 1;
-    let a1 = Systemj.Abort (Systemj.Not(Systemj.Esymbol (req_sym,lc),lc),
+    let a1 = Systemj.Abort (Systemj.Not(Systemj.Esymbol (req_sym,lc,Some(Systemj.ChanPause (Systemj.Req, Systemj.Start))),lc),
 			    Systemj.While(Systemj.True,Systemj.Pause(Some ("$" ^ (string_of_int !cnt)),lc),lc),lc) in
     cnt := !cnt + 1;
-    let a2 = Systemj.Abort (Systemj.Esymbol (req_sym,lc),
+    let a2 = Systemj.Abort (Systemj.Esymbol (req_sym,lc,Some(Systemj.ChanPause (Systemj.Req, Systemj.End))),
 			    Systemj.While(Systemj.True,
 					  Systemj.Block([Systemj.Emit (ack_sym,None,lc);
 							 Systemj.Pause(Some ("$" ^ (string_of_int !cnt)),lc)],lc),lc),lc) in
@@ -107,7 +107,7 @@ type logic =
 | Or of logic * logic
 | Not of logic
 | And of logic * logic
-| Proposition of proposition
+| Proposition of proposition * Systemj.tchan option list
 | Brackets of logic
 | NextTime of logic
 with sexp
@@ -143,7 +143,7 @@ and invert_not = function
 let rec collect_labels = function
   | Systemj.Noop | Systemj.Emit _ | Systemj.Signal _ 
   | Systemj.Channel _ | Systemj.Exit _ -> False
-  | Systemj.Pause (Some x,_) -> Proposition (Label x)
+  | Systemj.Pause (Some x,_) -> Proposition (Label x, [None])
   | Systemj.Block (x,_)  
   | Systemj.Spar (x,_) -> 
     if x = [] then False
@@ -159,7 +159,7 @@ let rec expr_to_logic = function
   | Systemj.And (x,y,_) -> And(expr_to_logic x, expr_to_logic y)
   | Systemj.Or (x,y,_) -> Or(expr_to_logic x, expr_to_logic y)
   | Systemj.Brackets (x,_) -> Brackets (expr_to_logic x)
-  | Systemj.Esymbol (Systemj.Symbol(x,_),_) -> Proposition (Expr x)
+  | Systemj.Esymbol (Systemj.Symbol(x,_),_,p) -> Proposition (Expr x,[p])
   | Systemj.Not (x,_) -> Not(expr_to_logic x)
 
 let rec solve_logic = function
@@ -169,11 +169,11 @@ let rec solve_logic = function
     | (True,True) -> True
     | (x,True)
     | (True,x) -> x
-    | ((Proposition a), Proposition b) when a = b -> Proposition a
-    | (Not (Proposition a), Proposition b) when a = b -> False
-    | (Proposition a, Not(Proposition b)) when a = b -> False
-    | (NextTime (Not (Proposition a)), NextTime(Proposition b)) when a = b -> False
-    | (NextTime (Proposition a), NextTime(Not(Proposition b))) when a = b -> False
+    | ((Proposition (a,c)), Proposition (b,d)) when a = b -> Proposition (a, c @ d)
+    | (Not (Proposition (a,_)), Proposition (b,_)) when a = b -> False
+    | (Proposition (a,_), Not(Proposition (b,_))) when a = b -> False
+    | (NextTime (Not (Proposition (a,_))), NextTime(Proposition (b,_))) when a = b -> False
+    | (NextTime (Proposition (a,_)), NextTime(Not(Proposition (b,_)))) when a = b -> False
     | (x,y) -> And (x,y))
   | Or (x,y) -> 
     (match (solve_logic x, solve_logic y) with
@@ -181,11 +181,11 @@ let rec solve_logic = function
     | (False,False) -> False
     | (x,False) -> x
     | (False,x) -> x
-    | ((Proposition a), Proposition b) when a = b -> Proposition a
-    | (Not (Proposition a), Proposition b) when a = b -> True
-    | (Proposition a, Not(Proposition b)) when a = b -> True
-    | (NextTime (Not (Proposition a)), NextTime(Proposition b)) when a = b -> True
-    | (NextTime (Proposition a), NextTime(Not(Proposition b))) when a = b -> True
+    | ((Proposition (a,c)), Proposition (b,d)) when a = b -> Proposition (a, c @ d)
+    | (Not (Proposition (a,_)), Proposition (b,_)) when a = b -> True
+    | (Proposition (a,_), Not(Proposition (b,_))) when a = b -> True
+    | (NextTime (Not (Proposition (a,_))), NextTime(Proposition (b,_))) when a = b -> True
+    | (NextTime (Proposition (a,_)), NextTime(Not(Proposition (b,_)))) when a = b -> True
     | (x,y) -> Or (x,y))
   | Not x -> 
     (match (solve_logic x) with
@@ -213,9 +213,9 @@ let rec inst = function
   | Systemj.Noop -> True
   (* Special change, adding data to the system!! *)
   | Systemj.Emit (s,Some uniq,_) -> 
-    let key = Proposition (Expr ("$" ^ uniq)) in
+          let key = Proposition (Expr ("$" ^ uniq),[None]) in
     let () = Hashtbl.add update_tuple_tbl key (Update (match s with | Systemj.Symbol (s,_) -> s)) in
-    let exprr = (Proposition (Expr (match s with Systemj.Symbol (s,_)->s))) in
+    let exprr = (Proposition (Expr (match s with Systemj.Symbol (s,_)->s),[None])) in
     let () = Hashtbl.add update_tuple_proposition key exprr in
     NextTime key
   | Systemj.Emit (s,None,_) as t -> 
@@ -245,7 +245,7 @@ let rec inst = function
 let rec enter = function
   | Systemj.Noop -> False
   | Systemj.Emit _ -> False
-  | Systemj.Pause (Some x,_) -> NextTime (Proposition (Label x))
+  | Systemj.Pause (Some x,_) -> NextTime (Proposition (Label x,[None]))
   | Systemj.Present (e,t,Some el,_) -> Or(And (NextTime (Not ((collect_labels el))), 
 					       And (enter t, NextTime (expr_to_logic e))), 
 					  And (NextTime (Not ((collect_labels t))),
@@ -285,7 +285,7 @@ and enter_spar r = function
 let rec term = function
   | Systemj.Noop -> False
   | Systemj.Emit _ -> False
-  | Systemj.Pause (Some x,_) -> Proposition (Label x)
+  | Systemj.Pause (Some x,_) -> Proposition (Label x,[None])
   | Systemj.Pause (None,lc) -> raise (Internal_error ("Pause without a label: " ^ (Reporting.get_line_and_column lc)))
   (* | Systemj.Present (e,t,Some el,_) -> Or(And(And(term t, Not((collect_labels el))),NextTime(expr_to_logic e)), *)
   (* 					  And(term el, Not( (collect_labels t)))) *)
@@ -318,8 +318,8 @@ and term_spar r = function
 let rec stutters = function
   | Systemj.Noop | Systemj.Emit _ | Systemj.Signal _ 
   | Systemj.Channel _ | Systemj.Exit _ -> True
-  | Systemj.Pause (Some x,_) -> Or(And(Proposition (Label x), NextTime (Proposition (Label x))), 
-				   And(Not (Proposition (Label x)), NextTime (Not(Proposition (Label x)))))
+  | Systemj.Pause (Some x,_) -> Or(And(Proposition (Label x,[None]), NextTime (Proposition (Label x,[None]))), 
+                  And(Not (Proposition (Label x,[None])), NextTime (Not(Proposition (Label x,[None])))))
   | Systemj.Block (x,_)  
   | Systemj.Spar (x,_) -> 
     if x = [] then True
@@ -374,18 +374,18 @@ and move_spar r = function
 
 let build_ltl stmt = 
   let shared = Or(Not( (collect_labels stmt)),term stmt) in
-  let fdis = And(And(inst stmt, Proposition (Label "st")),NextTime(Not((collect_labels stmt)))) in
+  let fdis = And(And(inst stmt, Proposition (Label "st",[None])),NextTime(Not((collect_labels stmt)))) in
   let () = IFDEF PDEBUG THEN output_hum stdout (sexp_of_logic ( solve_logic (push_not fdis))); print_endline "<-- FIRST" ELSE () ENDIF in
-  let sdis = And(Proposition (Label "st"), enter stmt) in
+  let sdis = And(Proposition (Label "st",[None]), enter stmt) in
   let () = IFDEF PDEBUG THEN output_hum stdout (sexp_of_logic ( solve_logic (push_not sdis))); print_endline "<-- SECOND" ELSE () ENDIF in
-  let tdis = And(Not(Proposition (Label "st")), NextTime(Not( (collect_labels stmt)))) in
+  let tdis = And(Not(Proposition (Label "st",[None])), NextTime(Not( (collect_labels stmt)))) in
   let () = IFDEF PDEBUG THEN output_hum stdout (sexp_of_logic ( solve_logic (push_not tdis))); print_endline "<-- THIRD" ELSE () ENDIF in
   let fdis = move stmt in
   let () = IFDEF PDEBUG THEN output_hum stdout (sexp_of_logic ( solve_logic (push_not fdis))); print_endline "<-- FOURTH" ELSE () ENDIF in
 
-  Or(Or(Or(And(Proposition (Label "st"),And(inst stmt,NextTime(Not((collect_labels stmt))))),
-	   And(Proposition (Label "st"),enter stmt)),
-	And(Not(Proposition (Label "st")),NextTime(Not( (collect_labels stmt))))),
+  Or(Or(Or(And(Proposition (Label "st",[None]),And(inst stmt,NextTime(Not((collect_labels stmt))))),
+          And(Proposition (Label "st",[None]),enter stmt)),
+      And(Not(Proposition (Label "st",[None])),NextTime(Not( (collect_labels stmt))))),
      move stmt)
 
 
@@ -404,7 +404,7 @@ let rec string_of_logic = function
   | Or (x,y) -> (string_of_logic x) ^ "_or_" ^ (string_of_logic y)
   | Not x -> "_not_" ^ (string_of_logic x)
   | And (x,y) -> (string_of_logic x) ^ "_and_" ^ (string_of_logic y)
-  | Proposition x -> (match x with | Label x -> x | Expr x -> x 
+  | Proposition (x,_) -> (match x with | Label x -> x | Expr x -> x 
     | Update _ -> raise (Internal_error "string_of_logic: Update should not occur here!!"))
   | Brackets x -> (string_of_logic x)
   | True -> "True"

@@ -73,7 +73,7 @@ try
       let () = Hashtbl.clear ModelSystem.tbl in
       let ret = List.filter (fun {node=n} -> n.old <> []) ret in
       let () = flush_all () in
-      let st_node = List.find (fun {tlabels=t} -> (match t with | PL.Proposition (PL.Label x) -> x = "st" | _ -> false)) ret in
+      let st_node = List.find (fun {tlabels=t} -> (match t with | PL.Proposition (PL.Label x,_) -> x = "st" | _ -> false)) ret in
       init := st_node.node.name :: !init;
       let () = print_endline "....Building SystemJ model......" in
       let () = IFDEF DEBUG THEN List.iter (fun x -> 
@@ -108,7 +108,7 @@ try
 	 incoming nodes 3.) FIXME (IMP): If no replacements are possible
 	 then these nodes and their corresponding guards should be
 	 delted!  *)
-      let torep = (List.filter(fun {tlabels=t} -> (match t with | PL.Proposition (PL.Label x) -> x <> "st" | _ -> true))
+      let torep = (List.filter(fun {tlabels=t} -> (match t with | PL.Proposition (PL.Label x,_) -> x <> "st" | _ -> true))
       		     (List.filter (fun{node=n} -> n.incoming=["Init"])ret)) in
       let () = List.iter(fun {node=n} -> n.incoming <- List.remove_all n.incoming "Init";) ret in
       let (_,ret) = List.partition (fun {node=n} -> n.incoming = [] && n.name <> st_node.node.name) ret in
@@ -121,6 +121,9 @@ try
     print_endline "\n\n\n\n\n\n-----------------------------------------------------\n\n\n\n") labeled_buchi_automatas ELSE () ENDIF in
   (* Remove the unreachable nodes from the generated graph *)
   let labeled_buchi_automatas = List.map Util.reachability labeled_buchi_automatas in
+  let () = List.iter (fun x -> 
+    SS.output_hum Pervasives.stdout (SSL.sexp_of_list TableauBuchiAutomataGeneration.sexp_of_labeled_graph_node x))
+     labeled_buchi_automatas in
   let () = 
       if !smt <> "" then
         let () = Smt.make_smt labeled_buchi_automatas !smt in 

@@ -56,8 +56,8 @@ let make = function
 
 let propagate_guards_from_st nodeset = 
   let sts = List.filter (fun {node=n;tlabels=t} -> (match t with 
-    | Proposition x -> (match x with Label st -> st="st" | _ -> false) 
-    | Not Proposition x ->(match x with Label st -> st="st" | _ -> false)
+    | Proposition (x,_) -> (match x with Label st -> st="st" | _ -> false) 
+    | Not Proposition (x,_) ->(match x with Label st -> st="st" | _ -> false)
     | _ -> false)) nodeset in
   let () = List.iter (fun {node=n} ->
     if not (List.for_all (fun x -> x="Init") n.incoming) then
