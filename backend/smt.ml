@@ -25,8 +25,9 @@ let print_sequentiality lba =
             (if List.exists (fun tt -> tt.node.name = k) f then
                 str := ("(>= CD"^(string_of_int y)^"_"^x.node.name^" (+ CD"^(string_of_int y)^"_"^k^" 1)) ")
              else str := "");
-            (if (x.node.incoming_chan <> "") then
-                str := (!str ^"(>= CD"^(string_of_int y)^"_"^x.node.name^" (+ "^x.node.incoming_chan^" 1)) ")
+            (if (List.is_empty x.node.incoming_chan = false)  then
+                List.iteri (fun i l -> 
+                    str := (!str ^"(>= CD"^(string_of_int y)^"_"^x.node.name^" (+ "^l^" 1)) ") ) x.node.incoming_chan
             );
             !str
           ) x.node.incoming)) f) in
@@ -92,26 +93,26 @@ let insert_incoming i1 cdn1 i2 cdn2 =
   | (a,s,"ack",true) -> 
     (match second with 
     | (aa,ss,"req",false) when a = aa ->
-      s.node.incoming_chan <- ("CD"^(string_of_int cdn2)^"_"^ss.node.name);
+      s.node.incoming_chan <- ("CD"^(string_of_int cdn2)^"_"^ss.node.name) :: s.node.incoming_chan;
     | (aa,ss,"req",true) when a = aa ->
-      ss.node.incoming_chan <- ("CD"^(string_of_int cdn1)^"_"^s.node.name);
+      ss.node.incoming_chan <- ("CD"^(string_of_int cdn1)^"_"^s.node.name):: s.node.incoming_chan;
     | _ -> ())
   | (a,s,"ack",false) ->
     (match second with 
     | (aa,ss,"req",true) when a = aa ->
-      s.node.incoming_chan <- ("CD"^(string_of_int cdn2)^"_"^ss.node.name);
+      s.node.incoming_chan <- ("CD"^(string_of_int cdn2)^"_"^ss.node.name):: s.node.incoming_chan;
     | _ -> ())
   | (a,s,"req",true) ->
     (match second with
     | (aa,ss,"ack",true) when a = aa ->
-      s.node.incoming_chan <- ("CD"^(string_of_int cdn2)^"_"^ss.node.name);
+      s.node.incoming_chan <- ("CD"^(string_of_int cdn2)^"_"^ss.node.name):: s.node.incoming_chan;
     | (aa,ss,"ack",false) when a = aa ->
-      ss.node.incoming_chan <- ("CD"^(string_of_int cdn1)^"_"^s.node.name);
+      ss.node.incoming_chan <- ("CD"^(string_of_int cdn1)^"_"^s.node.name):: s.node.incoming_chan;
     | _ -> ())
   | (a,s,"req",false) ->
     (match second with
     | (aa,ss,"ack",true) when a = aa ->
-      ss.node.incoming_chan <- ("CD"^(string_of_int cdn1)^"_"^s.node.name);
+      ss.node.incoming_chan <- ("CD"^(string_of_int cdn1)^"_"^s.node.name):: s.node.incoming_chan;
     | _ -> ())
   | _ -> ()
 

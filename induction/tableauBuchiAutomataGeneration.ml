@@ -6,7 +6,7 @@ open Sexp
 module List = Batteries.List
 
 exception Internal_error of string
-type graph_node = {mutable name:string; mutable father:string; mutable incoming: string list; mutable incoming_chan: string;
+type graph_node = {mutable name:string; mutable father:string; mutable incoming: string list; mutable incoming_chan: string list;
 		   mutable neew: logic list; mutable old:logic list; mutable next: logic list}
 with sexp
 
@@ -45,7 +45,7 @@ let rec expand index node nodes_set =
        nodes_set := node :: !nodes_set;
        let nn = new_name () in
        let st = {name=nn; father=nn;
-         incoming=[node.name]; incoming_chan="";
+         incoming=[node.name]; incoming_chan=[];
 		 neew=node.next;
 		 old=[]; next=[]} in
        expand index st nodes_set)
@@ -103,7 +103,7 @@ let rec expand index node nodes_set =
 	let ups = ref [x;y] in
 	let () = List.iter (fun y -> ups := (List.remove_all !ups y)) node.old in
 	let st = {name=node.name; father=node.name;
-            incoming=node.incoming; incoming_chan="";
+            incoming=node.incoming; incoming_chan=[];
 		  neew=node.neew @ !ups;
 		  old=node.old @ [n]; next=node.next} in
 	expand index st nodes_set
@@ -111,20 +111,20 @@ let rec expand index node nodes_set =
 	let nn1 = new_name () in
 	let ups = ref [x] in
 	let () = List.iter (fun y -> ups := (List.remove_all !ups y)) node.old in
-    let node1 = {name=nn1;father=node.name;incoming=node.incoming;incoming_chan="";
+    let node1 = {name=nn1;father=node.name;incoming=node.incoming;incoming_chan=[];
 		     neew=node.neew @ !ups;old=node.old @ [n];
 		     next=node.next} in
 	let nn2 = new_name () in
 	let ups = ref [y] in
 	let () = List.iter (fun y -> ups := (List.remove_all !ups y)) node.old in
 	(* let () = List.iter (fun y -> ups := (List.drop_while (fun x -> x = y) !ups)) node.old in *)
-    let node2 = {name=nn2;father=node.name;incoming=node.incoming;incoming_chan="";
+    let node2 = {name=nn2;father=node.name;incoming=node.incoming;incoming_chan=[];
 		     neew=node.neew @ !ups;old=node.old @ [n];
 		     next=node.next} in
 	let () = expand index node1 nodes_set in
 	expand index node2 nodes_set
       | NextTime x -> 
-              let node = {name=node.name;father=node.name;incoming=node.incoming;incoming_chan="";
+              let node = {name=node.name;father=node.name;incoming=node.incoming;incoming_chan=[];
 		    neew=node.neew;old=node.old@[n];
 		    next=node.next@[x]} in
 	expand index node nodes_set
@@ -143,7 +143,7 @@ let rec expand index node nodes_set =
 let create_graph index formula = 
   let nn = new_name () in
   let st = {name=nn; father=nn;
-      incoming=["Init"];incoming_chan="";
+      incoming=["Init"];incoming_chan=[];
 	    neew=[formula];
 	    old=[]; next=[]} in
   let nodes_set = ref [] in
