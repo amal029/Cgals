@@ -194,7 +194,8 @@ try
 		Pretty.append (Pretty.text ("bool CD"^(string_of_int i)^"_"^x^";\n"))
 		  (match y with
 		  | None -> Pretty.empty
-		  | Some r -> Pretty.append (Systemj.get_data_type_promela r.Systemj.data ^ " CD"^(string_of_int i)^"_"^x^"_val = "^r.Systemj.v^";\n"  |> Pretty.text)
+		  | Some r -> Pretty.append (Systemj.get_data_type_promela r.Systemj.data ^ " CD"^(string_of_int i)^"_"^x^"_val = "^r.Systemj.v^";\n"  
+						|> Pretty.text)
 		    (Systemj.get_data_type_promela r.Systemj.data ^ " CD"^(string_of_int i)^"_"^x^"_val_pre;\n"  |> Pretty.text)
 		  ))y z))signals signals_options) in
         let () = Pretty.print ~output:(output_string fd) 
