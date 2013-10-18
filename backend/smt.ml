@@ -70,16 +70,19 @@ let print_sequentiality lba =
 *)
             !str
           ) x.node.incoming)) f) in
-    ors := !ors2 :: !ors;
+    if(List.is_empty !ors2 = false) then
+        ors := !ors2 :: !ors;
     doc ^ "))\n"
   ) lba); 
-  ors := List.flatten !ors;
 
  (* fix here *)
   if ((List.is_empty !ors) = false) then
       ors_string := List.reduce (^) (List.map (fun x -> ((List.fold_left (^) ("(assert (or ") x) ^"))\n") ) !ors);
+  adecl := List.unique !adecl;
   ss := (
-      (List.reduce (^) (List.map (fun x -> ("(declare-fun "^x^" () Int)\n")) (List.unique !adecl)))
+      (match List.is_empty !adecl with 
+      | false -> (List.reduce (^) (List.map (fun x -> ("(declare-fun "^x^" () Int)\n")) (!adecl)))
+      | true -> "")
       ^ !ss ^ !ors_string);
   !ss
 
