@@ -2,6 +2,7 @@ module List = Batteries.List
 module SS = Sexplib.Sexp 
 module SSL = Sexplib.Std 
 module String = Batteries.String 
+open Systemj
 open Pretty 
 open TableauBuchiAutomataGeneration 
 open PropositionalLogic 
@@ -12,6 +13,17 @@ exception Internal_error of string
 
 let print_states lba = let ss = List.reduce (^) (List.mapi (fun y f ->  
   (List.reduce (^) (List.map (fun k -> "(declare-fun CD"^(string_of_int y)^"_"^k.node.name^" () Int)\n") f) )) lba) in ss 
+
+let string_of_direction = function
+    | Ack -> "Ack"
+    | Req -> "Req"
+
+let string_of_location = function
+    | Start -> "Start"
+    | End -> "End"
+
+let string_of_tchan = function
+    | ChanPause (a,b,c) -> ((string_of_direction a)^(string_of_location b)^c)
 
 let print_sequentiality lba =
   let adecl = ref [] in
@@ -27,38 +39,51 @@ let print_sequentiality lba =
         else
           List.reduce (^) (List.map (fun k -> 
             let str = ref "" in
-            (if List.exists (fun tt -> tt.node.name = k) f then
-                str := ("(>= CD"^(string_of_int y)^"_"^x.node.name^" (+ CD"^(string_of_int y)^"_"^k^" 1)) ")
+            (if List.exists (fun tt -> tt.node.name = k) f then(
+                (* Insering micro states *)
+                x.node.incoming_chan <- (List.unique x.node.incoming_chan);
+                (if (List.is_empty x.node.incoming_chan = false)  then
+                    let () = List.iter (fun z -> 
+                        (match z with
+                        | Proposition (Label (s),[Some ((ChanPause (a,b,c)) as p)]) ->
+                            let microst = ("CD"^(string_of_int y)^"_"^x.node.name^"-"^(string_of_tchan p)) in
+    (*                         let tutu = ("(declare-fun "^microst^" () Int)") in *)
+                            adecl := microst :: !adecl;
+                            let multdep = ref [] in
+                            List.iter(fun u ->
+                                str := (!str^" (>= "^microst^" (+ CD"^(string_of_int y)^"_"^k^" 1)) ");
+                               (* print_endline !str;
+                                let stu = try String.split s "@" with | Not_found -> ("","") in*)
+                                (match (p, (match u with | (inchan,Systemj.ChanPause (g,h,l)) -> (inchan,g,h,l) )) with
+                                | (ChanPause (Ack,Start,cn) (*("$AckStart",cn)*), (inchan,Systemj.Req,Systemj.Start,l)) 
+                                | (ChanPause (Ack,End,cn) (*("$AckEnd",cn)*), (inchan,Systemj.Req,Systemj.End,l))
+                                | (ChanPause (Req,End,cn) (*("$ReqEnd",cn)*), (inchan,Systemj.Ack,Systemj.Start,l)) 
+                                when (match String.split cn "_" with | (x,_) -> x) = (match String.split l "_" with | (x,_) -> x) -> 
+                                        print_endline (cn^"    - >    "^l);
+                                        multdep := (" (>= "^microst^" (+ "^inchan^" 1)) ") :: !multdep;
+(*                                         str := (!str^" (>= "^microst^" (+ "^inchan^" 1)) "); *)
+                                        ors2 := ("(>= CD"^(string_of_int y)^"_"^x.node.name^" "^microst^") ") :: !ors2;
+                                | _ -> ()
+                                )
+                            ) x.node.incoming_chan;
+                            str := (!str ^ (match !multdep with
+                           | [] -> ""
+                           | _::_ as t -> 
+                                   SS.output_hum Pervasives.stdout (SSL.sexp_of_list SSL.sexp_of_string t);
+
+                                   let mys = List.fold_left (^) ("(or ") !multdep in
+                                   let mys = (mys ^ " )") in
+                                   mys))
+
+                        | _ -> () )
+                        ) x.tls in
+                        ()
+                else
+                    str := ("(>= CD"^(string_of_int y)^"_"^x.node.name^" (+ CD"^(string_of_int y)^"_"^k^" 1)) ")
+               )
+            )
              else str := "");
 
-            (* Insering micro states *)
-            x.node.incoming_chan <- (List.unique x.node.incoming_chan);
-            (if (List.is_empty x.node.incoming_chan = false)  then
-                let () = List.iter (fun z -> 
-                    (match z with
-                    | Proposition (Label (s),_) ->
-                        let microst = ("CD"^(string_of_int y)^"_"^x.node.name^"-"^s) in
-(*                         let tutu = ("(declare-fun "^microst^" () Int)") in *)
-                        adecl := microst :: !adecl;
-                        List.iter(fun u ->
-                            str := (!str^" (>= "^microst^" (+ CD"^(string_of_int y)^"_"^k^" 1)) ");
-                            let stu = try String.split s "@" with | Not_found -> ("","") in
-                            (match (stu, (match u with | (inchan,Systemj.ChanPause (g,h,l)) -> (inchan,g,h,l) )) with
-                            | (("$AckStart",cn), (inchan,Systemj.Req,Systemj.Start,l)) 
-                            | (("$AckEnd",cn), (inchan,Systemj.Req,Systemj.End,l))
-                            | (("$ReqEnd",cn), (inchan,Systemj.Ack,Systemj.Start,l)) 
-                            when (match String.split cn "_" with | (x,_) -> x) = (match String.split l "_" with | (x,_) -> x) -> 
-                                    print_endline (cn^"    - >    "^l);
-                                    str := (!str^" (>= "^microst^" (+ "^inchan^" 1)) ");
-                                    ors2 := ("(>= CD"^(string_of_int y)^"_"^x.node.name^" "^microst^") ") :: !ors2;
-                            | _ -> ()
-                            )
-                        ) x.node.incoming_chan
-
-                    | _ -> () )
-                    ) x.tls in
-                    ()
-             );
 
 (*
             (if (List.is_empty x.node.incoming_chan = false)  then

@@ -124,11 +124,9 @@ try
   let () = 
       if !smt <> "" then
         let () = Smt.make_smt labeled_buchi_automatas !smt in 
-(*
         let () = List.iter (fun x -> 
             SS.output_hum Pervasives.stdout (SSL.sexp_of_list TableauBuchiAutomataGeneration.sexp_of_labeled_graph_node x))
                     labeled_buchi_automatas in
-*)
         ();
       else if !promela <> "" then
       try

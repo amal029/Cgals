@@ -26,12 +26,12 @@ let rewrite_send cnt = function
     let req_sym = Systemj.Symbol ((sym ^ "_req"),lc1) in
     cnt := !cnt + 1;
     let a1 = Systemj.Abort (Systemj.Esymbol (ack_sym,lc,Some(Systemj.ChanPause (Systemj.Ack, Systemj.Start,sym^"_ack")) ),
-			    Systemj.While(Systemj.True,Systemj.Pause(Some ("$" ^ "AckStart@"^sym^"_ack"),lc),lc),lc) in
+			    Systemj.While(Systemj.True,Systemj.Pause(Some ("$" ^ (string_of_int !cnt)),lc,Some(Systemj.ChanPause (Systemj.Ack, Systemj.Start,sym^"_ack"))),lc),lc) in
     cnt := !cnt + 1;
     let a2 = Systemj.Abort (Systemj.Not(Systemj.Esymbol (ack_sym,lc,Some(Systemj.ChanPause (Systemj.Ack, Systemj.End,sym^"_ack"))),lc),
 			    Systemj.While(Systemj.True,
 					  Systemj.Block([Systemj.Emit (req_sym,None,lc);
-							 Systemj.Pause(Some ("$" ^ "AckEnd@"^sym^"_ack"),lc)],lc),lc),lc) in
+							 Systemj.Pause(Some ("$" ^ (string_of_int !cnt)),lc,Some(Systemj.ChanPause (Systemj.Ack, Systemj.End,sym^"_ack")))],lc),lc),lc) in
     (* Systemj.Block([Systemj.Signal(Some Systemj.Input,ack_sym,lc);Systemj.Signal(Some Systemj.Output,req_sym,lc);a1;a2],lc) *)
     Systemj.Block([Systemj.Signal(Some Systemj.Output,req_sym,lc);a1;a2],lc)
   | _ -> raise (Internal_error "Tried to rewrite a non-send as send")
@@ -42,18 +42,18 @@ let rewrite_receive cnt = function
     let req_sym = Systemj.Symbol ((sym ^ "_req"),lc1) in
     cnt := !cnt + 1;
     let a1 = Systemj.Abort (Systemj.Not(Systemj.Esymbol (req_sym,lc,Some(Systemj.ChanPause (Systemj.Req, Systemj.Start,sym^"_req"))),lc),
-			    Systemj.While(Systemj.True,Systemj.Pause(Some ("$" ^ "ReqStart@"^sym^"_req"),lc),lc),lc) in
+			    Systemj.While(Systemj.True,Systemj.Pause(Some ("$" ^ (string_of_int !cnt)),lc,Some(Systemj.ChanPause (Systemj.Req, Systemj.Start,sym^"_req"))),lc),lc) in
     cnt := !cnt + 1;
     let a2 = Systemj.Abort (Systemj.Esymbol (req_sym,lc,Some(Systemj.ChanPause (Systemj.Req, Systemj.End,sym^"_req"))),
 			    Systemj.While(Systemj.True,
 					  Systemj.Block([Systemj.Emit (ack_sym,None,lc);
-							 Systemj.Pause(Some ("$" ^ "ReqEnd@"^sym^"_req"),lc)],lc),lc),lc) in
+							 Systemj.Pause(Some ("$" ^ (string_of_int !cnt)),lc,Some(Systemj.ChanPause (Systemj.Req, Systemj.End,sym^"_req")))],lc),lc),lc) in
     (* Systemj.Block([Systemj.Signal(Some Systemj.Output,ack_sym,lc);Systemj.Signal(Some Systemj.Input,req_sym,lc);a1;a2],lc) *)
     Systemj.Block([Systemj.Signal(Some Systemj.Output,ack_sym,lc);a1;a2],lc)
   | _ -> raise (Internal_error "Tried to rewrite a non-receive as receive")
 
 let rec add_labels_and_rewrite cnt = function
-  | Systemj.Pause (None,x) as s -> cnt := !cnt + 1; Systemj.Pause(Some ("$" ^ (string_of_int !cnt)), x)
+  | Systemj.Pause (None,x,p) as s -> cnt := !cnt + 1; Systemj.Pause(Some ("$" ^ (string_of_int !cnt)), x,p)
   | Systemj.Pause _ as s -> s
   | Systemj.Present (e,t,Some el,x) -> 
     let a = add_labels_and_rewrite cnt t in
@@ -143,7 +143,7 @@ and invert_not = function
 let rec collect_labels = function
   | Systemj.Noop | Systemj.Emit _ | Systemj.Signal _ 
   | Systemj.Channel _ | Systemj.Exit _ -> False
-  | Systemj.Pause (Some x,_) -> Proposition (Label x, [None])
+  | Systemj.Pause (Some x,_,p) -> Proposition (Label x, [p])
   | Systemj.Block (x,_)  
   | Systemj.Spar (x,_) -> 
     if x = [] then False
@@ -245,7 +245,7 @@ let rec inst = function
 let rec enter = function
   | Systemj.Noop -> False
   | Systemj.Emit _ -> False
-  | Systemj.Pause (Some x,_) -> NextTime (Proposition (Label x,[None]))
+  | Systemj.Pause (Some x,_,p) -> NextTime (Proposition (Label x,[p]))
   | Systemj.Present (e,t,Some el,_) -> Or(And (NextTime (Not ((collect_labels el))), 
 					       And (enter t, NextTime (expr_to_logic e))), 
 					  And (NextTime (Not ((collect_labels t))),
@@ -258,7 +258,7 @@ let rec enter = function
   | Systemj.Abort(_,s,_)
   | Systemj.Trap (_,s,_) -> enter s
   | Systemj.Signal _ | Systemj.Exit _ | Systemj.Channel _ -> False
-  | Systemj.Pause (None,_) as s -> 
+  | Systemj.Pause (None,_,_) as s -> 
     let () = output_hum stdout (Systemj.sexp_of_stmt s) in
     raise (Internal_error "Pause without a label found!!")
   | _ as s -> 
@@ -285,8 +285,8 @@ and enter_spar r = function
 let rec term = function
   | Systemj.Noop -> False
   | Systemj.Emit _ -> False
-  | Systemj.Pause (Some x,_) -> Proposition (Label x,[None])
-  | Systemj.Pause (None,lc) -> raise (Internal_error ("Pause without a label: " ^ (Reporting.get_line_and_column lc)))
+  | Systemj.Pause (Some x,_,p) -> Proposition (Label x,[p])
+  | Systemj.Pause (None,lc,_) -> raise (Internal_error ("Pause without a label: " ^ (Reporting.get_line_and_column lc)))
   (* | Systemj.Present (e,t,Some el,_) -> Or(And(And(term t, Not((collect_labels el))),NextTime(expr_to_logic e)), *)
   (* 					  And(term el, Not( (collect_labels t)))) *)
   | Systemj.Present (e,t,Some el,_) -> Or(And(And(term t, Not((collect_labels el))),True),
@@ -318,8 +318,8 @@ and term_spar r = function
 let rec stutters = function
   | Systemj.Noop | Systemj.Emit _ | Systemj.Signal _ 
   | Systemj.Channel _ | Systemj.Exit _ -> True
-  | Systemj.Pause (Some x,_) -> Or(And(Proposition (Label x,[None]), NextTime (Proposition (Label x,[None]))), 
-                  And(Not (Proposition (Label x,[None])), NextTime (Not(Proposition (Label x,[None])))))
+  | Systemj.Pause (Some x,_,p) -> Or(And(Proposition (Label x,[p]), NextTime (Proposition (Label x,[p]))), 
+                  And(Not (Proposition (Label x,[p])), NextTime (Not(Proposition (Label x,[p])))))
   | Systemj.Block (x,_)  
   | Systemj.Spar (x,_) -> 
     if x = [] then True

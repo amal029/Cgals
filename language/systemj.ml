@@ -55,7 +55,7 @@ with sexp
 
 type stmt = 
 | Block of stmt list * (line * column)
-| Pause of string option * (line * column)
+| Pause of string option * (line * column) * tchan option
 | Emit of symbol * string option * (line * column)
 | Present of expr * stmt * stmt option * (line * column)
 | Trap of symbol * stmt * (line * column)
