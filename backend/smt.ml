@@ -41,7 +41,9 @@ let print_sequentiality lba =
 (*                         let tutu = ("(declare-fun "^microst^" () Int)") in *)
                         adecl := microst :: !adecl;
                         List.iter(fun u ->
-                            (match (String.split s "@", (match u with | (inchan,Systemj.ChanPause (g,h,l)) -> (inchan,g,h,l) )) with
+                            str := (!str^" (>= "^microst^" (+ CD"^(string_of_int y)^"_"^k^" 1)) ");
+                            let stu = try String.split s "@" with | Not_found -> ("","") in
+                            (match (stu, (match u with | (inchan,Systemj.ChanPause (g,h,l)) -> (inchan,g,h,l) )) with
                             | (("$AckStart",cn), (inchan,Systemj.Req,Systemj.Start,l)) 
                             | (("$AckEnd",cn), (inchan,Systemj.Req,Systemj.End,l))
                             | (("$ReqEnd",cn), (inchan,Systemj.Ack,Systemj.Start,l)) 
@@ -50,8 +52,7 @@ let print_sequentiality lba =
                                     str := (!str^" (>= "^microst^" (+ "^inchan^" 1)) ");
                                     ors2 := ("(>= CD"^(string_of_int y)^"_"^x.node.name^" "^microst^") ") :: !ors2;
                             | _ -> ()
-                            );
-                            str := (!str^" (>= "^microst^" (+ CD"^(string_of_int y)^"_"^k^" 1)) ")
+                            )
                         ) x.node.incoming_chan
 
                     | _ -> () )
@@ -72,7 +73,9 @@ let print_sequentiality lba =
     ors := !ors2 :: !ors;
     doc ^ "))\n"
   ) lba); 
+  ors := List.flatten !ors;
 
+ (* fix here *)
   if ((List.is_empty !ors) = false) then
       ors_string := List.reduce (^) (List.map (fun x -> ((List.fold_left (^) ("(assert (or ") x) ^"))\n") ) !ors);
   ss := (
