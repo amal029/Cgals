@@ -25,13 +25,13 @@ let rewrite_send cnt = function
     let ack_sym = Systemj.Symbol ((sym ^ "_ack"),lc1) in
     let req_sym = Systemj.Symbol ((sym ^ "_req"),lc1) in
     cnt := !cnt + 1;
-    let a1 = Systemj.Abort (Systemj.Esymbol (ack_sym,lc,Some(Systemj.ChanPause (Systemj.Ack, Systemj.Start)) ),
-			    Systemj.While(Systemj.True,Systemj.Pause(Some ("$" ^ (string_of_int !cnt)),lc),lc),lc) in
+    let a1 = Systemj.Abort (Systemj.Esymbol (ack_sym,lc,Some(Systemj.ChanPause (Systemj.Ack, Systemj.Start,sym^"_ack")) ),
+			    Systemj.While(Systemj.True,Systemj.Pause(Some ("$" ^ "AckStart@"^sym^"_ack"),lc),lc),lc) in
     cnt := !cnt + 1;
-    let a2 = Systemj.Abort (Systemj.Not(Systemj.Esymbol (ack_sym,lc,Some(Systemj.ChanPause (Systemj.Ack, Systemj.End))),lc),
+    let a2 = Systemj.Abort (Systemj.Not(Systemj.Esymbol (ack_sym,lc,Some(Systemj.ChanPause (Systemj.Ack, Systemj.End,sym^"_ack"))),lc),
 			    Systemj.While(Systemj.True,
 					  Systemj.Block([Systemj.Emit (req_sym,None,lc);
-							 Systemj.Pause(Some ("$" ^ (string_of_int !cnt)),lc)],lc),lc),lc) in
+							 Systemj.Pause(Some ("$" ^ "AckEnd@"^sym^"_ack"),lc)],lc),lc),lc) in
     (* Systemj.Block([Systemj.Signal(Some Systemj.Input,ack_sym,lc);Systemj.Signal(Some Systemj.Output,req_sym,lc);a1;a2],lc) *)
     Systemj.Block([Systemj.Signal(Some Systemj.Output,req_sym,lc);a1;a2],lc)
   | _ -> raise (Internal_error "Tried to rewrite a non-send as send")
@@ -41,13 +41,13 @@ let rewrite_receive cnt = function
     let ack_sym = Systemj.Symbol ((sym ^ "_ack"),lc1) in
     let req_sym = Systemj.Symbol ((sym ^ "_req"),lc1) in
     cnt := !cnt + 1;
-    let a1 = Systemj.Abort (Systemj.Not(Systemj.Esymbol (req_sym,lc,Some(Systemj.ChanPause (Systemj.Req, Systemj.Start))),lc),
-			    Systemj.While(Systemj.True,Systemj.Pause(Some ("$" ^ (string_of_int !cnt)),lc),lc),lc) in
+    let a1 = Systemj.Abort (Systemj.Not(Systemj.Esymbol (req_sym,lc,Some(Systemj.ChanPause (Systemj.Req, Systemj.Start,sym^"_req"))),lc),
+			    Systemj.While(Systemj.True,Systemj.Pause(Some ("$" ^ "ReqStart@"^sym^"_req"),lc),lc),lc) in
     cnt := !cnt + 1;
-    let a2 = Systemj.Abort (Systemj.Esymbol (req_sym,lc,Some(Systemj.ChanPause (Systemj.Req, Systemj.End))),
+    let a2 = Systemj.Abort (Systemj.Esymbol (req_sym,lc,Some(Systemj.ChanPause (Systemj.Req, Systemj.End,sym^"_req"))),
 			    Systemj.While(Systemj.True,
 					  Systemj.Block([Systemj.Emit (ack_sym,None,lc);
-							 Systemj.Pause(Some ("$" ^ (string_of_int !cnt)),lc)],lc),lc),lc) in
+							 Systemj.Pause(Some ("$" ^ "ReqEnd@"^sym^"_req"),lc)],lc),lc),lc) in
     (* Systemj.Block([Systemj.Signal(Some Systemj.Output,ack_sym,lc);Systemj.Signal(Some Systemj.Input,req_sym,lc);a1;a2],lc) *)
     Systemj.Block([Systemj.Signal(Some Systemj.Output,ack_sym,lc);a1;a2],lc)
   | _ -> raise (Internal_error "Tried to rewrite a non-receive as receive")

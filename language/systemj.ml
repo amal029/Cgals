@@ -28,7 +28,7 @@ type location =
 with sexp
 
 type tchan =
-| ChanPause of direction * location
+| ChanPause of direction * location * string
 with sexp
 
 type symbol =

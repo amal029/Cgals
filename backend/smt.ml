@@ -14,7 +14,12 @@ let print_states lba = let ss = List.reduce (^) (List.mapi (fun y f ->
   (List.reduce (^) (List.map (fun k -> "(declare-fun CD"^(string_of_int y)^"_"^k.node.name^" () Int)\n") f) )) lba) in ss 
 
 let print_sequentiality lba =
-  let ss = List.reduce (^) (List.mapi (fun y f ->
+  let adecl = ref [] in
+  let ors_string = ref "" in
+  let ors = ref [] in
+  let ss = ref "" in
+  ss := List.reduce (^) (List.mapi (fun y f ->
+    let ors2 = ref [] in
     let doc = List.fold_left (^) ("(assert (and " ) 
       (List.map (fun x -> 
         if (x.tlabels = Proposition (Label "st",[None])) then
@@ -25,16 +30,55 @@ let print_sequentiality lba =
             (if List.exists (fun tt -> tt.node.name = k) f then
                 str := ("(>= CD"^(string_of_int y)^"_"^x.node.name^" (+ CD"^(string_of_int y)^"_"^k^" 1)) ")
              else str := "");
+
+            (* Insering micro states *)
+            x.node.incoming_chan <- (List.unique x.node.incoming_chan);
+            (if (List.is_empty x.node.incoming_chan = false)  then
+                let () = List.iter (fun z -> 
+                    (match z with
+                    | Proposition (Label (s),_) ->
+                        let microst = ("CD"^(string_of_int y)^"_"^x.node.name^"-"^s) in
+(*                         let tutu = ("(declare-fun "^microst^" () Int)") in *)
+                        adecl := microst :: !adecl;
+                        List.iter(fun u ->
+                            (match (String.split s "@", (match u with | (inchan,Systemj.ChanPause (g,h,l)) -> (inchan,g,h,l) )) with
+                            | (("$AckStart",cn), (inchan,Systemj.Req,Systemj.Start,l)) 
+                            | (("$AckEnd",cn), (inchan,Systemj.Req,Systemj.End,l))
+                            | (("$ReqEnd",cn), (inchan,Systemj.Ack,Systemj.Start,l)) 
+                            when (match String.split cn "_" with | (x,_) -> x) = (match String.split l "_" with | (x,_) -> x) -> 
+                                    print_endline (cn^"    - >    "^l);
+                                    str := (!str^" (>= "^microst^" (+ "^inchan^" 1)) ");
+                                    ors2 := ("(>= CD"^(string_of_int y)^"_"^x.node.name^" "^microst^") ") :: !ors2;
+                            | _ -> ()
+                            );
+                            str := (!str^" (>= "^microst^" (+ CD"^(string_of_int y)^"_"^k^" 1)) ")
+                        ) x.node.incoming_chan
+
+                    | _ -> () )
+                    ) x.tls in
+                    ()
+             );
+
+(*
             (if (List.is_empty x.node.incoming_chan = false)  then
                 List.iteri (fun i l -> 
-                    str := (!str ^"(>= CD"^(string_of_int y)^"_"^x.node.name^" (+ "^l^" 1)) ") ) x.node.incoming_chan
+                    match l with
+                    | (s,_) ->
+                    str := (!str ^"(>= CD"^(string_of_int y)^"_"^x.node.name^" (+ "^s^" 1)) ") ) x.node.incoming_chan
             );
+*)
             !str
           ) x.node.incoming)) f) in
-
+    ors := !ors2 :: !ors;
     doc ^ "))\n"
-  ) lba) in
-  ss
+  ) lba); 
+
+  if ((List.is_empty !ors) = false) then
+      ors_string := List.reduce (^) (List.map (fun x -> ((List.fold_left (^) ("(assert (or ") x) ^"))\n") ) !ors);
+  ss := (
+      (List.reduce (^) (List.map (fun x -> ("(declare-fun "^x^" () Int)\n")) (List.unique !adecl)))
+      ^ !ss ^ !ors_string);
+  !ss
 
 let print_constraint lba =
   let ss = List.reduce (^) 
@@ -57,7 +101,7 @@ let rec get_chan_prop logic node cc =
   | Or (t,l) -> get_chan_prop t node cc; get_chan_prop l node cc
   | Not (Proposition (Expr (t),p)) as s->
           (match p with
-          | [Some (Systemj.ChanPause ((Systemj.Ack|Systemj.Req), _))] ->
+          | [Some (Systemj.ChanPause ((Systemj.Ack|Systemj.Req), _,_))] ->
             cc := (node,s) :: !cc;
           | [None] -> ()
           | [_] as t -> print_endline ""; print_int (List.length t); print_endline ""; raise(Internal_error "Unexpected channel list")
@@ -74,7 +118,7 @@ let rec get_chan_prop logic node cc =
   | NextTime (t) -> get_chan_prop  t node cc
   | Proposition (Expr (t),p) as s ->
           (match p with
-          | [Some (Systemj.ChanPause ((Systemj.Ack|Systemj.Req), _))] ->
+          | [Some (Systemj.ChanPause ((Systemj.Ack|Systemj.Req), _,_))] ->
             cc := (node,s) :: !cc;
           | [None] -> ()
           | [_] as t -> print_endline ""; print_int (List.length t); print_endline ""; raise(Internal_error "Unexpected channel list")
@@ -102,29 +146,29 @@ let insert_incoming i1 cdn1 i2 cdn2 =
   (* (match second with | (a,b,c,d) -> print_endline (a^" "^b.node.name^" "^c^" "^(string_of_bool d))); *)
   (* print_endline "----"; *)
   match first with 
-  | (a,s,Systemj.ChanPause (Systemj.Ack, Systemj.Start) (*"ack",true*) ) -> 
+  | (a,s,((Systemj.ChanPause (Systemj.Ack, Systemj.Start,_)) as pp) (*"ack",true*) ) -> 
     (match second with 
-    | (aa,ss,Systemj.ChanPause (Systemj.Req, Systemj.Start) (*"req",false*) ) when a = aa ->
-      s.node.incoming_chan <- ("CD"^(string_of_int cdn2)^"_"^ss.node.name) :: s.node.incoming_chan;
-    | (aa,ss,Systemj.ChanPause (Systemj.Req, Systemj.End) (*"req",true*) ) when a = aa ->
-      ss.node.incoming_chan <- ("CD"^(string_of_int cdn1)^"_"^s.node.name):: s.node.incoming_chan;
+    | (aa,ss,((Systemj.ChanPause (Systemj.Req, Systemj.Start,_)) as p) (*"req",false*) ) when a = aa ->
+      s.node.incoming_chan <- (("CD"^(string_of_int cdn2)^"_"^ss.node.name),p) :: s.node.incoming_chan;
+    | (aa,ss,Systemj.ChanPause (Systemj.Req, Systemj.End,_) (*"req",true*) ) when a = aa ->
+      ss.node.incoming_chan <- (("CD"^(string_of_int cdn1)^"_"^s.node.name),pp) :: ss.node.incoming_chan;
     | _ -> ())
-  | (a,s,Systemj.ChanPause (Systemj.Ack, Systemj.End) (*"ack",false*) ) ->
+  | (a,s,Systemj.ChanPause (Systemj.Ack, Systemj.End,_) (*"ack",false*) ) ->
     (match second with 
-    | (aa,ss,Systemj.ChanPause (Systemj.Req, Systemj.End) (*"req",true*) ) when a = aa ->
-      s.node.incoming_chan <- ("CD"^(string_of_int cdn2)^"_"^ss.node.name):: s.node.incoming_chan;
+    | (aa,ss,((Systemj.ChanPause (Systemj.Req, Systemj.End,_)) as p) (*"req",true*) ) when a = aa ->
+      s.node.incoming_chan <- (("CD"^(string_of_int cdn2)^"_"^ss.node.name),p) :: s.node.incoming_chan;
     | _ -> ())
-  | (a,s,Systemj.ChanPause (Systemj.Req, Systemj.End) (*"req",true*) ) ->
+  | (a,s,((Systemj.ChanPause (Systemj.Req, Systemj.End,_)) as pp) (*"req",true*) ) ->
     (match second with
-    | (aa,ss,Systemj.ChanPause (Systemj.Ack, Systemj.Start) (*"ack",true*) ) when a = aa ->
-      s.node.incoming_chan <- ("CD"^(string_of_int cdn2)^"_"^ss.node.name):: s.node.incoming_chan;
-    | (aa,ss,Systemj.ChanPause (Systemj.Ack, Systemj.End) (*"ack",false*) ) when a = aa ->
-      ss.node.incoming_chan <- ("CD"^(string_of_int cdn1)^"_"^s.node.name):: s.node.incoming_chan;
+    | (aa,ss,((Systemj.ChanPause (Systemj.Ack, Systemj.Start,_) as p)) (*"ack",true*) ) when a = aa ->
+      s.node.incoming_chan <- (("CD"^(string_of_int cdn2)^"_"^ss.node.name),p) :: s.node.incoming_chan;
+    | (aa,ss,Systemj.ChanPause (Systemj.Ack, Systemj.End,_) (*"ack",false*) ) when a = aa ->
+      ss.node.incoming_chan <- (("CD"^(string_of_int cdn1)^"_"^s.node.name), pp) :: ss.node.incoming_chan;
     | _ -> ())
-  | (a,s,Systemj.ChanPause (Systemj.Req, Systemj.Start) (*"req",false*) ) ->
+  | (a,s,((Systemj.ChanPause (Systemj.Req, Systemj.Start,_)) as pp) (*"req",false*) ) ->
     (match second with
-    | (aa,ss,Systemj.ChanPause (Systemj.Ack, Systemj.Start) (*"ack",true*) ) when a = aa ->
-      ss.node.incoming_chan <- ("CD"^(string_of_int cdn1)^"_"^s.node.name):: s.node.incoming_chan;
+    | (aa,ss,Systemj.ChanPause (Systemj.Ack, Systemj.Start,_) (*"ack",true*) ) when a = aa ->
+      ss.node.incoming_chan <- (("CD"^(string_of_int cdn1)^"_"^s.node.name), pp ):: ss.node.incoming_chan;
     | _ -> ())
   | _ -> ()
 

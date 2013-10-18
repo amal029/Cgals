@@ -6,7 +6,8 @@ open Sexp
 module List = Batteries.List
 
 exception Internal_error of string
-type graph_node = {mutable name:string; mutable father:string; mutable incoming: string list; mutable incoming_chan: string list;
+type graph_node = {mutable name:string; mutable father:string; mutable incoming: string list; 
+                   mutable incoming_chan: (string * Systemj.tchan) list;
 		   mutable neew: logic list; mutable old:logic list; mutable next: logic list}
 with sexp
 
