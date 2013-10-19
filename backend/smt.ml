@@ -42,42 +42,44 @@ let print_sequentiality lba =
                 (* Insering micro states *)
                 x.node.incoming_chan <- (List.unique x.node.incoming_chan);
                 (if (List.is_empty x.node.incoming_chan = false)  then
+                    let ors2 = ref [] in
                     let () = List.iter (fun z -> 
                         (match z with
                         | Proposition (Label (s),[Some ((ChanPause (a,b,c)) as p)]) ->
-                            let ors2 = ref [] in
                             let microst = ("CD"^(string_of_int y)^"_"^x.node.name^"-"^(string_of_tchan p)) in
     (*                         let tutu = ("(declare-fun "^microst^" () Int)") in *)
                             adecl := microst :: !adecl;
                             let multdep = ref [] in
                             List.iter(fun u ->
+                                (* micrsteps depends on the previous state on the same CD *)
                                 str := (!str^" (>= "^microst^" (+ CD"^(string_of_int y)^"_"^k^" 1)) ");
-                               (* print_endline !str;
-                                let stu = try String.split s "@" with | Not_found -> ("","") in*)
                                 (match (p, (match u with | (inchan,Systemj.ChanPause (g,h,l)) -> (inchan,g,h,l) )) with
                                 | (ChanPause (Ack,Start,cn) (*("$AckStart",cn)*), (inchan,Systemj.Req,Systemj.Start,l)) 
                                 | (ChanPause (Ack,End,cn) (*("$AckEnd",cn)*), (inchan,Systemj.Req,Systemj.End,l))
                                 | (ChanPause (Req,End,cn) (*("$ReqEnd",cn)*), (inchan,Systemj.Ack,Systemj.Start,l)) 
                                 when (match String.split cn "_" with | (x,_) -> x) = (match String.split l "_" with | (x,_) -> x) -> 
                                         print_endline (cn^"    - >    "^l);
+                                        (* macrostate can finish when any of one of deps finish for the same microst  *)
                                         multdep := (" (>= "^microst^" (+ "^inchan^" 1)) ") :: !multdep;
 (*                                         str := (!str^" (>= "^microst^" (+ "^inchan^" 1)) "); *)
-                                        ors2 := ("(>= CD"^(string_of_int y)^"_"^x.node.name^" "^microst^") ") :: !ors2;
                                 | _ -> ()
-                                )
+                                );
+                                ors2 := ("(>= CD"^(string_of_int y)^"_"^x.node.name^" "^microst^") ") :: !ors2;
+                                print_endline "";
                             ) x.node.incoming_chan;
-                            if(List.is_empty !ors2 = false) then
-                                ors := (((List.fold_left (^) ("(assert (or ") !ors2) ^ "))\n")) :: !ors;
                             str := (!str ^ (match !multdep with
                            | [] -> ""
                            | _::_ as t -> 
-                                   SS.output_hum Pervasives.stdout (SSL.sexp_of_list SSL.sexp_of_string t);
+(*                                    SS.output_hum Pervasives.stdout (SSL.sexp_of_list SSL.sexp_of_string t); *)
                                    let mys = List.fold_left (^) ("(or ") !multdep in
                                    let mys = (mys ^ " )") in
                                    mys))
 
                         | _ -> () )
                         ) x.tls in
+                        SS.output_hum Pervasives.stdout (SSL.sexp_of_list SSL.sexp_of_string !ors2);
+                        if(List.is_empty !ors2 = false) then
+                            ors := (((List.fold_left (^) ("(assert (or ") !ors2) ^ "))\n")) :: !ors;
                         ()
                 else
                     str := ("(>= CD"^(string_of_int y)^"_"^x.node.name^" (+ CD"^(string_of_int y)^"_"^k^" 1)) ")
