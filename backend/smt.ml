@@ -31,7 +31,6 @@ let print_sequentiality lba =
   let ors = ref [] in
   let ss = ref "" in
   ss := List.reduce (^) (List.mapi (fun y f ->
-    let ors2 = ref [] in
     let doc = List.fold_left (^) ("(assert (and " ) 
       (List.map (fun x -> 
         if (x.tlabels = Proposition (Label "st",[None])) then
@@ -46,6 +45,7 @@ let print_sequentiality lba =
                     let () = List.iter (fun z -> 
                         (match z with
                         | Proposition (Label (s),[Some ((ChanPause (a,b,c)) as p)]) ->
+                            let ors2 = ref [] in
                             let microst = ("CD"^(string_of_int y)^"_"^x.node.name^"-"^(string_of_tchan p)) in
     (*                         let tutu = ("(declare-fun "^microst^" () Int)") in *)
                             adecl := microst :: !adecl;
@@ -66,11 +66,12 @@ let print_sequentiality lba =
                                 | _ -> ()
                                 )
                             ) x.node.incoming_chan;
+                            if(List.is_empty !ors2 = false) then
+                                ors := (((List.fold_left (^) ("(assert (or ") !ors2) ^ "))\n")) :: !ors;
                             str := (!str ^ (match !multdep with
                            | [] -> ""
                            | _::_ as t -> 
                                    SS.output_hum Pervasives.stdout (SSL.sexp_of_list SSL.sexp_of_string t);
-
                                    let mys = List.fold_left (^) ("(or ") !multdep in
                                    let mys = (mys ^ " )") in
                                    mys))
@@ -95,20 +96,20 @@ let print_sequentiality lba =
 *)
             !str
           ) x.node.incoming)) f) in
-    if(List.is_empty !ors2 = false) then
-        ors := !ors2 :: !ors;
     doc ^ "))\n"
   ) lba); 
 
- (* fix here *)
-  if ((List.is_empty !ors) = false) then
-      ors_string := List.reduce (^) (List.map (fun x -> ((List.fold_left (^) ("(assert (or ") x) ^"))\n") ) !ors);
   adecl := List.unique !adecl;
+  ors := List.unique !ors;
   ss := (
       (match List.is_empty !adecl with 
       | false -> (List.reduce (^) (List.map (fun x -> ("(declare-fun "^x^" () Int)\n")) (!adecl)))
       | true -> "")
-      ^ !ss ^ !ors_string);
+      ^ !ss ^ 
+      (match List.is_empty !ors with
+      | false -> List.reduce (^) !ors
+      | true -> "")
+      );
   !ss
 
 let print_constraint lba =
