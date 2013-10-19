@@ -161,11 +161,47 @@ let rec get_chan_prop logic node cc =
   | True | False -> ()
   | _ as t -> raise (Internal_error ((SS.to_string_hum (sexp_of_logic t)) ^ "Error during channel analysis"))
 
+let remove_loop n = 
+   if List.exists (fun x -> 
+      (match x with
+      | Proposition (_, [Some (ChanPause (Ack,Start,c))]) ->
+              List.exists (fun x ->
+                  (match x with
+                  | (_, ChanPause (Req,Start,cc)) when 
+                    (match String.split c "_" with |(j,k) -> j) = (match String.split cc "_" with |(j,k) -> j) -> true
+                  | _ -> false
+                  )
+              ) n.node.incoming_chan
+      | Proposition (_, [Some (ChanPause (Ack,End,c))]) ->
+              List.exists (fun x ->
+                  (match x with
+                  | (_, ChanPause (Req,End,cc)) when 
+                    (match String.split c "_" with |(j,k) -> j) = (match String.split cc "_" with |(j,k) -> j) -> true
+                  | _ -> false
+                  )
+              ) n.node.incoming_chan
+      | Proposition (_, [Some (ChanPause (Req,End,c))]) ->
+              List.exists (fun x ->
+                  (match x with
+                  | (_, ChanPause (Ack,Start,cc)) when 
+                    (match String.split c "_" with |(j,k) -> j) = (match String.split cc "_" with |(j,k) -> j) -> true
+                  | _ -> false
+                  )
+              ) n.node.incoming_chan
+      | Proposition (_, [Some (ChanPause (Req,Start,c))]) -> true
+      | _ -> false)
+      ) n.tls then
+       let tt = List.filter (fun x -> x <> n.node.name) n.node.incoming in
+       n.node.incoming <- tt
+   else
+      ()
 
 let getnames = function
   | (s,ss) ->
+(*
     let tt = List.filter (fun x -> x <> s.node.name) s.node.incoming in
     s.node.incoming <- tt;
+*)
     match ss with 
     | Proposition (Expr (t),[Some (Systemj.ChanPause _ as p )]) ->
       ((match String.split t "_" with | (j,k) -> j), s, p)
@@ -246,6 +282,7 @@ let make_smt lba filename =
 	) (List.nth !cc (i+1)) 
       ) x
   ) !cc in
+  let () = List.iter (fun x -> List.iter (fun x -> remove_loop x) x) lba in
 
   let fd = open_out filename in   
   let decl_stuff = ("(set-logic QF_IDL)\n" >> text) ++
