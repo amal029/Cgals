@@ -22,6 +22,7 @@ let make_body internal_signals channels o index signals isignals = function
     let (o,guards) = L.split o in
     (* First add the location label *)
     ((n ^ "/*" ^ (string_of_logic tlabel) ^ "*/" ^ ":\n") >> text)
+    ++ ("atomic {\n" >> text)
     (* Now add the transitions *)
     ++ (L.reduce (++) (
       if o <> [] then
@@ -51,8 +52,10 @@ let make_body internal_signals channels o index signals isignals = function
 	    ++ ("}\n" >> text)
 	  else empty
 	) o guards
-      else [("goto " ^ n ^ ";\n">> text)]
+      else [("  goto " ^ n ^ ";\n">> text)]
+      (* else [(" skip;\n">> text)] *)
     )) 
+    ++ ("}\n" >> text)
       
       
 let make_process internal_signals channels o index signals isignals init lgn = 
