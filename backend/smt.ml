@@ -71,7 +71,7 @@ let print_sequentiality lba =
                       | [] -> ""
                       | _::_ as t -> 
 			(*                                    SS.output_hum Pervasives.stdout (SSL.sexp_of_list SSL.sexp_of_string t); *)
-                        let mys = List.fold_left (^) ("(or ") !multdep in
+                        let mys = List.fold_left (^) ("(and ") !multdep in
                         let mys = (mys ^ " )") in
                         mys))
 
