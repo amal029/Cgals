@@ -285,11 +285,13 @@ let make_smt lba filename =
   let () = List.iter (fun x -> List.iter (fun x -> remove_loop x) x) lba in
 
   let fd = open_out filename in   
-  let decl_stuff = ("(set-logic QF_IDL)\n" >> text) ++
+  let decl_stuff = 
+    ("(set-option :produce-proofs true)\n" >> text) ++
+    ("(set-logic QF_IDL)\n" >> text) ++
     ((print_states lba) >> text) ++
     ((print_sequentiality lba) >> text) ++
     ((print_constraint lba) >> text) ++
-    ("(check-sat)\n(get-model)\n" >> text)
+    ("(check-sat)\n(get-model)\n(get-proof)\n" >> text)
   in
   let () = print ~output:(output_string fd) decl_stuff in
   close_out fd
