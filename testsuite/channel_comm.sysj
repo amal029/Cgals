@@ -14,6 +14,7 @@
     pause;
     C!;
     M?;
+    pause;
   /* } */
 }
 ><
@@ -23,10 +24,9 @@
   output channel C;
   input signal PIPI;
   /* This abort is the reason for failure!! */
-  /* abort(PIPI) */
+  abort(PIPI)
     /* loop { */
       M!;||C?;
-      emit A;
       pause;
     /* } */
   /* This is one path that will lead to non-completion of the channel
