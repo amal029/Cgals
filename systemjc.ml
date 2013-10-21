@@ -21,11 +21,13 @@ try
   let formula = ref "" in
   let promela = ref "" in
   let smt = ref "" in
+  let smtopt = ref "" in
   let outfile = ref "" in
   let () = Arg.parse [
     ("-formula", Arg.Set_string formula, " The propositional linear temporal logic formula to verify (see promela ltl man page)");
     ("-promela", Arg.Set_string promela, " The name of the promela output file");
-    ("-smt", Arg.Set_string smt, " The name of the SMT-LIB output file");
+    ("-smt2", Arg.Set_string smt, " The name of the SMT-LIB output file");
+    ("-sopt", Arg.Set_string smtopt, " The name of the option file for SMT-LIB output generation (optional)");
     ("-o", Arg.Set_string outfile, " The name of the [llvm/C/Java] output file (Only C backend implemented)")] 
     (fun x -> file_name := x) usage_msg in
 
@@ -123,10 +125,14 @@ try
   let labeled_buchi_automatas = List.map Util.reachability labeled_buchi_automatas in
   let () = 
       if !smt <> "" then
+        let () = Smt.parse_option !smtopt in
         let () = Smt.make_smt labeled_buchi_automatas !smt in 
+
+(*
         let () = List.iter (fun x -> 
             SS.output_hum Pervasives.stdout (SSL.sexp_of_list TableauBuchiAutomataGeneration.sexp_of_labeled_graph_node x))
                     labeled_buchi_automatas in
+*)
         ();
       else if !promela <> "" then
       try

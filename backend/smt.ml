@@ -2,12 +2,15 @@ module List = Batteries.List
 module SS = Sexplib.Sexp 
 module SSL = Sexplib.Std 
 module String = Batteries.String 
+module Hashtbl = Batteries.Hashtbl
 open Systemj
 open Pretty 
 open TableauBuchiAutomataGeneration 
 open PropositionalLogic 
 let (++) = append 
 let (>>) x f = f x
+let wctt_opt = ref (Hashtbl.create 10)
+let wcrt_opt = ref (Hashtbl.create 10)
 
 exception Internal_error of string
 
@@ -52,34 +55,32 @@ let print_sequentiality lba =
                       let multdep = ref [] in
                       List.iter(fun u ->
                         (* micrsteps depends on the previous state on the same CD *)
-                        str := (!str^" (>= "^microst^" (+ CD"^(string_of_int y)^"_"^k^" 1)) ");
+                        let wctt1 = (match Hashtbl.find_option !wctt_opt y with | Some (t) -> t | None -> "1") in
+                        str := (!str^" (>= "^microst^" (+ CD"^(string_of_int y)^"_"^k^" "^wctt1^")) ");
                         (match (p, (match u with | (inchan,Systemj.ChanPause (g,h,l)) -> (inchan,g,h,l) )) with
                         | (ChanPause (Ack,Start,cn) (*("$AckStart",cn)*), (inchan,Systemj.Req,Systemj.Start,l)) 
                         | (ChanPause (Ack,End,cn) (*("$AckEnd",cn)*), (inchan,Systemj.Req,Systemj.End,l))
                         | (ChanPause (Req,End,cn) (*("$ReqEnd",cn)*), (inchan,Systemj.Ack,Systemj.Start,l)) 
                             when (match String.split cn "_" with | (x,_) -> x) = (match String.split l "_" with | (x,_) -> x) -> 
-                          print_endline (cn^"    - >    "^l);
                               (* macrostate can finish when any of one of deps finish for the same microst  *)
-                              multdep := (" (>= "^microst^" (+ "^inchan^" 1)) ") :: !multdep;
-			(*                                         str := (!str^" (>= "^microst^" (+ "^inchan^" 1)) "); *)
+                              let cdnum = int_of_string (String.lchop ~n:2 (List.at (String.nsplit inchan "_") 0)) in
+                              let wctt1 = (match Hashtbl.find_option !wctt_opt cdnum with | Some (t) -> t | None -> "1") in
+                              multdep := (" (>= "^microst^" (+ "^inchan^" "^wctt1^")) ") :: !multdep;
                         | _ -> ()
                         );
                         ors2 := ("(= CD"^(string_of_int y)^"_"^x.node.name^" "^microst^") ") :: !ors2;
-                        print_endline "";
                       ) x.node.incoming_chan;
                       str := (!str ^ (match !multdep with
                       | [] -> ""
                       | _::_ as t -> 
-			(*                                    SS.output_hum Pervasives.stdout (SSL.sexp_of_list SSL.sexp_of_string t); *)
                         let mys = List.fold_left (^) ("(and ") !multdep in
                         let mys = (mys ^ " )") in
                         mys))
 
                     | _ -> () )
                   ) x.tls in
-                  (* SS.output_hum Pervasives.stdout (SSL.sexp_of_list SSL.sexp_of_string !ors2); *)
                   if(not (List.is_empty !ors2)) then
-		    ors := (((List.fold_left (^) ("(assert (or ") !ors2) ^ "))\n")) :: !ors;
+                    ors := (((List.fold_left (^) ("(assert (or ") !ors2) ^ "))\n")) :: !ors;
                else
                   str := ("(>= CD"^(string_of_int y)^"_"^x.node.name^" (+ CD"^(string_of_int y)^"_"^k^" 1)) ")
               )
@@ -119,8 +120,10 @@ let print_constraint lba =
       if(((List.length lba) - 1) <> r) then
         List.reduce (^) (List.map (fun x ->
           List.reduce (^) (List.map (fun y ->
-            ("(assert (or (>= CD"^(string_of_int r)^"_"^x.node.name^" (+ CD"^(string_of_int (r+1))^"_"^y.node.name^" 1)) "^
-                "(>= CD"^(string_of_int (r+1))^"_"^y.node.name^" (+ CD"^(string_of_int r)^"_"^x.node.name^" 1))))\n")
+            let wctt1 = (match Hashtbl.find_option !wctt_opt r with | Some (t) -> t | None -> "1") in
+            let wctt2 = (match Hashtbl.find_option !wctt_opt (r+1) with | Some (t) -> t | None -> "1") in
+            ("(assert (or (>= CD"^(string_of_int r)^"_"^x.node.name^" (+ CD"^(string_of_int (r+1))^"_"^y.node.name^" "^wctt2^")) "^
+                "(>= CD"^(string_of_int (r+1))^"_"^y.node.name^" (+ CD"^(string_of_int r)^"_"^x.node.name^" "^wctt1^"))))\n")
           ) (List.nth lba (r+1)))
         ) q)
       else
@@ -241,6 +244,41 @@ let insert_incoming i1 cdn1 i2 cdn2 =
     | _ -> ())
   | _ -> ()
 
+
+let parse_option o =
+    if o <> "" then
+      (try
+      let ic = open_in o in
+        while true do
+        let line = input_line ic in
+        let lrval = String.split (String.trim line) "=" in
+        let rval = (match lrval with | (l,r) -> String.trim r) in
+        let lval = String.nsplit (match lrval with | (l,r) -> String.trim l) "." in
+        (match lval with
+        | ["CD";num;"WCTT"] ->
+            let cdnum = (int_of_string num) in
+            Hashtbl.replace !wctt_opt (int_of_string num) rval
+        | ["CD";num;"WCRT"] ->
+            let cdnum = (int_of_string num) in
+            Hashtbl.replace !wcrt_opt (int_of_string num) rval
+        | _ as t -> raise (Internal_error ("Wrong smt option format : "^
+            (SSL.string_of_sexp (SSL.sexp_of_list SSL.sexp_of_string t))))
+        );
+        let () = SS.output_hum Pervasives.stdout (SSL.Hashtbl.sexp_of_t SSL.sexp_of_int SSL.sexp_of_string !wctt_opt) in
+        print_endline "";
+        let () = SS.output_hum Pervasives.stdout (SSL.Hashtbl.sexp_of_t SSL.sexp_of_int SSL.sexp_of_string !wcrt_opt) in
+        print_endline "------";
+        ()
+        done
+      with
+      | End_of_file -> ()
+      | Sys_error e -> raise (Internal_error e)
+      | _ as t -> prerr_endline "Wrong smt option format"; raise t
+      );
+    ()
+let print_wcrt () =
+  ""
+
 let make_smt lba filename =
   let cc = ref [] in
   let () = List.iter (fun x -> 
@@ -290,6 +328,7 @@ let make_smt lba filename =
       ((print_states lba) >> text) ++
       ((print_sequentiality lba) >> text) ++
       ((print_constraint lba) >> text) ++
+      ((print_wcrt ()) >> text)++
       ("(check-sat)\n(get-model)\n(get-proof)\n" >> text)
   in
   let () = print ~output:(output_string fd) decl_stuff in
