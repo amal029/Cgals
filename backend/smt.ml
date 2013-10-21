@@ -3,6 +3,7 @@ module SS = Sexplib.Sexp
 module SSL = Sexplib.Std 
 module String = Batteries.String 
 module Hashtbl = Batteries.Hashtbl
+module Enum = Batteries.Enum
 open Systemj
 open Pretty 
 open TableauBuchiAutomataGeneration 
@@ -82,7 +83,8 @@ let print_sequentiality lba =
                   if(not (List.is_empty !ors2)) then
                     ors := (((List.fold_left (^) ("(assert (or ") !ors2) ^ "))\n")) :: !ors;
                else
-                  str := ("(>= CD"^(string_of_int y)^"_"^x.node.name^" (+ CD"^(string_of_int y)^"_"^k^" 1)) ")
+                  let wctt1 = (match Hashtbl.find_option !wctt_opt y with | Some (t) -> t | None -> "1") in
+                  str := ("(>= CD"^(string_of_int y)^"_"^x.node.name^" (+ CD"^(string_of_int y)^"_"^k^" "^wctt1^")) ")
               )
              )
              else str := "");
@@ -276,8 +278,14 @@ let parse_option o =
       | _ as t -> prerr_endline "Wrong smt option format"; raise t
       );
     ()
-let print_wcrt () =
-  ""
+
+let get_last_node lb =
+  let incoming_list = List.concat (List.map (fun x -> x.node.incoming) lb) in
+  List.filter (fun x -> List.for_all (fun y -> x.node.name <> y ) incoming_list ) lb
+
+let print_wcrt lba =
+(*   List.mapi (fun i x -> List. List.map (fun x -> ("CD"^(string_of_int i)^"_"^x.node.name) x) lba  *)
+""
 
 let make_smt lba filename =
   let cc = ref [] in
@@ -328,7 +336,7 @@ let make_smt lba filename =
       ((print_states lba) >> text) ++
       ((print_sequentiality lba) >> text) ++
       ((print_constraint lba) >> text) ++
-      ((print_wcrt ()) >> text)++
+(*       ((print_wcrt lba) >> text)++ *)
       ("(check-sat)\n(get-model)\n(get-proof)\n" >> text)
   in
   let () = print ~output:(output_string fd) decl_stuff in
