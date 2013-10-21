@@ -286,19 +286,17 @@ let get_last_node lb =
 let print_wcrt lba =
   let wcrt = List.reduce (^) (List.mapi (fun i x -> 
     let node = get_last_node x in
-    print_endline "------------------";
+    print_endline "\nlast nodes ------------------";
     let () = SS.output_hum Pervasives.stdout (SSL.sexp_of_list sexp_of_labeled_graph_node node) in
     print_endline "\n%%%%%%%%%%%%%%%%%%;";
-    if List.length node <> 1 then
-      raise (Internal_error "Assumption failed : there are more than one last nodes")
-    else(
+    List.reduce (^) (List.map (fun l ->
       (match (Hashtbl.find_option !wcrt_opt i,Hashtbl.find_option !wctt_opt i) with
-      | (Some (x),Some(z)) -> ("(assert (and (<= (+ CD"^(string_of_int i)^"_"^((List.hd node).node.name)^" "^z^") "^x^")))\n")
-      | _ -> ""
+      | (Some (x),Some(z)) -> ("(assert (and (<= (+ CD"^(string_of_int i)^"_"^(l.node.name)^" "^z^") "^x^")))\n")
+      | _ -> ("; CD "^(string_of_int i)^" : none\n")
       )
-    )
+    ) node)
   ) lba) in
-  let wcrt = ("; WCRT constraints\n"^wcrt) in
+  let wcrt = ("; -- WCRT constraints -- \n"^wcrt) in
   wcrt
 
 let make_smt lba filename =
@@ -317,21 +315,6 @@ let make_smt lba filename =
 	 ) (match Hashtbl.find_option o y.node.name with Some x -> x | None -> [("",True)])) ) x; 
     cc := !cc2 :: !cc) lba in
   cc := List.rev !cc;
-  (*
-    print_int (List.length !cc);
-    print_endline "";
-    let () = List.iteri (fun y x -> 
-    print_endline ("CD "^(string_of_int y)^"-------");
-    List.iter(fun y ->
-    let () = SS.output_hum Pervasives.stdout (PropositionalLogic.sexp_of_logic (
-    match y with
-    | (_,ss) -> ss
-    )) in
-    print_endline "";
-    ()
-    ) x
-    ) !cc in
-  *)
   (* let () = List.iter (fun y -> List.iter(fun (x,_) -> SS.output_hum stdout (sexp_of_labeled_graph_node x)) y) !cc in *)
   let () = List.iteri (fun i x ->
     if (((List.length !cc) - 1) <> i) then
@@ -350,7 +333,7 @@ let make_smt lba filename =
       ((print_states lba) >> text) ++
       ((print_sequentiality lba) >> text) ++
       ((print_constraint lba) >> text) ++
-(*       ((print_wcrt lba) >> text)++ *)
+      ((print_wcrt lba) >> text)++
       ("(check-sat)\n(get-model)\n(get-proof)\n" >> text)
   in
   let () = print ~output:(output_string fd) decl_stuff in
