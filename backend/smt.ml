@@ -284,8 +284,22 @@ let get_last_node lb =
   List.filter (fun x -> List.for_all (fun y -> x.node.name <> y ) incoming_list ) lb
 
 let print_wcrt lba =
-(*   List.mapi (fun i x -> List. List.map (fun x -> ("CD"^(string_of_int i)^"_"^x.node.name) x) lba  *)
-""
+  let wcrt = List.reduce (^) (List.mapi (fun i x -> 
+    let node = get_last_node x in
+    print_endline "------------------";
+    let () = SS.output_hum Pervasives.stdout (SSL.sexp_of_list sexp_of_labeled_graph_node node) in
+    print_endline "\n%%%%%%%%%%%%%%%%%%;";
+    if List.length node <> 1 then
+      raise (Internal_error "Assumption failed : there are more than one last nodes")
+    else(
+      (match (Hashtbl.find_option !wcrt_opt i,Hashtbl.find_option !wctt_opt i) with
+      | (Some (x),Some(z)) -> ("(assert (and (<= (+ CD"^(string_of_int i)^"_"^((List.hd node).node.name)^" "^z^") "^x^")))\n")
+      | _ -> ""
+      )
+    )
+  ) lba) in
+  let wcrt = ("; WCRT constraints\n"^wcrt) in
+  wcrt
 
 let make_smt lba filename =
   let cc = ref [] in

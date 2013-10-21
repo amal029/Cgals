@@ -179,8 +179,10 @@ try
       if !smt <> "" then
         let () = Smt.parse_option !smtopt in
         let () = Smt.make_smt labeled_buchi_automatas !smt in () in
+(*
         let () = List.iter (fun x -> 
           SS.output_hum Pervasives.stdout (SSL.sexp_of_list sexp_of_labeled_graph_node x)) labeled_buchi_automatas in
+*)
     let () = Printf.printf "Execution time: %fs\n" (Sys.time() -. mytime) in
     () in ()
 with
