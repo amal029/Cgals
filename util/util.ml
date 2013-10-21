@@ -95,18 +95,22 @@ let get_outgoings o = function
       print_endline ("Node: " ^ n);
       raise s
 
-let rec solve q o ret lgn = 
+let rec solve nff q o ret lgn = 
   if not (Q.is_empty q) then
     let element = Q.pop q in
     (* Get all the outgoing nodes from element *)
     (* add these nodes to the queue if they are not already there *)
+    let () = IFDEF DEBUG THEN print_endline ("\nElement name: " ^ element.node.name) ELSE () ENDIF in
+    let () = IFDEF DEBUG THEN output_hum stdout (sexp_of_list sexp_of_string element.node.incoming) ELSE () ENDIF in
     let oo = (match Hashtbl.find_option o element.node.name with Some x -> x | None -> []) in
     let (oo,_) = L.split oo in
     (* Check if the oo contains names that are already there in the Q *)
     let oo = L.filter (fun x -> not(Enum.exists (fun y -> y.node.name = x) (Q.enum (Q.copy q)))) oo in
     (* Check if these are not already there in ret, because that means they have been visited *)
     let oo = L.filter (fun x -> not(L.exists (fun y -> y.node.name = x) !ret)) oo in
-    let () = IFDEF DEBUG THEN output_hum stdout (sexp_of_list sexp_of_string oo); print_endline ""; ELSE () ENDIF in
+    (* Solve the guard to see if you get a "false" *)
+    let oo = List.filter (fun x -> not (List.exists (fun t -> t = x) nff)) oo in
+    (* let () = IFDEF DEBUG THEN output_hum stdout (sexp_of_list sexp_of_string oo); print_endline ""; ELSE () ENDIF in *)
     (* Add the remaining elements *)
     let oo = L.map (fun x -> L.find (fun y -> y.node.name = x) lgn) oo in
     (* let () = IFDEF DEBUG THEN output_hum stdout (sexp_of_list sexp_of_labeled_graph_node oo); print_endline ""; ELSE () ENDIF in *)
@@ -115,18 +119,18 @@ let rec solve q o ret lgn =
     (* Finally add the element to the return list *)
     ret := element :: !ret;
     (* Call it recursively again *)
-    solve q o ret lgn
+    solve nff q o ret lgn
       
 
 (* Reachability using BF traversal *)
-let reachability lgn = 
+let reachability nff lgn = 
   let ret = ref [] in
   let q = Q.create () in
   let o = Hashtbl.create 1000 in
   let () = L.iter (fun x -> get_outgoings o (x.node,x.guards)) lgn in
   (* Added the starting node *)
   let () = Q.push (L.find (fun {tlabels=t} -> (match t with | Proposition (Label x,_) -> x = "st" | _ -> false)) lgn) q in
-  let () = solve q o ret lgn in
+  let () = solve nff q o ret lgn in
   (* Finally the list is returned *)
   L.sort_unique compare !ret
 
