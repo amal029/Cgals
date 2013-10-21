@@ -266,10 +266,12 @@ let parse_option o =
         | _ as t -> raise (Internal_error ("Wrong smt option format : "^
             (SSL.string_of_sexp (SSL.sexp_of_list SSL.sexp_of_string t))))
         );
+(*
         let () = SS.output_hum Pervasives.stdout (SSL.Hashtbl.sexp_of_t SSL.sexp_of_int SSL.sexp_of_string !wctt_opt) in
         print_endline "";
         let () = SS.output_hum Pervasives.stdout (SSL.Hashtbl.sexp_of_t SSL.sexp_of_int SSL.sexp_of_string !wcrt_opt) in
         print_endline "------";
+*)
         ()
         done
       with
@@ -286,9 +288,11 @@ let get_last_node lb =
 let print_wcrt lba =
   let wcrt = List.reduce (^) (List.mapi (fun i x -> 
     let node = get_last_node x in
+(*
     print_endline "\nlast nodes ------------------";
     let () = SS.output_hum Pervasives.stdout (SSL.sexp_of_list sexp_of_labeled_graph_node node) in
     print_endline "\n%%%%%%%%%%%%%%%%%%;";
+*)
     List.reduce (^) (List.map (fun l ->
       (match (Hashtbl.find_option !wcrt_opt i,Hashtbl.find_option !wctt_opt i) with
       | (Some (x),Some(z)) -> ("(assert (and (<= (+ CD"^(string_of_int i)^"_"^(l.node.name)^" "^z^") "^x^")))\n")
