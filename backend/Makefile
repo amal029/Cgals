@@ -21,7 +21,7 @@ codegen.cmxa: code.cmx
 
 code.cmx:
 	$(CC) -pp "camlp4o -I $(TYPECONV) -I $(SEXPLIB) -I $(PRETTYLIB)	\
-	pa_type_conv.cma pa_sexp_conv.cma pa_macro.cmo -DDEBUG" -I	\
+	pa_type_conv.cma pa_sexp_conv.cma pa_macro.cmo -UDEBUG" -I	\
 	$(REPORTDIR) -I $(LANGUAGEDIR) -I $(BATDIR) -I $(SEXPLIB) -I	\
 	$(LOGICLIB) -I $(UTILDIR) -I $(PRETTYLIB) -c $(SRC)
 
