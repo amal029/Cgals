@@ -15,7 +15,7 @@
   {
     emit resetTimer;
     {
-      loop{
+      /* loop{ */
 	if(TLRITAVI){
 	  AP!;
 	  emit oAP;
@@ -31,15 +31,15 @@
 	  emit resetTimer;
 	}
 	pause;
-      }
+      /* } */
     }
     ||
       {
-	loop{
+	/* loop{ */
 	  VP?;
 	  emit sVP;
 	  pause;
-	}
+	/* } */
       }
   }
   ||
@@ -68,7 +68,7 @@
   input channel OB;
   {
     {
-      loop{
+      /* loop{ */
 	abort(AS||sAP){loop{pause;}}
 	emit resetTimer;
 
@@ -85,15 +85,15 @@
 	  }
 	}
 	pause;
-      }
+      /* } */
     }
     ||
       {
-	loop{
+	/* loop{ */
 	  AP?;
 	  emit sAP;
 	  pause;
-	}
+	/* } */
       }
   }
   ||
