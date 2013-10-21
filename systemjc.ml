@@ -124,6 +124,36 @@ try
   (* Remove the unreachable nodes from the generated graph *)
   let labeled_buchi_automatas = List.map (Util.reachability []) labeled_buchi_automatas in
   let () = 
+    let signals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_signal_declarations x) in
+    let isignals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_input_signal_declarations x) in
+    let internal_signals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_internal_signal_declarations x) in
+    let prom_make = map7 
+      Promela.make_promela 
+      (List.init (List.length labeled_buchi_automatas) (fun x -> channels)) internal_signals signals isignals
+      (List.init (List.length labeled_buchi_automatas) (fun x -> x)) (List.rev !init) labeled_buchi_automatas in
+    let (promela_model,labeled_buchi_automatas) = List.split prom_make in
+    let () = 
+      if !promela <> "" then
+	try
+          let fd = open_out !promela in
+          (* make the channel declarations in the global space!! *)
+          let promela_channels = List.fold_left Pretty.append Pretty.empty (List.map (fun x -> Pretty.text ("bool "^x^";\n"))channels) in
+          let promela_gsigs = List.fold_left Pretty.append Pretty.empty 
+            (List.mapi (fun i y -> List.fold_left Pretty.append Pretty.empty (List.map (fun x -> Pretty.text ("bool CD"^(string_of_int i)^"_"^x^";\n")) 
+										(List.sort_unique compare y)))
+               signals) in
+          let appf = if !formula = "" then Pretty.empty else (Pretty.text ("ltl {" ^ !formula ^ "}\n")) in
+          let () = Pretty.print ~output:(output_string fd) 
+            (Pretty.append promela_gsigs
+               (Pretty.append promela_channels 
+		  (Pretty.append appf
+		     (List.reduce Pretty.append promela_model)))) in
+          close_out fd;
+	with
+	| Sys_error _ as s -> raise s in
+    let () = 
+      if MyString.ends_with !outfile ".c" then
+        let fd = open_out !outfile in
         let signals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_signal_declarations x) in
         let isignals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_input_signal_declarations x) in
         let internal_signals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_internal_signal_declarations x) in
