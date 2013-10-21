@@ -120,41 +120,38 @@ try
     let () = SS.output_hum Pervasives.stdout (SSL.sexp_of_list TableauBuchiAutomataGeneration.sexp_of_labeled_graph_node x) in
     print_endline "\n\n\n\n\n\n-----------------------------------------------------\n\n\n\n") labeled_buchi_automatas ELSE () ENDIF in
   (* Remove the unreachable nodes from the generated graph *)
-  let labeled_buchi_automatas = List.map Util.reachability labeled_buchi_automatas in
+  let labeled_buchi_automatas = List.map (Util.reachability []) labeled_buchi_automatas in
   let () = 
-      if !smt <> "" then
-        let () = Smt.make_smt labeled_buchi_automatas !smt in 
-        let () = List.iter (fun x -> 
-            SS.output_hum Pervasives.stdout (SSL.sexp_of_list TableauBuchiAutomataGeneration.sexp_of_labeled_graph_node x))
-                    labeled_buchi_automatas in
-        ();
-      else if !promela <> "" then
-      try
-        let fd = open_out !promela in
-        let signals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_signal_declarations x) in
-        let isignals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_input_signal_declarations x) in
-        let internal_signals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_internal_signal_declarations x) in
-        let promela_model = map7 
-          Promela.make_promela 
-          (List.init (List.length labeled_buchi_automatas) (fun x -> channels)) internal_signals signals isignals
-          (List.init (List.length labeled_buchi_automatas) (fun x -> x)) (List.rev !init) labeled_buchi_automatas in
-        (* make the channel declarations in the global space!! *)
-        let promela_channels = List.fold_left Pretty.append Pretty.empty (List.map (fun x -> Pretty.text ("bool "^x^";\n"))channels) in
-        let promela_gsigs = List.fold_left Pretty.append Pretty.empty 
-          (List.mapi (fun i y -> List.fold_left Pretty.append Pretty.empty (List.map (fun x -> Pretty.text ("bool CD"^(string_of_int i)^"_"^x^";\n")) 
-                                              (List.sort_unique compare y)))
-             signals) in
-        let appf = if !formula = "" then Pretty.empty else (Pretty.text ("ltl {" ^ !formula ^ "}\n")) in
-        let () = Pretty.print ~output:(output_string fd) 
-          (Pretty.append promela_gsigs
-             (Pretty.append promela_channels 
-            (Pretty.append appf
-               (List.reduce Pretty.append promela_model)))) in
-        close_out fd;
-          with
-          | Sys_error _ as s -> raise s 
-    else if MyString.ends_with !outfile ".c" then
-        let fd = open_out !outfile in
+    let signals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_signal_declarations x) in
+    let isignals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_input_signal_declarations x) in
+    let internal_signals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_internal_signal_declarations x) in
+    let prom_make = map7 
+      Promela.make_promela 
+      (List.init (List.length labeled_buchi_automatas) (fun x -> channels)) internal_signals signals isignals
+      (List.init (List.length labeled_buchi_automatas) (fun x -> x)) (List.rev !init) labeled_buchi_automatas in
+    let (promela_model,labeled_buchi_automatas) = List.split prom_make in
+    let () = 
+      if !promela <> "" then
+	try
+          let fd = open_out !promela in
+          (* make the channel declarations in the global space!! *)
+          let promela_channels = List.fold_left Pretty.append Pretty.empty (List.map (fun x -> Pretty.text ("bool "^x^";\n"))channels) in
+          let promela_gsigs = List.fold_left Pretty.append Pretty.empty 
+            (List.mapi (fun i y -> List.fold_left Pretty.append Pretty.empty (List.map (fun x -> Pretty.text ("bool CD"^(string_of_int i)^"_"^x^";\n")) 
+										(List.sort_unique compare y)))
+               signals) in
+          let appf = if !formula = "" then Pretty.empty else (Pretty.text ("ltl {" ^ !formula ^ "}\n")) in
+          let () = Pretty.print ~output:(output_string fd) 
+            (Pretty.append promela_gsigs
+               (Pretty.append promela_channels 
+		  (Pretty.append appf
+		     (List.reduce Pretty.append promela_model)))) in
+          close_out fd;
+	with
+	| Sys_error _ as s -> raise s in
+    let () = 
+      if MyString.ends_with !outfile ".c" then
+	let fd = open_out !outfile in
         let signals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_signal_declarations x) in
         let isignals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_input_signal_declarations x) in
         let internal_signals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_internal_signal_declarations x) in
@@ -167,20 +164,20 @@ try
         let c_channels = List.fold_left Pretty.append Pretty.empty (List.map (fun x -> Pretty.text ("bool "^x^" = false;\n"))channels) in
         let c_gsigs = List.fold_left Pretty.append Pretty.empty 
           (List.mapi (fun i y -> List.fold_left Pretty.append Pretty.empty (List.map (fun x -> Pretty.text ("bool CD"^(string_of_int i)^"_"^x^" = false;\n")) 
-                                              (List.sort_unique compare y)))
+									      (List.sort_unique compare y)))
              signals) in
         let () = Pretty.print ~output:(output_string fd) 
           (Pretty.append c_headers
-            (Pretty.append c_gsigs
-             (Pretty.append c_channels 
-               (Pretty.append(List.reduce Pretty.append c_model)
-                c_main)))) in
-        close_out fd;
-        ()
-    else 
-      () in
-  let () = Printf.printf "Execution time: %fs\n" (Sys.time() -. mytime) in
-  ()
+             (Pretty.append c_gsigs
+		(Pretty.append c_channels 
+		   (Pretty.append(List.reduce Pretty.append c_model)
+                      c_main)))) in
+        close_out fd in
+    let () = 
+      if !smt <> "" then
+        let () = Smt.make_smt labeled_buchi_automatas !smt in () in
+    let () = Printf.printf "Execution time: %fs\n" (Sys.time() -. mytime) in
+    () in ()
 with
 | End_of_file -> exit 0
 | Sys_error  _ -> print_endline usage_msg
