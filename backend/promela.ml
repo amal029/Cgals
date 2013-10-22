@@ -51,7 +51,7 @@ let make_body ff internal_signals channels o index signals isignals = function
 	      ++ ((":: else skip;\n") >> text)
 	      ++ ("fi;\n" >> text)
 	      ++ ("}\n" >> text)
-	    else begin ff := x::!ff; empty end
+	    else begin ff := x::!ff; ("goto " ^ n ^ ";\n" >> text) end
 	  ) o guards
 	else [("  goto " ^ n ^ ";\n">> text)]
       (* else [(" skip;\n">> text)] *)
