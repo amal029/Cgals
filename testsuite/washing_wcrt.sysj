@@ -1,0 +1,29 @@
+{
+  signal wash_on;
+  signal wash_off;
+  signal spin_on;
+  signal spin_off;
+
+  signal WASHING;
+  signal DRYING;
+  {
+    /* loop{ */
+  T1:await(wash_on);
+    abort(wash_off){loop{emit WASHING; T2:pause;}}
+    /* } */
+  }
+  ||{
+    /* loop{ */
+  T3:await(spin_on);
+      abort(immediate WASHING){
+      T4:pause;
+	abort(spin_off){loop{emit DRYING; T5:pause;}}
+      }
+    /* } */
+  }||{
+    /* loop{ */
+  T6:pause;T7:pause;emit wash_on;T8:pause;T9:pause;
+    emit spin_on;T10:pause;emit spin_off;emit wash_off;T12:pause;
+    /* } */
+  }
+}

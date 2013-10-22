@@ -77,8 +77,8 @@ stmt:
     | suspend {$1}
     /*| TExit TOP symbol TCP TSEMICOLON {Systemj.Exit($3,ln())}*/
     | TEmit symbol TSEMICOLON {Systemj.Emit($2,None,ln())}
-    | TPause TSEMICOLON {Systemj.Pause(None,ln())}
-    | symbol TColon TPause TSEMICOLON {Systemj.Pause(Some (match $1 with Systemj.Symbol (x,_) -> x),ln())}
+    | TPause TSEMICOLON {Systemj.Pause(None,ln(),None)}
+    | symbol TColon TPause TSEMICOLON {Systemj.Pause(Some (match $1 with Systemj.Symbol (x,_) -> x),ln(),None)}
     | send TSEMICOLON {$1}
     | receive TSEMICOLON {$1}
     | twhile {$1}
@@ -110,9 +110,9 @@ par:
 ;
 
 await:
-    | TAwait TOP expr TCP {Systemj.Abort($3,Systemj.While(Systemj.True,Systemj.Pause(None ,ln()),ln()),ln())}
+    | TAwait TOP expr TCP {Systemj.Abort($3,Systemj.While(Systemj.True,Systemj.Pause(None ,ln(),None),ln()),ln())}
     | symbol TColon TAwait TOP expr TCP {Systemj.Abort($5,Systemj.While(Systemj.True,Systemj.Pause(Some (match $1 with Systemj.Symbol (x,_) -> x)
-												      ,ln()),ln()),ln())}
+												      ,ln(),None),ln()),ln())}
 ;
 
 send:
@@ -146,7 +146,7 @@ twhile:
 ;
 
 expr:
-    | symbol {Systemj.Esymbol($1,ln())}
+    | symbol {Systemj.Esymbol($1,ln(),None)}
     | TXCL expr {Systemj.Not($2,ln())}
     | expr Or Or expr {Systemj.Or($1,$4,ln())}
     | expr And And expr {Systemj.And($1,$4,ln())}

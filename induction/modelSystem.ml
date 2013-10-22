@@ -76,10 +76,10 @@ let propagate_guards_from_st nodeset =
   ) nodeset in 
   List.iter (fun s -> 
     let y = (match s.tlabels with
-      | Proposition x -> (match x with 
+      | Proposition (x,_) -> (match x with 
 	| Label st -> if st="st" then Some s else None
 	| _ -> None)
-      | Not Proposition x ->  (match x with 
+      | Not Proposition (x,_) ->  (match x with 
 	| Label st -> if st="st" then Some s else None
 	| _ -> None)
       | _ -> None

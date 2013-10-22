@@ -6,7 +6,8 @@ open Sexp
 module List = Batteries.List
 
 exception Internal_error of string
-type graph_node = {mutable name:string; mutable father:string; mutable incoming: string list; mutable incoming_chan: string;
+type graph_node = {mutable name:string; mutable father:string; mutable incoming: string list; 
+                   mutable incoming_chan: (string * Systemj.tchan) list;
 		   mutable neew: logic list; mutable old:logic list; mutable next: logic list}
 with sexp
 
@@ -21,8 +22,8 @@ let new_name () =
   "N" ^ (string_of_int !counter)
 
 let negate = function
-  | Proposition x -> Not (Proposition x)
-  | Not (Proposition x) -> Proposition x
+  | Proposition (x,p) -> Not (Proposition (x,p))
+  | Not (Proposition (x,p)) -> Proposition (x,p)
   | True -> False
   | False -> True
   | _ as s -> 
@@ -45,7 +46,7 @@ let rec expand index node nodes_set =
        nodes_set := node :: !nodes_set;
        let nn = new_name () in
        let st = {name=nn; father=nn;
-         incoming=[node.name]; incoming_chan="";
+         incoming=[node.name]; incoming_chan=[];
 		 neew=node.next;
 		 old=[]; next=[]} in
        expand index st nodes_set)
@@ -60,7 +61,7 @@ let rec expand index node nodes_set =
       | False -> 
 	(* Contradiction, abondon! *)
 	let s = 
-	  if (match n with | Proposition (Expr t) -> t.[0] = '$' | _ -> false) then
+	  if (match n with | Proposition (Expr t,_) -> t.[0] = '$' | _ -> false) then
 	    try 
 	      (Hashtbl.find (List.at !update_tuple_proposition_ll index) n)
 	    with | _ as s ->
@@ -70,7 +71,7 @@ let rec expand index node nodes_set =
 	  else n in
 	if n = False || List.exists (fun x -> x = (negate n)) node.old 
 	|| List.exists (fun x -> 
-	  let tt = if (match x with | Proposition (Expr t) -> t.[0] = '$' | _ -> false) then
+	  let tt = if (match x with | Proposition (Expr t,_) -> t.[0] = '$' | _ -> false) then
 	      try 
 		(Hashtbl.find (List.at !update_tuple_proposition_ll index) x)
 	      with | _ as s ->
@@ -103,7 +104,7 @@ let rec expand index node nodes_set =
 	let ups = ref [x;y] in
 	let () = List.iter (fun y -> ups := (List.remove_all !ups y)) node.old in
 	let st = {name=node.name; father=node.name;
-            incoming=node.incoming; incoming_chan="";
+            incoming=node.incoming; incoming_chan=[];
 		  neew=node.neew @ !ups;
 		  old=node.old @ [n]; next=node.next} in
 	expand index st nodes_set
@@ -111,20 +112,20 @@ let rec expand index node nodes_set =
 	let nn1 = new_name () in
 	let ups = ref [x] in
 	let () = List.iter (fun y -> ups := (List.remove_all !ups y)) node.old in
-    let node1 = {name=nn1;father=node.name;incoming=node.incoming;incoming_chan="";
+    let node1 = {name=nn1;father=node.name;incoming=node.incoming;incoming_chan=[];
 		     neew=node.neew @ !ups;old=node.old @ [n];
 		     next=node.next} in
 	let nn2 = new_name () in
 	let ups = ref [y] in
 	let () = List.iter (fun y -> ups := (List.remove_all !ups y)) node.old in
 	(* let () = List.iter (fun y -> ups := (List.drop_while (fun x -> x = y) !ups)) node.old in *)
-    let node2 = {name=nn2;father=node.name;incoming=node.incoming;incoming_chan="";
+    let node2 = {name=nn2;father=node.name;incoming=node.incoming;incoming_chan=[];
 		     neew=node.neew @ !ups;old=node.old @ [n];
 		     next=node.next} in
 	let () = expand index node1 nodes_set in
 	expand index node2 nodes_set
       | NextTime x -> 
-              let node = {name=node.name;father=node.name;incoming=node.incoming;incoming_chan="";
+              let node = {name=node.name;father=node.name;incoming=node.incoming;incoming_chan=[];
 		    neew=node.neew;old=node.old@[n];
 		    next=node.next@[x]} in
 	expand index node nodes_set
@@ -143,7 +144,7 @@ let rec expand index node nodes_set =
 let create_graph index formula = 
   let nn = new_name () in
   let st = {name=nn; father=nn;
-      incoming=["Init"];incoming_chan="";
+      incoming=["Init"];incoming_chan=[];
 	    neew=[formula];
 	    old=[]; next=[]} in
   let nodes_set = ref [] in
@@ -158,7 +159,7 @@ let state_label propositions = function
     ) propositions in
     let pos_props = (List.sort_unique compare) !pos_props in
     let neg_props = List.filter (fun x -> (match x with | Not(Proposition _) -> true | _ -> false)) o in
-    let (labels,g) = List.partition (fun x -> (match x with | Proposition x | Not (Proposition x)
+    let (labels,g) = List.partition (fun x -> (match x with | Proposition (x,_) | Not (Proposition (x,_))
       -> (match x with | Label _ -> true | _ -> false) | _ -> false)) (pos_props @ neg_props) in
     let tls = if labels <> [] then List.reduce (fun x y -> And(x,y)) labels else True in
     let g = if g <> [] then List.reduce (fun x y -> solve_logic (And(x,y))) g else True in

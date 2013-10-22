@@ -1,0 +1,27 @@
+/* ltl property used to check liveness */
+/* Need to set weak-fairness guarantees */
+/* [](CD0_A -> <> CD1_A) */
+/* Result -- fail */
+
+/* Run this example like so: */
+/* ./systemjc testsuite/channel_comm.sysj -promela channel.pml -formula "[](CD0_A -> <> CD1_A)" */
+{
+	signal A;
+	output channel C;
+	input channel M;
+	C!;
+	M?;
+	pause;
+}
+><
+{
+	signal A;
+	input channel C;
+	output channel C;
+	signal PIPI;
+	/* This abort is the reason for failure!! */
+	{M!;}
+	||
+	{C?;}
+	pause;
+}
