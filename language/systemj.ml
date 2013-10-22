@@ -280,6 +280,7 @@ let get_allsym index asignals = function
   | AllSymbol (Symbol (x,_)) -> x ^ " = "
   | AllTypedSymbol x -> get_typedsymbol x ^ " = "
   | AllSignalorChannelSymbol (Symbol(x,ln)) as s -> 
+    let () = print_endline (string_of_int index) in
     let signals = List.split asignals |> (fun (x,_) -> x) in
     let ops = List.split asignals |> (fun (_,y) -> y) in
     if List.exists (fun y -> y = x) signals then 

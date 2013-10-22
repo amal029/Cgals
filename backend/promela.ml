@@ -58,8 +58,8 @@ let make_body asignals internal_signals channels o index signals isignals = func
 	      (match y with
 	      | None -> Pretty.empty
 	      | Some r -> 
-		("CD"^(string_of_int i)^"_"^x^"_val_pre = CD" ^ (string_of_int i)^"_"^x^"_val;\n" >> Pretty.text)
-		++ ("CD"^(string_of_int i)^"_"^x^"_val = "^r.Systemj.v^";\n"  >> Pretty.text)
+		("CD"^(string_of_int index)^"_"^x^"_val_pre = CD" ^ (string_of_int index)^"_"^x^"_val;\n" >> Pretty.text)
+		++ ("CD"^(string_of_int index)^"_"^x^"_val = "^r.Systemj.v^";\n"  >> Pretty.text)
 	      ))asignals_names asignals_options)
 	    ++ (("goto " ^ x ^ ";\n") >> text)
 	  else empty
