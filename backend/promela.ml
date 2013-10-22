@@ -63,7 +63,7 @@ let make_body ff asignals internal_signals channels o index signals isignals = f
 		  ++ ("CD"^(string_of_int index)^"_"^x^"_val = "^r.Systemj.v^";\n"  >> Pretty.text)
 		))asignals_names asignals_options)
 	      ++ (("goto " ^ x ^ ";\n") >> text)
-            else begin ff := x::!ff; empty end
+            else begin ff := x::!ff; ("goto " ^ n ^ ";\n" >> text) end
 	  ) o guards
 	else [(":: goto " ^ n ^ ";\n">> text)]
       )) 
