@@ -31,7 +31,6 @@ let string_of_tchan = function
 
 let print_sequentiality lba =
   let adecl = ref [] in
-  (* let ors_string = ref "" in *)
   let ors = ref [] in
   let ss = ref "" in
   ss := List.reduce (^) (List.mapi (fun y f ->
@@ -63,10 +62,10 @@ let print_sequentiality lba =
                         | (ChanPause (Ack,End,cn) (*("$AckEnd",cn)*), (inchan,Systemj.Req,Systemj.End,l))
                         | (ChanPause (Req,End,cn) (*("$ReqEnd",cn)*), (inchan,Systemj.Ack,Systemj.Start,l)) 
                             when (match String.split cn "_" with | (x,_) -> x) = (match String.split l "_" with | (x,_) -> x) -> 
-                              (* macrostate can finish when any of one of deps finish for the same microst  *)
-                              let cdnum = int_of_string (String.lchop ~n:2 (List.at (String.nsplit inchan "_") 0)) in
-                              let wctt1 = (match Hashtbl.find_option !wctt_opt cdnum with | Some (t) -> t | None -> "1") in
-                              multdep := (" (>= "^microst^" (+ "^inchan^" "^wctt1^")) ") :: !multdep;
+                          (* macrostate can finish when any of one of deps finish for the same microst  *)
+                          let cdnum = int_of_string (String.lchop ~n:2 (List.at (String.nsplit inchan "_") 0)) in
+                          let wctt1 = (match Hashtbl.find_option !wctt_opt cdnum with | Some (t) -> t | None -> "1") in
+                          multdep := (" (>= "^microst^" (+ "^inchan^" "^wctt1^")) ") :: !multdep;
                         | _ -> ()
                         );
                         ors2 := ("(= CD"^(string_of_int y)^"_"^x.node.name^" "^microst^") ") :: !ors2;
@@ -88,16 +87,6 @@ let print_sequentiality lba =
               )
              )
              else str := "");
-
-
-	    (*
-              (if (List.is_empty x.node.incoming_chan = false)  then
-              List.iteri (fun i l -> 
-              match l with
-              | (s,_) ->
-              str := (!str ^"(>= CD"^(string_of_int y)^"_"^x.node.name^" (+ "^s^" 1)) ") ) x.node.incoming_chan
-              );
-	    *)
             !str
           ) x.node.incoming)) f) in
     doc ^ "))\n"
@@ -152,7 +141,6 @@ let rec get_chan_prop logic node cc =
     | [Some (Systemj.ChanPause ((Systemj.Ack|Systemj.Req), _,_))] ->
       cc := (node,s) :: !cc;
     | [None] -> ()
-    (* | [_] as t -> print_endline ""; print_int (List.length t); print_endline ""; raise(Internal_error "Unexpected channel list") *)
     | _ -> ())
   | True | False -> ()
   | Proposition _ -> ()
@@ -194,10 +182,6 @@ let remove_loop n =
 
 let getnames = function
   | (s,ss) ->
-    (*
-      let tt = List.filter (fun x -> x <> s.node.name) s.node.incoming in
-      s.node.incoming <- tt;
-    *)
     match ss with 
     | Proposition (Expr (t),[Some (Systemj.ChanPause _ as p )]) ->
       ((match String.split t "_" with | (j,k) -> j), s, p)
@@ -208,9 +192,6 @@ let getnames = function
 let insert_incoming i1 cdn1 i2 cdn2 =
   let first = getnames i1 in
   let second = getnames i2 in
-  (* (match first with | (a,b,c,d) -> print_endline (a^" "^b.node.name^" "^c^" "^(string_of_bool d))); *)
-  (* (match second with | (a,b,c,d) -> print_endline (a^" "^b.node.name^" "^c^" "^(string_of_bool d))); *)
-  (* print_endline "----"; *)
   match first with 
   | (a,s,((Systemj.ChanPause (Systemj.Ack, Systemj.Start,_)) as pp) (*"ack",true*) ) -> 
     (match second with 
@@ -236,42 +217,35 @@ let insert_incoming i1 cdn1 i2 cdn2 =
     | (aa,ss,Systemj.ChanPause (Systemj.Ack, Systemj.Start,_) (*"ack",true*) ) when a = aa ->
       ss.node.incoming_chan <- (("CD"^(string_of_int cdn1)^"_"^s.node.name), pp ):: ss.node.incoming_chan;
     | _ -> ())
-  (* | _ -> () *)
+(* | _ -> () *)
 
 
 let parse_option o =
-    if o <> "" then
-      (try
-      let ic = open_in o in
-        while true do
-        let line = input_line ic in
-        let lrval = String.split (String.trim line) "=" in
-        let rval = (match lrval with | (l,r) -> String.trim r) in
-        let lval = String.nsplit (match lrval with | (l,r) -> String.trim l) "." in
-        (match lval with
-        | ["CD";num;"WCTT"] ->
-            (* let cdnum = (int_of_string num) in *)
-            Hashtbl.replace !wctt_opt (int_of_string num) rval
-        | ["CD";num;"WCRT"] ->
-            (* let cdnum = (int_of_string num) in *)
-            Hashtbl.replace !wcrt_opt (int_of_string num) rval
-        | _ as t -> raise (Internal_error ("Wrong smt option format : "^
-            (SSL.string_of_sexp (SSL.sexp_of_list SSL.sexp_of_string t))))
-        );
-(*
-        let () = SS.output_hum Pervasives.stdout (SSL.Hashtbl.sexp_of_t SSL.sexp_of_int SSL.sexp_of_string !wctt_opt) in
-        print_endline "";
-        let () = SS.output_hum Pervasives.stdout (SSL.Hashtbl.sexp_of_t SSL.sexp_of_int SSL.sexp_of_string !wcrt_opt) in
-        print_endline "------";
-*)
-        ()
-        done
-      with
-      | End_of_file -> ()
-      | Sys_error e -> raise (Internal_error e)
-      | _ as t -> prerr_endline "Wrong smt option format"; raise t
-      );
-    ()
+  if o <> "" then
+    (try
+       let ic = open_in o in
+       while true do
+         let line = input_line ic in
+         let lrval = String.split (String.trim line) "=" in
+         let rval = (match lrval with | (l,r) -> String.trim r) in
+         let lval = String.nsplit (match lrval with | (l,r) -> String.trim l) "." in
+         (match lval with
+         | ["CD";num;"WCTT"] ->
+           (* let cdnum = (int_of_string num) in *)
+           Hashtbl.replace !wctt_opt (int_of_string num) rval
+         | ["CD";num;"WCRT"] ->
+           (* let cdnum = (int_of_string num) in *)
+           Hashtbl.replace !wcrt_opt (int_of_string num) rval
+         | _ as t -> raise (Internal_error ("Wrong smt option format : "^
+					       (SSL.string_of_sexp (SSL.sexp_of_list SSL.sexp_of_string t))))
+         );()
+       done
+     with
+     | End_of_file -> ()
+     | Sys_error e -> raise (Internal_error e)
+     | _ as t -> prerr_endline "Wrong smt option format"; raise t
+    );
+  ()
 
 let get_last_node lb =
   let incoming_list = List.concat (List.map (fun x -> x.node.incoming) lb) in
@@ -280,11 +254,6 @@ let get_last_node lb =
 let print_wcrt lba =
   let wcrt = List.fold_left (^) ("") (List.mapi (fun i x -> 
     let node = get_last_node x in
-(*
-    print_endline "\nlast nodes ------------------";
-    let () = SS.output_hum Pervasives.stdout (SSL.sexp_of_list sexp_of_labeled_graph_node node) in
-    print_endline "\n%%%%%%%%%%%%%%%%%%;";
-*)
     List.fold_left (^) ("") (List.map (fun l ->
       (match (Hashtbl.find_option !wcrt_opt i,Hashtbl.find_option !wctt_opt i) with
       | (Some (x),Some(z)) -> ("(assert (and (<= (+ CD"^(string_of_int i)^"_"^(l.node.name)^" "^z^") "^x^")))\n")
@@ -311,7 +280,6 @@ let make_smt lba filename =
 	 ) (match Hashtbl.find_option o y.node.name with Some x -> x | None -> [("",True)])) ) x; 
     cc := !cc2 :: !cc) lba in
   cc := List.rev !cc;
-  (* let () = List.iter (fun y -> List.iter(fun (x,_) -> SS.output_hum stdout (sexp_of_labeled_graph_node x)) y) !cc in *)
   let () = List.iteri (fun i x ->
     if (((List.length !cc) - 1) <> i) then
       List.iter (fun i1 ->
