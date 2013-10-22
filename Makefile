@@ -1,4 +1,4 @@
-CC=ocamlopt -annot -warn-error +a+8
+CC=ocamlopt -annot -warn-error +a+8 -g
 PARSERLIB=parser.cmxa
 LANGUAGELIB=systemj.cmxa
 LOGICLIB=logic.cmxa
@@ -32,4 +32,4 @@ clean:
 	$(MAKE) -e -C backend/ clean
 	$(MAKE) -e -C testsuite/ clean
 	rm -rf *.ll *.lle *.bc *.s *.dot *.grf *.part* gmon.out TAGS *.mli *.cm* *.o systemjc \
-	*.xml *.annot *.pml *_spi* *_ver* *.pml.trail *.smt*
+	*.xml *.annot *_spi* *_ver* *.pml.trail 

@@ -19,6 +19,20 @@ type column = int
 with sexp
 
 
+type direction =
+| Ack
+| Req
+with sexp
+
+type location =
+| Start
+| End
+with sexp
+
+type tchan =
+| ChanPause of direction * location * string
+with sexp
+
 type symbol =
 | Symbol of string * (line * column)
 with sexp
@@ -62,7 +76,7 @@ type relDataExpr =
 with sexp
 
 type expr =
-| Esymbol of symbol * (line * column)
+| Esymbol of symbol * (line * column) * tchan option
 | And of expr * expr * (line * column)
 | Or of expr * expr * (line * column)
 | Not of expr * (line * column)
@@ -101,7 +115,7 @@ with sexp
 
 type stmt = 
 | Block of stmt list * (line * column)
-| Pause of string option * (line * column)
+| Pause of string option * (line * column) * tchan option
 | Emit of symbol * string option * (line * column)
 | Present of expr * stmt * stmt option * (line * column)
 | Trap of symbol * stmt * (line * column)
@@ -280,7 +294,6 @@ let get_allsym index asignals = function
   | AllSymbol (Symbol (x,_)) -> x ^ " = "
   | AllTypedSymbol x -> get_typedsymbol x ^ " = "
   | AllSignalorChannelSymbol (Symbol(x,ln)) as s -> 
-    let () = print_endline (string_of_int index) in
     let signals = List.split asignals |> (fun (x,_) -> x) in
     let ops = List.split asignals |> (fun (_,y) -> y) in
     if List.exists (fun y -> y = x) signals then 
@@ -307,7 +320,7 @@ let rec get_expr index asignals = function
   | Brackets (x,_) -> "(" ^ get_expr index asignals x ^ ")"
   | DataExpr x -> get_data_expr index asignals x
   | Not (_,ln) 
-  | Esymbol (_,ln)-> raise (Internal_error ((Reporting.get_line_and_column ln) ^ ": non-data type not allowed in here"))
+  | Esymbol (_,ln,_)-> raise (Internal_error ((Reporting.get_line_and_column ln) ^ ": non-data type not allowed in here"))
 
 let get_colon_expr index asignals = function
   | ColonExpr (x,y,z,_) -> (get_simple_data_expr index asignals x, get_simple_data_expr index asignals y, get_simple_data_expr index asignals z)
