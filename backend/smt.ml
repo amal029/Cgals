@@ -271,8 +271,12 @@ let print_wcrt lba =
   let wcrt = ("; -- WCRT constraints -- \n"^wcrt) in
   wcrt
 
-let rec get_guards n o =
-  ()
+let get_updates index g =
+  let updates = Util.get_updates index g in
+  let updates = List.sort_unique compare ((List.map 
+    (fun x -> (match x with | Update x ->x | _ ->  raise (Internal_error "Cannot happen!!"))))
+    (List.filter (fun x -> (match x with | Update _ ->true | _ -> false)) updates)) in
+  updates
 
 let remove_unreachable lba =
   let o = Hashtbl.create 1000 in
@@ -295,12 +299,11 @@ let remove_unreachable lba =
   ) x ) lba in
 *)
 
-  let l = List.map (fun x ->
-    let removables = List.map (fun n -> 
-      let gl = get_guards n o in
-      gl 
-    ) x in (* node *)
-    removables
+  let () = List.iteri (fun index x ->
+    List.iter (fun y ->    
+      let sigins = List.map (fun x -> get_updates index x) y.guards in
+      ()
+  ) x
   ) lba in 
 
 (*
@@ -348,7 +351,7 @@ let make_smt lba filename =
   ) !cc in
 
   let () = List.iter (fun x -> List.iter (fun x -> remove_loop x) x) lba in
-(*   let () = remove_unreachable lba in *)
+  let () = remove_unreachable lba in
 
   let fd = open_out filename in   
   let decl_stuff = 
