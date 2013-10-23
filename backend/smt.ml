@@ -175,8 +175,15 @@ let remove_loop n =
     | Proposition (_, [Some (ChanPause (Req,Start,c))]) -> true
     | _ -> false)
   ) n.tls then
-    let tt = List.filter (fun x -> x <> n.node.name) n.node.incoming in
-    n.node.incoming <- tt
+(*     let tt = List.filter (fun x -> x <> n.node.name) n.node.incoming in *)
+    let a = ref [] in
+    let b = ref [] in
+    (try
+      List.iter2 (fun x y ->  if x <> n.node.name then( a := x :: !a; b := y :: !b ) ) n.node.incoming n.guards
+    with
+    | _ as s -> raise s);
+    n.node.incoming <- !a;
+    n.guards <- !b
   else
     ()
 
@@ -264,6 +271,55 @@ let print_wcrt lba =
   let wcrt = ("; -- WCRT constraints -- \n"^wcrt) in
   wcrt
 
+let rec get_guards n o =
+  ()
+
+let remove_unreachable lba =
+  let o = Hashtbl.create 1000 in
+  let () = List.iter (fun x -> List.iter (fun x -> Util.get_outgoings o (x.node,x.guards)) x) lba in
+(*
+  let () = List.iter (fun x -> List.iter (fun x ->
+    let s = Hashtbl.find_option o x.node.name in
+      print_endline ("node : "^x.node.name);
+      let () = List.iter (fun x -> 
+          (function
+            | (a,b) ->
+                print_endline a;
+                SS.output_hum Pervasives.stdout (sexp_of_logic b) ;
+                print_endline ""
+          ) x
+        )
+        (match s with | Some(f) -> f | None -> [] ) in
+      print_endline "---------";
+      ()
+  ) x ) lba in
+*)
+
+  let l = List.map (fun x ->
+    let removables = List.map (fun n -> 
+      let gl = get_guards n o in
+      gl 
+    ) x in (* node *)
+    removables
+  ) lba in 
+
+(*
+  List.map (fun x -> List.map (fun y -> 
+    let guards = List.filter (fun x -> 
+       List.for_all (fun z -> 
+         match z with 
+         | Proposition (Expr s,_) 
+           when (match x with | Proposition (Expr ss,_) -> ss | _ -> "" ) = s ->      
+           true
+         | _ -> false
+       ) x.node.guards
+
+       ) x.node.guards in
+
+    ) x  ) lba
+*)
+  ()
+
 let make_smt lba filename =
   let cc = ref [] in
   let () = List.iter (fun x -> 
@@ -279,7 +335,9 @@ let make_smt lba filename =
           | _ -> True)
 	 ) (match Hashtbl.find_option o y.node.name with Some x -> x | None -> [("",True)])) ) x; 
     cc := !cc2 :: !cc) lba in
+  
   cc := List.rev !cc;
+
   let () = List.iteri (fun i x ->
     if (((List.length !cc) - 1) <> i) then
       List.iter (fun i1 ->
@@ -288,7 +346,9 @@ let make_smt lba filename =
 	) (List.nth !cc (i+1)) 
       ) x
   ) !cc in
+
   let () = List.iter (fun x -> List.iter (fun x -> remove_loop x) x) lba in
+(*   let () = remove_unreachable lba in *)
 
   let fd = open_out filename in   
   let decl_stuff = 
