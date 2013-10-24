@@ -271,39 +271,26 @@ let print_wcrt lba =
   let wcrt = ("; -- WCRT constraints -- \n"^wcrt) in
   wcrt
 
-let get_updates index g =
+let get_in_sigs index g =
   let updates = Util.get_updates index g in
   let updates = List.sort_unique compare ((List.map 
     (fun x -> (match x with | Update x ->x | _ ->  raise (Internal_error "Cannot happen!!"))))
     (List.filter (fun x -> (match x with | Update _ ->true | _ -> false)) updates)) in
   updates
 
+let eval out_edge insig_list =
+  true
+
 let remove_unreachable lba =
   let o = Hashtbl.create 1000 in
   let () = List.iter (fun x -> List.iter (fun x -> Util.get_outgoings o (x.node,x.guards)) x) lba in
-(*
-  let () = List.iter (fun x -> List.iter (fun x ->
-    let s = Hashtbl.find_option o x.node.name in
-      print_endline ("node : "^x.node.name);
-      let () = List.iter (fun x -> 
-          (function
-            | (a,b) ->
-                print_endline a;
-                SS.output_hum Pervasives.stdout (sexp_of_logic b) ;
-                print_endline ""
-          ) x
-        )
-        (match s with | Some(f) -> f | None -> [] ) in
-      print_endline "---------";
-      ()
-  ) x ) lba in
-*)
-
-  let () = List.iteri (fun index x ->
-    List.iter (fun y ->    
-      let sigins = List.map (fun x -> get_updates index x) y.guards in
-      ()
-  ) x
+  let unreachables_all = List.mapi (fun index x ->
+    List.flatten (List.map (fun y ->    
+      let insigs = List.map (fun x -> get_in_sigs index x) y.guards in
+      let olists = match Hashtbl.find_option o y.node.name with | Some (l) -> l | _ -> [] in
+      let unreachables = List.map (fun outgoing -> List.for_all (fun x -> not(eval outgoing x) ) insigs) olists in
+      unreachables
+  ) x)
   ) lba in 
 
 (*
