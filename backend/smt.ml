@@ -271,27 +271,95 @@ let print_wcrt lba =
   let wcrt = ("; -- WCRT constraints -- \n"^wcrt) in
   wcrt
 
-let get_in_sigs index g =
+let get_update_sigs index g =
   let updates = Util.get_updates index g in
   let updates = List.sort_unique compare ((List.map 
     (fun x -> (match x with | Update x ->x | _ ->  raise (Internal_error "Cannot happen!!"))))
     (List.filter (fun x -> (match x with | Update _ ->true | _ -> false)) updates)) in
   updates
 
-let eval out_edge insig_list =
+let rec eval node updates channels internal_signals signals isignals asignals index outnode = function
+  | And (x,y) -> 
+      let lv = eval node updates channels internal_signals signals isignals asignals index outnode x in
+      let rv = eval node updates channels internal_signals signals isignals asignals index outnode y in
+      (match (lv,rv) with
+      | (false,_) | (_,false) -> false
+      | (true,true) -> true
+      | _ -> true
+      )
+  | Or (x,y) ->
+      let lv = eval node updates channels internal_signals signals isignals asignals index outnode x in
+      let rv = eval node updates channels internal_signals signals isignals asignals index outnode y in
+      (match (lv,rv) with
+      | (true,_) | (_,true) -> true
+      | (false,false) -> false
+      | _ -> true
+      )
+  | Proposition (x,_) -> 
+      (match x with 
+      | Expr x -> 
+          if x.[0] = '$' then 
+            true
+          else(
+            let ii = List.exists (fun y -> x = y ) isignals in
+            let up = List.exists (fun y -> x = y ) updates in
+            print_endline (node.node.name^"-- yes -- to "^outnode);
+            List.iter (fun x -> print_endline ("updates "^x)) updates;
+            List.iter (fun x -> print_endline ("internal_signals "^x)) internal_signals;
+            print_endline x;
+            ii || up
+          );
+      | _ -> true (* Ignoring data atm *)
+      )
+  | Not (Proposition (x,_)) as s->
+      (match x with 
+      | Expr x -> 
+          if x.[0] = '$' then 
+            let () = SS.output_hum Pervasives.stdout (sexp_of_logic s) in
+            raise (Internal_error "^^^^^^^^^^^^ Not emit proposition impossible!")
+          else(
+            let ii = List.exists (fun y -> x = y ) isignals in
+            let up = List.for_all (fun y -> x <> y ) updates in
+            print_endline (node.node.name^"-- no -- to "^outnode);
+            List.iter (fun x -> print_endline ("updates "^x)) updates;
+            List.iter (fun x -> print_endline ("internal_signals "^x)) internal_signals;
+            print_endline ("NOT "^x);
+            ii || up
+          )
+      | _ -> true (* Ignoring data atm *)
+      )
+  | True -> true
+  | False -> false
+  | _ as s -> 
+    let () = SS.output_hum Pervasives.stdout (sexp_of_logic s) in
+    raise (Internal_error ("Got a non known proposition type in smt" ))
+
+(*
+  let to_false = ref signals in
+  let () = List.iter (fun x -> to_false := List.filter (fun y -> y <> x) !to_false) updates in
+  let () = List.iter (fun x -> to_false := List.filter (fun y -> y <> x) !to_false) isignals in
+  let g = Util.label "smt" !to_false internal_signals channels index updates isignals asignals (match outgoing with | (a,b) -> b) in
+  let a = (function (b,c) -> b) outgoing in
+  print_endline (node.node.name^" to "^a^" evaluated to "^g);
+  let () = List.iter (fun x -> print_endline ("tofalse "^x)) !to_false in
+*)
   true
 
-let remove_unreachable lba =
+let remove_unreachable index lb channels internal_signals signals isignals asignals =
   let o = Hashtbl.create 1000 in
-  let () = List.iter (fun x -> List.iter (fun x -> Util.get_outgoings o (x.node,x.guards)) x) lba in
-  let unreachables_all = List.mapi (fun index x ->
+  let () = List.iter (fun x -> Util.get_outgoings o (x.node,x.guards)) lb in
+  let unreachables_all = 
     List.flatten (List.map (fun y ->    
-      let insigs = List.map (fun x -> get_in_sigs index x) y.guards in
+      let updates = List.map (fun x -> get_update_sigs index x) y.guards in
+(*       List.iter (fun x -> List.iter (fun x -> print_endline ("AAAA "^x)) x) updates; *)
       let olists = match Hashtbl.find_option o y.node.name with | Some (l) -> l | _ -> [] in
-      let unreachables = List.map (fun outgoing -> List.for_all (fun x -> not(eval outgoing x) ) insigs) olists in
+      let unreachables = List.map (fun outgoing -> 
+        List.for_all (fun x -> 
+          not(eval y x channels internal_signals signals isignals asignals index ((fun (a,b) -> a ) outgoing) ((fun (a,b) -> b) outgoing) ) 
+          ) updates ) olists in
       unreachables
-  ) x)
-  ) lba in 
+  ) lb )
+  in 
 
 (*
   List.map (fun x -> List.map (fun y -> 
@@ -310,7 +378,7 @@ let remove_unreachable lba =
 *)
   ()
 
-let make_smt lba filename =
+let make_smt lba filename channels internal_signals signals isignals asignals =
   let cc = ref [] in
   let () = List.iter (fun x -> 
     let o = Hashtbl.create 1000 in
@@ -338,7 +406,7 @@ let make_smt lba filename =
   ) !cc in
 
   let () = List.iter (fun x -> List.iter (fun x -> remove_loop x) x) lba in
-  let () = remove_unreachable lba in
+  let ttt = Util.map7 remove_unreachable (List.init (List.length lba) (fun x -> x)) lba channels internal_signals signals isignals asignals in
 
   let fd = open_out filename in   
   let decl_stuff = 

@@ -173,10 +173,10 @@ try
         let fd = open_out !outfile in
         let asignals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_signal_declarations x) in
         let asignals = List.map (fun x -> List.sort_unique compare x) asignals in
-	let signals = List.map (fun x -> List.split x) asignals |> List.split |> (fun (x,_) -> x) in
+        let signals = List.map (fun x -> List.split x) asignals |> List.split |> (fun (x,_) -> x) in
         let isignals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_input_signal_declarations x) in
         let internal_signals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_internal_signal_declarations x) in
-	let channel_strings = List.sort_unique compare (List.flatten (List.map (fun (x,_) -> x) channels)) in
+        let channel_strings = List.sort_unique compare (List.flatten (List.map (fun (x,_) -> x) channels)) in
         let c_model = Util.map8 
           C.make_c
           (List.init (List.length labeled_buchi_automatas) (fun x -> channel_strings)) internal_signals signals isignals
@@ -185,8 +185,8 @@ try
         let c_main = C.make_main (List.length labeled_buchi_automatas) in
         let c_channels = List.fold_left Pretty.append Pretty.empty (List.map (fun x -> Pretty.text ("bool "^x^" = false;\n"))channel_strings) in
         let asignals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_all_signal_declarations x) in
-	let signals_options = List.map (fun x -> List.split x) asignals |> List.split |> (fun (_,y) -> y) in
-	let signals = List.map (fun x -> List.split x) asignals |> List.split |> (fun (x,_) -> x) in
+        let signals_options = List.map (fun x -> List.split x) asignals |> List.split |> (fun (_,y) -> y) in
+        let signals = List.map (fun x -> List.split x) asignals |> List.split |> (fun (x,_) -> x) in
         let c_gsigs = List.fold_left Pretty.append Pretty.empty
           (Util.map2i (fun i y z -> 
 	    List.fold_left Pretty.append Pretty.empty 
@@ -207,8 +207,17 @@ try
         close_out fd in
     let () = 
       if !smt <> "" then
+        let asignals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_signal_declarations x) in
+        let asignals = List.map (fun x -> List.sort_unique compare x) asignals in
+        let signals = List.map (fun x -> List.split x) asignals |> List.split |> (fun (x,_) -> x) in
+        let isignals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_input_signal_declarations x) in
+        let internal_signals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_internal_signal_declarations x) in
+        let channel_strings = List.sort_unique compare (List.flatten (List.map (fun (x,_) -> x) channels)) in
         let () = Smt.parse_option !smtopt in
-        let () = Smt.make_smt labeled_buchi_automatas !smt in () in
+        let () = Smt.make_smt labeled_buchi_automatas !smt 
+        (List.init (List.length labeled_buchi_automatas) (fun x -> channel_strings)) internal_signals signals isignals asignals in 
+        () 
+    in
       let () = List.iter (fun x -> 
       SS.output_hum Pervasives.stdout (SSL.sexp_of_list sexp_of_labeled_graph_node x)) labeled_buchi_automatas in
     let () = Printf.printf "Execution time: %fs\n" (Sys.time() -. mytime) in
