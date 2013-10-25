@@ -123,6 +123,19 @@ try
     print_endline "\n\n\n\n\n\n-----------------------------------------------------\n\n\n\n") labeled_buchi_automatas ELSE () ENDIF in
   (* Remove the unreachable nodes from the generated graph *)
   let labeled_buchi_automatas = List.map (Util.reachability []) labeled_buchi_automatas in
+
+  (* Removing unreachable edges and corresponding nodes before generating any backend codes - HJ *)
+  let labeled_buchi_automatas = (
+    let asignals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_signal_declarations x) in
+    let asignals = List.map (fun x -> List.sort_unique compare x) asignals in
+    let signals = List.map (fun x -> List.split x) asignals |> List.split |> (fun (x,_) -> x) in
+    let isignals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_input_signal_declarations x) in
+    let internal_signals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_internal_signal_declarations x) in
+    let channel_strings = List.sort_unique compare (List.flatten (List.map (fun (x,_) -> x) channels)) in
+    let labeled_buchi_automatas = Util.map7 Util.remove_unreachable (List.init (List.length labeled_buchi_automatas) (fun x -> x)) labeled_buchi_automatas 
+                                      (List.init (List.length labeled_buchi_automatas) (fun x -> channel_strings)) internal_signals signals isignals asignals in
+    labeled_buchi_automatas) in
+
   let () = 
     let asignals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_signal_declarations x) in
     let asignals = List.map (fun x -> List.sort_unique compare x) asignals in
@@ -207,15 +220,8 @@ try
         close_out fd in
     let () = 
       if !smt <> "" then
-        let asignals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_signal_declarations x) in
-        let asignals = List.map (fun x -> List.sort_unique compare x) asignals in
-        let signals = List.map (fun x -> List.split x) asignals |> List.split |> (fun (x,_) -> x) in
-        let isignals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_input_signal_declarations x) in
-        let internal_signals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_internal_signal_declarations x) in
-        let channel_strings = List.sort_unique compare (List.flatten (List.map (fun (x,_) -> x) channels)) in
         let () = Smt.parse_option !smtopt in
-        let () = Smt.make_smt labeled_buchi_automatas !smt 
-        (List.init (List.length labeled_buchi_automatas) (fun x -> channel_strings)) internal_signals signals isignals asignals in 
+        let () = Smt.make_smt labeled_buchi_automatas !smt in 
         () 
     in
       let () = List.iter (fun x -> 
