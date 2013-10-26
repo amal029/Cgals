@@ -1,0 +1,30 @@
+{
+  int input signal A op+ = 0;
+  output channel C;
+  output channel M;
+  loop {
+    await(A);
+    if(?A == 1){
+      C!;||M!;
+    }
+    else C!;
+  }
+}
+><
+{
+  output signal D;
+  input channel C;
+  loop {
+    C?;
+    emit D;
+  }
+}
+><
+{
+  output signal TT;
+  input channel M;
+  loop {
+    M?;
+    emit TT;
+  }
+}

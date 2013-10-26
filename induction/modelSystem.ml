@@ -31,7 +31,7 @@ let replace = function
       (match (Hashtbl.find_option replaced x) with 
       | None -> x 
       | Some y -> y)) n.incoming
-    
+      
 
 let make = function
   | {node=n;tls=llabels} as s  -> 
@@ -128,7 +128,6 @@ let find_subformula_equivalents model = function
 	) nn.incoming t.guards in
 	nn.incoming <- !torep;
 	t.guards <- !gtorep;
-      ) model in
-      ()
-    
-    
+      ) model in ()
+	
+	

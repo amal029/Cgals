@@ -1,4 +1,4 @@
-OCMLOPTS=-a 
+OCMLOPTS=-a
 OCMALDEBUG=-g
 CC=ocamlopt -annot 
 SRC=systemj.ml

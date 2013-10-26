@@ -124,7 +124,7 @@ try
   (* Remove the unreachable nodes from the generated graph *)
   let labeled_buchi_automatas = List.map (Util.reachability []) labeled_buchi_automatas in
   let () = 
-    let asignals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_signal_declarations x) in
+    let asignals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_all_signal_declarations x) in
     let asignals = List.map (fun x -> List.sort_unique compare x) asignals in
     let signals = List.map (fun x -> List.split x) asignals |> List.split |> (fun (x,_) -> x) in
     let signals_options = List.map (fun x -> List.split x) asignals |> List.split |> (fun (_,y) -> y) in
@@ -171,7 +171,7 @@ try
     let () = 
       if MyString.ends_with !outfile ".c" then
         let fd = open_out !outfile in
-        let asignals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_signal_declarations x) in
+        let asignals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_all_signal_declarations x) in
         let asignals = List.map (fun x -> List.sort_unique compare x) asignals in
 	let signals = List.map (fun x -> List.split x) asignals |> List.split |> (fun (x,_) -> x) in
         let isignals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_input_signal_declarations x) in
