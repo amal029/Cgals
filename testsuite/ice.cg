@@ -12,10 +12,11 @@
 }
 ><
 {
-  output signal D;
+  int output signal D op+ = 0;
   input channel C;
   loop {
     C?;
+    if(?D==0) ?D = 1; else ?D = 0;
     emit D;
   }
 }
