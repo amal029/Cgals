@@ -206,7 +206,7 @@ let rec eval node updates channels internal_signals signals isignals asignals in
   | Proposition (x,_) -> 
       (match x with 
       | Expr x -> 
-          if x.[0] = '$' then 
+          if x.[0] = '$' || (L.exists (fun y -> x=y )channels)    then 
             true
           else(
             let ii = L.exists (fun y -> x = y ) isignals in
@@ -285,13 +285,14 @@ let remove_unreachable index lb channels internal_signals signals isignals asign
         print_endline ("outgoins done "^(string_of_bool result));
 
         if result then
-           (fun (a,b) -> Some (a,node.node.name)) outgoing (* (node, incoming) node need to rem incoming and its corrs guards *)
+           (fun (a,b) -> Some (a,node.node.name,b)) outgoing (* (node, incoming) node need to rem incoming and its corrs guards *)
         else
           None
        ) olists in
       L.iter (function
-        | Some (x,y) -> 
-            print_endline ("unreachables : from "^y^ " to "^x) 
+        | Some (x,y,g) -> 
+            print_endline ("unreachables : from "^y^ " to "^x^" with guard");
+            output_hum Pervasives.stdout (sexp_of_logic g)
         | None -> ()
        ) unreachables;
       print_endline "=======================";
@@ -302,9 +303,21 @@ let remove_unreachable index lb channels internal_signals signals isignals asign
   let unreachables_all = L.filter (fun x -> x <> None) unreachables_all in
   (* First removing edges (incomings) *)
   let () = L.iter (fun n -> 
-    L.iter (function Some (remn,remin) ->
+    L.iter (function Some (remn,remin,uguard) ->
       if(n.node.name = remn) then(
-        let ig = L.map2 (fun incoming guard -> if remin <> incoming then Some (incoming,guard) else None ) n.node.incoming n.guards in
+        let ig = L.map2 (fun incoming guard -> 
+          print_endline "two guards";
+          output_hum Pervasives.stdout (sexp_of_logic uguard);
+          print_endline "";
+          output_hum Pervasives.stdout (sexp_of_logic guard);
+          print_endline ("remn "^remn^"remin "^remin^" incoming "^incoming);
+          if uguard <> guard then Some (incoming,guard) else None ) n.node.incoming n.guards in
+
+        print_endline "ig0 : ";
+        print_endline ((string_of_int (L.length ig)));
+        L.iter (function | Some _ ->  print_endline ("SOMSOM"); 
+        | None -> print_endline "FF"
+        ) ig;
         let ig = L.filter (function | Some _ -> true | None -> false ) ig in
         let ig = L.map (function | Some ((_) as a) -> a ) ig in
         let ig = L.split ig in

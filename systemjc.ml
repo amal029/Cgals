@@ -132,9 +132,11 @@ try
     let isignals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_input_signal_declarations x) in
     let internal_signals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_internal_signal_declarations x) in
     let channel_strings = List.sort_unique compare (List.flatten (List.map (fun (x,_) -> x) channels)) in
-    let labeled_buchi_automatas = Util.map7 Util.remove_unreachable (List.init (List.length labeled_buchi_automatas) (fun x -> x)) labeled_buchi_automatas 
-                                      (List.init (List.length labeled_buchi_automatas) (fun x -> channel_strings)) internal_signals signals isignals asignals in
-    labeled_buchi_automatas) in
+    let labeled_buchi_automatas = Util.map7 
+    Util.remove_unreachable (List.init (List.length labeled_buchi_automatas) (fun x -> x)) labeled_buchi_automatas 
+    (List.init (List.length labeled_buchi_automatas) (fun x -> channel_strings)) internal_signals signals isignals asignals in
+    labeled_buchi_automatas
+                                      ) in
 
   let () = 
     let asignals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_signal_declarations x) in
