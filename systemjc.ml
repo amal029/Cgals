@@ -126,7 +126,7 @@ try
 
   (* Removing unreachable edges and corresponding nodes before generating any backend codes - HJ *)
   let labeled_buchi_automatas = (
-    let asignals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_signal_declarations x) in
+    let asignals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_all_signal_declarations x) in
     let asignals = List.map (fun x -> List.sort_unique compare x) asignals in
     let signals = List.map (fun x -> List.split x) asignals |> List.split |> (fun (x,_) -> x) in
     let isignals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_input_signal_declarations x) in
@@ -139,7 +139,7 @@ try
                                       ) in
 
   let () = 
-    let asignals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_signal_declarations x) in
+    let asignals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_all_signal_declarations x) in
     let asignals = List.map (fun x -> List.sort_unique compare x) asignals in
     let signals = List.map (fun x -> List.split x) asignals |> List.split |> (fun (x,_) -> x) in
     let signals_options = List.map (fun x -> List.split x) asignals |> List.split |> (fun (_,y) -> y) in
@@ -186,7 +186,7 @@ try
     let () = 
       if MyString.ends_with !outfile ".c" then
         let fd = open_out !outfile in
-        let asignals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_signal_declarations x) in
+        let asignals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_all_signal_declarations x) in
         let asignals = List.map (fun x -> List.sort_unique compare x) asignals in
         let signals = List.map (fun x -> List.split x) asignals |> List.split |> (fun (x,_) -> x) in
         let isignals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_input_signal_declarations x) in
