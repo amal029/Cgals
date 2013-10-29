@@ -179,8 +179,6 @@ let map2i f l1 l2 =
 
 let get_update_sigs index g =
   let updates = get_updates index g in
-  print_endline "DEEEEEBUG   ";
-  let () =  output_hum Pervasives.stdout (sexp_of_list sexp_of_proposition updates) in
   let updates = L.sort_unique compare ((L.map 
     (fun x -> (match x with | Update x ->x | _ ->  raise (Internal_error "Cannot happen!!"))))
     (L.filter (fun x -> (match x with | Update _ ->true | _ -> false)) updates)) in
@@ -211,11 +209,6 @@ let rec eval node updates channels internal_signals signals isignals asignals in
           else(
             let ii = L.exists (fun y -> x = y ) isignals in
             let up = L.exists (fun y -> x = y ) updates in
-            print_endline (node.node.name^"-- yes -- to "^outnode);
-            L.iter (fun x -> print_endline ("updates "^x)) updates;
-            L.iter (fun x -> print_endline ("internal_signals "^x)) internal_signals;
-            print_endline x;
-            print_endline ("ii||up : "^(string_of_bool (ii||up)));
             ii || up
           );
       | _ -> true (* Ignoring data atm *)
@@ -229,11 +222,6 @@ let rec eval node updates channels internal_signals signals isignals asignals in
           else(
             let ii = L.exists (fun y -> x = y ) isignals in
             let up = L.for_all (fun y -> x <> y ) updates in
-            print_endline (node.node.name^"-- no -- to "^outnode);
-            L.iter (fun x -> print_endline ("updates "^x)) updates;
-            L.iter (fun x -> print_endline ("internal_signals "^x)) internal_signals;
-            print_endline ("NOT "^x);
-            print_endline ("ii||up : "^(string_of_bool (ii||up)));
             ii || up
           )
       | _ -> true (* Ignoring data atm *)
@@ -244,23 +232,46 @@ let rec eval node updates channels internal_signals signals isignals asignals in
     let () = output_hum Pervasives.stdout (sexp_of_logic s) in
     raise (Internal_error ("Got a non known proposition type in smt" ))
 
+let rec remove_dollars = function
+  | Or (True,True) -> True
+  | Or (True,x) -> remove_dollars x
+  | Or (x,True) -> remove_dollars x
+  | Or (x,y) -> 
+      let lval = remove_dollars x in
+      let rval = remove_dollars y in
+      (match (lval,rval) with
+      | (True,True) -> True
+      | (True,y) -> y
+      | (x,True) -> x
+      | (x,y) as t -> Or (x,y))
+  | And (True,True) -> True
+  | And (True,x) -> remove_dollars x
+  | And (x,True) -> remove_dollars x
+  | And (x,y) -> 
+      let lval = remove_dollars x in
+      let rval = remove_dollars y in
+      (match (lval,rval) with
+      | (True,True) -> True
+      | (True,y) -> y
+      | (x,True) -> x
+      | (x,y) as t -> And (x,y))
+  | Proposition (Expr x,_) | Not Proposition (Expr x,_) as s when x.[0] = '$' ->
+(*
+      print_endline ("SSSS "^x);
+      output_hum stdout (sexp_of_proposition (Hashtbl.find (L.nth !update_tuple_tbl_ll 0) s));
+      print_endline ("de "^x);
+*)
+       True
+  | _ as t -> t (* Ignoring data *)    
+
 let remove_unreachable index lb channels internal_signals signals isignals asignals =
   let o = Hashtbl.create 1000 in
   let () = L.iter (fun x -> get_outgoings o (x.node,x.guards)) lb in
   let unreachables_all = 
     L.flatten (L.map (fun node ->    
-      print_endline ("ANALYZING "^node.node.name);
       let updates = L.map (fun x -> get_update_sigs index x) node.guards in
-      print_endline "update all --==== ";
-      let () = L.iter (fun x -> 
-          output_hum Pervasives.stdout (sexp_of_list sexp_of_string x)) updates  in
-      print_endline "\nupdate ends ----";
-(*       List.iter (fun x -> List.iter (fun x -> print_endline ("AAAA "^x)) x) updates; *)
       let olists = match Hashtbl.find_option o node.node.name with | Some (l) -> l | _ -> [] in
       let unreachables = L.map (fun outgoing -> 
-        print_endline "outgoins :";
-        let () = output_hum Pervasives.stdout (sexp_of_logic ((fun (a,b) -> b) outgoing) ) in
-        print_endline ("\nupdate size :"^(string_of_int (L.length updates)));
 
         let result = 
           (match node.tlabels with
@@ -269,20 +280,14 @@ let remove_unreachable index lb channels internal_signals signals isignals asign
           | _ ->
             L.for_all2 (fun update incoming -> 
               if (incoming <> node.node.name) then(
-                print_endline "\nupdate";
-                let () = output_hum Pervasives.stdout (sexp_of_list sexp_of_string update)  in
-                print_endline "";
                 not(eval node update channels internal_signals signals isignals asignals index 
                     ((fun (a,b) -> a ) outgoing) ((fun (a,b) -> b) outgoing) ) 
               )
               else(
-                print_endline "returning here true";
                 true
               )
             ) updates node.node.incoming (* assuming order of updates, incoming and guards are the same *)
           ) in
-
-        print_endline ("outgoins done "^(string_of_bool result));
 
         if result then
            (fun (a,b) -> Some (a,node.node.name,b)) outgoing (* (node, incoming) node need to rem incoming and its corrs guards *)
@@ -291,11 +296,11 @@ let remove_unreachable index lb channels internal_signals signals isignals asign
        ) olists in
       L.iter (function
         | Some (x,y,g) -> 
-            print_endline ("unreachables : from "^y^ " to "^x^" with guard");
-            output_hum Pervasives.stdout (sexp_of_logic g)
+            print_endline ("\nunreachables : from "^y^ " to "^x^" with guard");
+            output_hum Pervasives.stdout (sexp_of_logic g);
+            print_endline ""
         | None -> ()
        ) unreachables;
-      print_endline "=======================";
       unreachables
   ) lb )
   in 
@@ -306,18 +311,23 @@ let remove_unreachable index lb channels internal_signals signals isignals asign
     L.iter (function Some (remn,remin,uguard) ->
       if(n.node.name = remn) then(
         let ig = L.map2 (fun incoming guard -> 
-          print_endline "two guards";
-          output_hum Pervasives.stdout (sexp_of_logic uguard);
-          print_endline "";
-          output_hum Pervasives.stdout (sexp_of_logic guard);
-          print_endline ("remn "^remn^"remin "^remin^" incoming "^incoming);
-          if uguard <> guard then Some (incoming,guard) else None ) n.node.incoming n.guards in
-
-        print_endline "ig0 : ";
-        print_endline ((string_of_int (L.length ig)));
-        L.iter (function | Some _ ->  print_endline ("SOMSOM"); 
-        | None -> print_endline "FF"
-        ) ig;
+          print_endline (string_of_bool ((remove_dollars uguard) <> (remove_dollars guard)));
+          print_endline (string_of_bool (incoming <> remin));
+          if not ((incoming = remin) && ((remove_dollars uguard) = (remove_dollars guard))) then 
+            Some (incoming,guard) 
+          else( 
+            if (n.node.name = "N86") then(
+              print_endline ("remn : "^remn^" remin "^remin^" incoming : "^incoming);
+              print_endline "N86 removed guard";
+              output_hum Pervasives.stdout (sexp_of_logic (remove_dollars uguard));
+              print_endline "";
+              output_hum Pervasives.stdout (sexp_of_logic (remove_dollars guard));
+              print_endline ""
+            );
+            None 
+          )
+         
+         ) n.node.incoming n.guards in
         let ig = L.filter (function | Some _ -> true | None -> false ) ig in
         let ig = L.map (function | Some ((_) as a) -> a ) ig in
         let ig = L.split ig in
@@ -336,8 +346,6 @@ let remove_unreachable index lb channels internal_signals signals isignals asign
       if L.for_all (fun x -> x.node.name <> node.node.name ) !newlb then
           if L.exists (fun x -> L.exists (fun y-> x = y.node.name ) !newlb  ) node.node.incoming then(
             newlb := node :: !newlb;
-            print_int (L.length !newlb);
-            print_endline "";
             true
           )
           else

@@ -1,65 +1,42 @@
 {
-  /* Camera controller */
-  signal objectfound;
-  output channel C1;
-  output channel O;		/*Channel used to communicate between the observers*/
-  output channel C2;
-  {
-    loop {
-      abort(objectfound)
-	loop
-	SEARCH: pause;
-      C1!;
-      C2!;
-    }
-  }||{
-    /* observer */
-    loop {
-      abort(objectfound)
-	loop
-	P1: pause;
-      O!;
-    }
-  }||{
-    pause;
-    pause;
-    emit objectfound;
-    pause;
-  }
+	/* Camera controller */
+	signal objectfound;
+	output channel C1;
+	output channel O;		/*Channel used to communicate between the observers*/
+	output channel C2;
+	{
+/*    loop {*/
+			abort(objectfound)
+				loop
+				SEARCH: pause;
+			C1!;
+			C2!;
+/*    }*/
+	}||{
+		pause;
+		pause;
+		emit objectfound;
+		pause;
+	}
+	pause;
 }
 ><
 {
-  /* Motion controller */
-  input channel C1;
-  input channel C2;
-  input channel O;
-  output signal objectpicked;
-  output signal VIOLATED;
-  signal SC1;
-  signal SC2;
-  {
-    loop {
-      C1?; emit SC1;
-      C2?; emit SC2;
-    PICKOBJECT: pause;
-      emit objectpicked;
-    }
-  }||{
-    /* observer */
-    loop {
-      O?;
-      abort(SC2){
-      	loop
-      	  pause;
-      }
-      abort(objectpicked){
-  	abort(SC1){
-  	  loop{
-  	    pause;
-  	  }
-	  emit VIOLATED;
-  	}
-      }
-    }
-  }
+	/* Motion controller */
+	input channel C1;
+	input channel C2;
+	input channel O;
+	output signal objectpicked;
+	output signal VIOLATED;
+	signal SC1;
+	signal SC2;
+	{
+/*    loop {*/
+			C1?; emit SC1;
+			C2?; emit SC2;
+PICKOBJECT: pause;
+						emit objectpicked;
+		}
+	pause;
+/*  }*/
 }
