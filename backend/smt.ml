@@ -106,20 +106,23 @@ let print_sequentiality lba =
   !ss
 
 let print_constraint lba =
-  let ss = List.reduce (^) 
+  let ss = 
     (List.mapi (fun r q ->
-      if(((List.length lba) - 1) <> r) then
-        List.reduce (^) (List.map (fun x ->
-          List.reduce (^) (List.map (fun y ->
-            let wctt1 = (match Hashtbl.find_option !wctt_opt r with | Some (t) -> t | None -> "1") in
-            let wctt2 = (match Hashtbl.find_option !wctt_opt (r+1) with | Some (t) -> t | None -> "1") in
-            ("(assert (or (>= CD"^(string_of_int r)^"_"^x.node.name^" (+ CD"^(string_of_int (r+1))^"_"^y.node.name^" "^wctt2^")) "^
-                "(>= CD"^(string_of_int (r+1))^"_"^y.node.name^" (+ CD"^(string_of_int r)^"_"^x.node.name^" "^wctt1^"))))\n")
-          ) (List.nth lba (r+1)))
-        ) q)
-      else
-        ""
-     )lba) 
+      List.mapi (fun rr tt -> 
+        if( r < rr ) then(
+          List.reduce (^) (List.map (fun x ->
+            List.reduce (^) (List.map (fun y ->
+              let wctt1 = (match Hashtbl.find_option !wctt_opt r with | Some (t) -> t | None -> "1") in
+              let wctt2 = (match Hashtbl.find_option !wctt_opt (r+1) with | Some (t) -> t | None -> "1") in
+              ("(assert (or (>= CD"^(string_of_int r)^"_"^x.node.name^" (+ CD"^(string_of_int rr)^"_"^y.node.name^" "^wctt2^")) "^
+                  "(>= CD"^(string_of_int rr)^"_"^y.node.name^" (+ CD"^(string_of_int r)^"_"^x.node.name^" "^wctt1^"))))\n")
+            ) tt)
+          ) q)
+        )
+        else
+          ""
+    ) lba;
+      )lba) >> List.flatten >> List.reduce (^) 
   in
   ss       
 
