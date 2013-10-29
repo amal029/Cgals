@@ -32,8 +32,8 @@ Install dependencies:
 * parmap: https://github.com/rdicosmo/parmap
 * SPIN model-checker: http://spinroot.com/
 * CVC3 (http://www.cs.nyu.edu/acsys/cvc3/) /Z3 (http://z3.codeplex.com/)
-  if you want to perform real-time analysis. The output-files in the
-  stable branch are produced in the smt-lib (http://www.smtlib.org/)
+  if you want to perform real-time analysis. The output-files 
+  are produced in the smt-lib (http://www.smtlib.org/)
   format
 
 make clean && make in the source directory.
