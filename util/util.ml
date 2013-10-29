@@ -294,6 +294,7 @@ let remove_unreachable index lb channels internal_signals signals isignals asign
         else
           None
        ) olists in
+(*
       L.iter (function
         | Some (x,y,g) -> 
             print_endline ("\nunreachables : from "^y^ " to "^x^" with guard");
@@ -301,6 +302,7 @@ let remove_unreachable index lb channels internal_signals signals isignals asign
             print_endline ""
         | None -> ()
        ) unreachables;
+*)
       unreachables
   ) lb )
   in 
@@ -311,22 +313,10 @@ let remove_unreachable index lb channels internal_signals signals isignals asign
     L.iter (function Some (remn,remin,uguard) ->
       if(n.node.name = remn) then(
         let ig = L.map2 (fun incoming guard -> 
-          print_endline (string_of_bool ((remove_dollars uguard) <> (remove_dollars guard)));
-          print_endline (string_of_bool (incoming <> remin));
           if not ((incoming = remin) && ((remove_dollars uguard) = (remove_dollars guard))) then 
             Some (incoming,guard) 
-          else( 
-            if (n.node.name = "N86") then(
-              print_endline ("remn : "^remn^" remin "^remin^" incoming : "^incoming);
-              print_endline "N86 removed guard";
-              output_hum Pervasives.stdout (sexp_of_logic (remove_dollars uguard));
-              print_endline "";
-              output_hum Pervasives.stdout (sexp_of_logic (remove_dollars guard));
-              print_endline ""
-            );
+          else 
             None 
-          )
-         
          ) n.node.incoming n.guards in
         let ig = L.filter (function | Some _ -> true | None -> false ) ig in
         let ig = L.map (function | Some ((_) as a) -> a ) ig in
