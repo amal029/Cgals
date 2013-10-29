@@ -128,25 +128,14 @@ let print_constraint lba =
 
 let rec get_chan_prop logic node cc =
   match logic with
-  | Or (t,l) -> get_chan_prop t node cc; get_chan_prop l node cc
-  | Not (Proposition (Expr (t),p)) as s ->
+  | Not (Proposition (Label (t),p)) as s -> ()
+  | Proposition (Label (t),p) as s ->
     (match p with
     | [Some (Systemj.ChanPause ((Systemj.Ack|Systemj.Req), _,_))] ->
       cc := (node,s) :: !cc;
     | [None] -> ()
     | _ -> ())
-  | Not (t) -> get_chan_prop t node cc
-  | And (t,l) -> get_chan_prop  t node cc; get_chan_prop l node cc
-  | Brackets (t) -> get_chan_prop  t node cc
-  | NextTime (t) -> get_chan_prop  t node cc
-  | Proposition (Expr (t),p) as s ->
-    (match p with
-    | [Some (Systemj.ChanPause ((Systemj.Ack|Systemj.Req), _,_))] ->
-      cc := (node,s) :: !cc;
-    | [None] -> ()
-    | _ -> ())
-  | True | False -> ()
-  | Proposition _ -> ()
+  | _ -> ()
 
 let remove_loop n = 
   if List.exists (fun x -> 
@@ -193,10 +182,8 @@ let remove_loop n =
 let getnames = function
   | (s,ss) ->
     match ss with 
-    | Proposition (Expr (t),[Some (Systemj.ChanPause _ as p )]) ->
-      ((match String.split t "_" with | (j,k) -> j), s, p)
-    | Not (Proposition (Expr (t),[Some(Systemj.ChanPause _ as p )])) ->
-      ((match String.split t "_" with | (j,k) -> j), s, p)
+    | Proposition (Label _,[Some (Systemj.ChanPause (a,b,c) as p )]) ->
+      ((match String.split c "_" with | (j,k) -> j), s, p)
     | _ as t -> raise(Internal_error ("Unexpected channel proposition : "^(SS.to_string_hum (sexp_of_logic t))))
 
 let insert_incoming i1 cdn1 i2 cdn2 =
@@ -282,13 +269,7 @@ let make_smt lba filename =
     let () = List.iter (fun x -> Util.get_outgoings o (x.node,x.guards)) x in
     let cc2 = ref [] in 
     List.iter (fun y ->  
-      List.iter (fun k -> get_chan_prop k y cc2 ) 
-      (List.map (fun x -> 
-        (match x with
-        | (name,logic) when name <> y.node.name ->
-            logic
-        | _ -> True)
-        ) (match Hashtbl.find_option o y.node.name with Some x -> x | None -> [("",True)])) ) x; 
+      List.iter (fun k -> get_chan_prop k y cc2 ) y.tls ) x;
     cc := !cc2 :: !cc) lba in
   
   cc := List.rev !cc;

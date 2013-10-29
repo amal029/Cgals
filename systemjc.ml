@@ -226,6 +226,11 @@ try
         let () = Smt.make_smt labeled_buchi_automatas !smt in 
         () 
     in
+(*
+    let () = List.iter (fun x -> 
+      let () = SS.output_hum Pervasives.stdout (SSL.sexp_of_list TableauBuchiAutomataGeneration.sexp_of_labeled_graph_node x) in
+      print_endline "\n\n\n\n\n\n-----------------------------------------------------\n\n\n\n") labeled_buchi_automatas in
+*)
     let () = Printf.printf "Execution time: %fs\n" (Sys.time() -. mytime) in
     () in ()
 with
