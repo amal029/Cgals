@@ -155,6 +155,13 @@ let reachability nff lgn =
   L.sort_unique compare !ret
 
 
+let rec map7 f a b c d e g i = 
+  match (a,b,c,d,e,g,i) with
+  | ((h1::t1),(h2::t2),(h3::t3),(h4::t4),(h5::t5),(h6::t6),(h7::t7)) -> 
+    (f h1 h2 h3 h4 h5 h6 h7) :: map7 f t1 t2 t3 t4 t5 t6 t7 
+  | ([],[],[],[],[],[],[]) -> []
+  | _ -> failwith "Lists not of equal length"
+
 let rec map8 f a b c d e g i j = 
   match (a,b,c,d,e,g,i,j) with
   | ((h1::t1),(h2::t2),(h3::t3),(h4::t4),(h5::t5),(h6::t6),(h7::t7),(h8::t8)) -> 
@@ -169,3 +176,172 @@ let map2i f l1 l2 =
     | ([],[]) -> []
     | _ -> failwith "Lists not of equal length"  in
   ff f 0 (l1,l2)
+
+let get_update_sigs index g =
+  let updates = get_updates index g in
+  let updates = L.sort_unique compare ((L.map 
+    (fun x -> (match x with | Update x ->x | _ ->  raise (Internal_error "Cannot happen!!"))))
+    (L.filter (fun x -> (match x with | Update _ ->true | _ -> false)) updates)) in
+  updates
+
+let rec eval node updates channels internal_signals signals isignals asignals index outnode = function
+  | And (x,y) -> 
+      let lv = eval node updates channels internal_signals signals isignals asignals index outnode x in
+      let rv = eval node updates channels internal_signals signals isignals asignals index outnode y in
+      (match (lv,rv) with
+      | (false,_) | (_,false) -> false
+      | (true,true) -> true
+      | _ -> true
+      )
+  | Or (x,y) ->
+      let lv = eval node updates channels internal_signals signals isignals asignals index outnode x in
+      let rv = eval node updates channels internal_signals signals isignals asignals index outnode y in
+      (match (lv,rv) with
+      | (true,_) | (_,true) -> true
+      | (false,false) -> false
+      | _ -> true
+      )
+  | Proposition (x,_) -> 
+      (match x with 
+      | Expr x -> 
+          if x.[0] = '$' || (L.exists (fun y -> x=y )channels)    then 
+            true
+          else(
+            let ii = L.exists (fun y -> x = y ) isignals in
+            let up = L.exists (fun y -> x = y ) updates in
+            ii || up
+          );
+      | _ -> true (* Ignoring data atm *)
+      )
+  | Not (Proposition (x,_)) as s->
+      (match x with 
+      | Expr x -> 
+          if x.[0] = '$' then 
+            let () = output_hum Pervasives.stdout (sexp_of_logic s) in
+            raise (Internal_error "^^^^^^^^^^^^ Not emit proposition impossible!")
+          else(
+            let ii = L.exists (fun y -> x = y ) isignals in
+            let up = L.for_all (fun y -> x <> y ) updates in
+            ii || up
+          )
+      | _ -> true (* Ignoring data atm *)
+      )
+  | True -> true
+  | False -> false
+  | _ as s -> 
+    let () = output_hum Pervasives.stdout (sexp_of_logic s) in
+    raise (Internal_error ("Got a non known proposition type in smt" ))
+
+let rec remove_dollars = function
+  | Or (True,True) -> True
+  | Or (True,x) -> remove_dollars x
+  | Or (x,True) -> remove_dollars x
+  | Or (x,y) -> 
+      let lval = remove_dollars x in
+      let rval = remove_dollars y in
+      (match (lval,rval) with
+      | (True,True) -> True
+      | (True,y) -> y
+      | (x,True) -> x
+      | (x,y) as t -> Or (x,y))
+  | And (True,True) -> True
+  | And (True,x) -> remove_dollars x
+  | And (x,True) -> remove_dollars x
+  | And (x,y) -> 
+      let lval = remove_dollars x in
+      let rval = remove_dollars y in
+      (match (lval,rval) with
+      | (True,True) -> True
+      | (True,y) -> y
+      | (x,True) -> x
+      | (x,y) as t -> And (x,y))
+  | Proposition (Expr x,_) | Not Proposition (Expr x,_) as s when x.[0] = '$' ->
+(*
+      print_endline ("SSSS "^x);
+      output_hum stdout (sexp_of_proposition (Hashtbl.find (L.nth !update_tuple_tbl_ll 0) s));
+      print_endline ("de "^x);
+*)
+       True
+  | _ as t -> t (* Ignoring data *)    
+
+let remove_unreachable index lb channels internal_signals signals isignals asignals =
+  let o = Hashtbl.create 1000 in
+  let () = L.iter (fun x -> get_outgoings o (x.node,x.guards)) lb in
+  let unreachables_all = 
+    L.flatten (L.map (fun node ->    
+      let updates = L.map (fun x -> get_update_sigs index x) node.guards in
+      let olists = match Hashtbl.find_option o node.node.name with | Some (l) -> l | _ -> [] in
+      let unreachables = L.map (fun outgoing -> 
+
+        let result = 
+          (match node.tlabels with
+          | Proposition (Label "st",_) ->
+              false
+          | _ ->
+            L.for_all2 (fun update incoming -> 
+              if (incoming <> node.node.name) then(
+                not(eval node update channels internal_signals signals isignals asignals index 
+                    ((fun (a,b) -> a ) outgoing) ((fun (a,b) -> b) outgoing) ) 
+              )
+              else(
+                true
+              )
+            ) updates node.node.incoming (* assuming order of updates, incoming and guards are the same *)
+          ) in
+
+        if result then
+           (fun (a,b) -> Some (a,node.node.name,b)) outgoing (* (node, incoming) node need to rem incoming and its corrs guards *)
+        else
+          None
+       ) olists in
+(*
+      L.iter (function
+        | Some (x,y,g) -> 
+            print_endline ("\nunreachables : from "^y^ " to "^x^" with guard");
+            output_hum Pervasives.stdout (sexp_of_logic g);
+            print_endline ""
+        | None -> ()
+       ) unreachables;
+*)
+      unreachables
+  ) lb )
+  in 
+
+  let unreachables_all = L.filter (fun x -> x <> None) unreachables_all in
+  (* First removing edges (incomings) *)
+  let () = L.iter (fun n -> 
+    L.iter (function Some (remn,remin,uguard) ->
+      if(n.node.name = remn) then(
+        let ig = L.map2 (fun incoming guard -> 
+          if not ((incoming = remin) && ((remove_dollars uguard) = (remove_dollars guard))) then 
+            Some (incoming,guard) 
+          else 
+            None 
+         ) n.node.incoming n.guards in
+        let ig = L.filter (function | Some _ -> true | None -> false ) ig in
+        let ig = L.map (function | Some ((_) as a) -> a ) ig in
+        let ig = L.split ig in
+        let () = (fun (i,g) -> n.node.incoming <- i; n.guards <- g) ig in
+        ()
+      )
+    ) unreachables_all
+  ) lb in
+  (* Second traverse the graph and remove unreachable nodes *)
+  let newlb = ref [] in
+  let st = L.filter (fun x -> match x.tlabels with | Proposition (Label "st",_) -> true | _ -> false ) lb in
+  newlb := (L.hd st) :: !newlb;
+  let r = ref true in
+  while !r do
+    r := L.fold_left (||) false (L.map (fun node ->
+      if L.for_all (fun x -> x.node.name <> node.node.name ) !newlb then
+          if L.exists (fun x -> L.exists (fun y-> x = y.node.name ) !newlb  ) node.node.incoming then(
+            newlb := node :: !newlb;
+            true
+          )
+          else
+            false
+      else
+        false
+        ) lb) 
+  done;
+  !newlb

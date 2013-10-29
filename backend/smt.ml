@@ -175,8 +175,15 @@ let remove_loop n =
     | Proposition (_, [Some (ChanPause (Req,Start,c))]) -> true
     | _ -> false)
   ) n.tls then
-    let tt = List.filter (fun x -> x <> n.node.name) n.node.incoming in
-    n.node.incoming <- tt
+(*     let tt = List.filter (fun x -> x <> n.node.name) n.node.incoming in *)
+    let a = ref [] in
+    let b = ref [] in
+    (try
+      List.iter2 (fun x y ->  if x <> n.node.name then( a := x :: !a; b := y :: !b ) ) n.node.incoming n.guards
+    with
+    | _ as s -> raise s);
+    n.node.incoming <- !a;
+    n.guards <- !b
   else
     ()
 
@@ -264,6 +271,7 @@ let print_wcrt lba =
   let wcrt = ("; -- WCRT constraints -- \n"^wcrt) in
   wcrt
 
+
 let make_smt lba filename =
   let cc = ref [] in
   let () = List.iter (fun x -> 
@@ -272,22 +280,28 @@ let make_smt lba filename =
     let cc2 = ref [] in 
     List.iter (fun y ->  
       List.iter (fun k -> get_chan_prop k y cc2 ) 
-	(List.map (fun x -> 
-	  (match x with
-          | (name,logic) when name <> y.node.name ->
+      (List.map (fun x -> 
+        (match x with
+        | (name,logic) when name <> y.node.name ->
             logic
-          | _ -> True)
-	 ) (match Hashtbl.find_option o y.node.name with Some x -> x | None -> [("",True)])) ) x; 
+        | _ -> True)
+        ) (match Hashtbl.find_option o y.node.name with Some x -> x | None -> [("",True)])) ) x; 
     cc := !cc2 :: !cc) lba in
+  
   cc := List.rev !cc;
+
   let () = List.iteri (fun i x ->
-    if (((List.length !cc) - 1) <> i) then
-      List.iter (fun i1 ->
-        List.iter (fun i2 ->
-          insert_incoming i1 i i2 (i+1)
-	) (List.nth !cc (i+1)) 
-      ) x
+    List.iteri (fun y z ->
+      if(i <> y) then(
+        List.iter (fun i1 ->
+            List.iter (fun i2 ->
+              insert_incoming i1 i i2 y
+            ) z
+          ) x
+      )
+    ) !cc
   ) !cc in
+
   let () = List.iter (fun x -> List.iter (fun x -> remove_loop x) x) lba in
 
   let fd = open_out filename in   
