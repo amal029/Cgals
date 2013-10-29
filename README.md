@@ -22,8 +22,6 @@ planned.
 
 # INSTALL:
 
-Please pull the stable branch!
-
 Install dependencies:
 
 * Ocaml (>= 3.12.0) http://ocaml.org/
