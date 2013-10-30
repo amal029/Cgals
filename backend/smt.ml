@@ -16,7 +16,8 @@ let wcrt_opt = ref (Hashtbl.create 10)
 exception Internal_error of string
 
 let print_states lba = let ss = List.reduce (^) (List.mapi (fun y f ->  
-  (List.reduce (^) (List.map (fun k -> "(declare-fun CD"^(string_of_int y)^"_"^k.node.name^" () Int)\n") f) )) lba) in ss 
+  (List.reduce (^) (List.map (fun k -> "(declare-fun CD"^(string_of_int
+  y)^"_"^k.node.name^" () Real)\n") f) )) lba) in ss 
 
 let string_of_direction = function
   | Ack -> "Ack"
@@ -96,7 +97,7 @@ let print_sequentiality lba =
   ors := List.unique !ors;
   ss := (
     (match List.is_empty !adecl with 
-    | false -> (List.reduce (^) (List.map (fun x -> ("(declare-fun "^x^" () Int)\n")) (!adecl)))
+    | false -> (List.reduce (^) (List.map (fun x -> ("(declare-fun "^x^" () Real)\n")) (!adecl)))
     | true -> "")
     ^ !ss ^ 
       (match List.is_empty !ors with
@@ -291,7 +292,7 @@ let make_smt lba filename =
   let fd = open_out filename in   
   let decl_stuff = 
     ("(set-option :produce-proofs true)\n" >> text) ++
-      ("(set-logic QF_IDL)\n" >> text) ++
+      ("(set-logic QF_RDL)\n" >> text) ++
       ((print_states lba) >> text) ++
       ((print_sequentiality lba) >> text) ++
       ((print_constraint lba) >> text) ++
