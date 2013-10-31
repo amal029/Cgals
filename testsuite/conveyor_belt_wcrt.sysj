@@ -1,0 +1,47 @@
+{
+	output channel C;
+	output signal sent;
+	output signal VIOLATED;
+	signal last;
+	signal S1;
+	{
+/*    loop {*/
+			abort(last)
+				loop {
+					emit S1;
+					S1: pause;
+				}
+			C!;
+			emit sent;
+/*    }*/
+	}||{
+		/* Env */
+		pause;
+		emit last;
+		pause;
+		pause;
+	}
+	pause;
+}
+><
+{
+	input channel C;
+	signal MOVE;
+	output signal mv_belt;
+	output signal VIOLATED;
+	signal out;
+	{
+		pause;
+/*    loop {*/
+			C?;
+			emit mv_belt;
+			emit out;
+			abort(out)
+				loop {
+					emit MOVE;
+					MOVE: pause;
+				}
+/*    }*/
+	}
+	pause;
+}
