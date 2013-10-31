@@ -292,7 +292,7 @@ let make_smt lba filename =
   let fd = open_out filename in   
   let decl_stuff = 
     ("(set-option :produce-proofs true)\n" >> text) ++
-      ("(set-logic QF_RDL)\n" >> text) ++
+      ("(set-logic QF_LRA)\n" >> text) ++
       ((print_states lba) >> text) ++
       ((print_sequentiality lba) >> text) ++
       ((print_constraint lba) >> text) ++
