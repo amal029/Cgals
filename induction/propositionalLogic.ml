@@ -220,7 +220,7 @@ let rec inst = function
   | Systemj.Noop -> True
   (* Special change, adding data to the system!! *)
   | Systemj.Emit (s,Some uniq,_) -> 
-          let key = Proposition (Expr ("$" ^ uniq),[None]) in
+    let key = Proposition (Expr ("$" ^ uniq),[None]) in
     let () = Hashtbl.add update_tuple_tbl key (Update (match s with | Systemj.Symbol (s,_) -> s)) in
     let exprr = (Proposition (Expr (match s with Systemj.Symbol (s,_)->s),[None])) in
     let () = Hashtbl.add update_tuple_proposition key exprr in
@@ -331,7 +331,7 @@ let rec stutters = function
   | Systemj.Noop | Systemj.Emit _ | Systemj.Signal _ 
   | Systemj.Channel _ | Systemj.Exit _ | Systemj.Data _ -> True
   | Systemj.Pause (Some x,_,p) -> Or(And(Proposition (Label x,[p]), NextTime (Proposition (Label x,[p]))), 
-                                   And(Not (Proposition (Label x,[p])), NextTime (Not(Proposition (Label x,[p])))))
+                                     And(Not (Proposition (Label x,[p])), NextTime (Not(Proposition (Label x,[p])))))
   | Systemj.Block (x,_)  
   | Systemj.Spar (x,_) -> 
     if x = [] then True
@@ -399,8 +399,8 @@ let build_ltl stmt =
   (* let () = IFDEF PDEBUG THEN output_hum stdout (sexp_of_logic ( solve_logic (push_not fdis))); print_endline "<-- FOURTH" ELSE () ENDIF in *)
 
   Or(Or(Or(And(Proposition (Label "st",[None]),And(inst stmt,NextTime(Not((collect_labels stmt))))),
-          And(Proposition (Label "st",[None]),enter stmt)),
-      And(Not(Proposition (Label "st",[None])),NextTime(Not( (collect_labels stmt))))),
+           And(Proposition (Label "st",[None]),enter stmt)),
+	And(Not(Proposition (Label "st",[None])),NextTime(Not( (collect_labels stmt))))),
      move stmt)
 
 

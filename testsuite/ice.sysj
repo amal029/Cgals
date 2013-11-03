@@ -2,35 +2,35 @@
   int signal A op+ = 0;
   output channel C;
   output channel M;
-/*  loop {*/
-	{
-    await(A);
+  /*  loop {*/
+  {
+  L:await(A);
     if(?A == 1){
       C!;||M!;
     }
     else C!;
-/*  }*/
-		pause;
-}||{emit A;pause;pause;pause;}
+    /*  }*/
+    pause;
+  }||{emit A;pause;pause;pause;}
 }
 ><
 {
   int output signal D op+ = 0;
   input channel C;
-/*  loop {*/
-    C?;
-    if(?D==0) ?D = 1; else ?D = 0;
-    emit D;
-/*  }*/
-		pause;
+  /*  loop {*/
+  C?;
+  if(?D==0) ?D = 1; else ?D = 0;
+  emit D;
+  /*  }*/
+  pause;
 }
 ><
 {
   output signal TT;
   input channel M;
-/*  loop {*/
-    M?;
-    emit TT;
-/*  }*/
-		pause;
+  /*  loop {*/
+  M?;
+  emit TT;
+  /*  }*/
+  pause;
 }
