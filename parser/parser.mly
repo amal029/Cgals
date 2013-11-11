@@ -230,6 +230,8 @@ simpleDataExpr:
     | TOP dataTypes TCP simpleDataExpr {Systemj.Cast ($2,$4,ln())}
     | TMinus simpleDataExpr %prec TUminus {Systemj.Opposite($2,ln())}
     | const {$1}
+    | TExtern symbol TOP simpleDataExpr TCP {Systemj.Call ($2,[$4],ln())}
+    | TExtern symbol TOP TCP {Systemj.Call ($2,[],ln())}
 ;
 
 const:

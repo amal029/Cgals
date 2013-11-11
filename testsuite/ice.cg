@@ -8,6 +8,7 @@
       C!;||M!;
     }
     else C!;
+    int i = extern T ();
   }
 }
 ><

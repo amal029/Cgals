@@ -57,10 +57,11 @@ type simpleDataExpr =
 | DataBrackets of simpleDataExpr * (line * column)
 | Cast of datatype * simpleDataExpr  * (line * column)
 | Opposite of simpleDataExpr * (line * column)
+| Call of symbol * simpleDataExpr list * (line * column)
 and colonDataExpr = 
 (* start:end:stride *)
 | ColonExpr of simpleDataExpr * simpleDataExpr * simpleDataExpr * (line * column)
-with sexp
+  with sexp
 
 type typedSymbol =
 | SimTypedSymbol of datatype * symbol * (line * column) (* Type Symbol *)
@@ -300,8 +301,8 @@ let get_allsym index asignals = function
       let (x1,_) = List.findi (fun i y -> x = y) signals in
       let ttt = 
 	if !backend = "promela" then
-	"now.CD"^(string_of_int index)^"_"^x^"_val"
-      else
+	  "now.CD"^(string_of_int index)^"_"^x^"_val"
+	else
 	  "CD"^(string_of_int index)^"_"^x^"_val" in
       ttt ^ (((List.at ops x1) 
 		 |> (fun x ->
