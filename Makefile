@@ -22,6 +22,7 @@ compile:
 	-thread -I ./language -I ./error -I ./parser -I	\
 	./induction -I ./util -I ./backend $(ERRORLIB) $(LANGUAGELIB)	\
 	$(PARSERLIB) $(LOGICLIB) $(UTILLIB) $(CODEGENLIB) systemjc.ml
+	ctags -R .
 
 clean:
 	$(MAKE) -e -C language/ clean
