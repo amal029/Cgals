@@ -25,7 +25,7 @@ try
     ("-promela", Arg.Set_string promela, " The name of the promela output file");
     ("-smt2", Arg.Set_string smt, " The name of the SMT-LIB output file");
     ("-sopt", Arg.Set_string smtopt, " The name of the option file for SMT-LIB output generation (optional)");
-    ("-o", Arg.Set_string outfile, " The name of the [llvm/C/Java] output file (Only C backend implemented)")] 
+    ("-o", Arg.Set_string outfile, " The name of the [llvm/C/Java] output file (Only C and Java backend implemented)")] 
     (fun x -> file_name := x) usage_msg in
 
   (* Initialize the error reporting structures *)
@@ -154,35 +154,35 @@ try
     let (promela_model,labeled_buchi_automatas) = List.split prom_make in
     let () = 
       if !promela <> "" then
-	try
+        try
           let fd = open_out !promela in
-	  let promela_vardecs = List.fold_left Pretty.append Pretty.empty
-	    (List.map (fun x -> 
-	      let (ttype,name) = (match x with | Systemj.SimTypedSymbol (t,Systemj.Symbol(y,_),_) -> t,y) in
-	      ("c_code {" ^ (Systemj.get_data_type ttype) ^ " " ^ name ^ ";}\n" ^ 
-		  "c_track \"&" ^ name ^ "\" " ^ "\"sizeof(" ^(Systemj.get_data_type ttype)^")\"\n") |> Pretty.text) var_decs) in
-	  let promela_channels = List.fold_left Pretty.append Pretty.empty 
-	    (List.map (fun x -> Pretty.text ("bool "^x^";\n"))channel_strings) in
+          let promela_vardecs = List.fold_left Pretty.append Pretty.empty
+          (List.map (fun x -> 
+            let (ttype,name) = (match x with | Systemj.SimTypedSymbol (t,Systemj.Symbol(y,_),_) -> t,y) in
+            ("c_code {" ^ (Systemj.get_data_type ttype) ^ " " ^ name ^ ";}\n" ^ 
+            "c_track \"&" ^ name ^ "\" " ^ "\"sizeof(" ^(Systemj.get_data_type ttype)^")\"\n") |> Pretty.text) var_decs) in
+          let promela_channels = List.fold_left Pretty.append Pretty.empty 
+          (List.map (fun x -> Pretty.text ("bool "^x^";\n"))channel_strings) in
           let promela_gsigs = List.fold_left Pretty.append Pretty.empty
-            (Util.map2i (fun i y z -> 
-	      List.fold_left Pretty.append Pretty.empty 
-		(List.map2 (fun x y -> 
-		  Pretty.append (Pretty.text ("bool CD"^(string_of_int i)^"_"^x^";\n"))
-		    (match y with
-		    | None -> Pretty.empty
-		    | Some r -> Pretty.append (Systemj.get_data_type_promela r.Systemj.data ^ " CD"^(string_of_int i)^"_"^x^"_val = "^r.Systemj.v^";\n"  |> Pretty.text)
-		      (Systemj.get_data_type_promela r.Systemj.data ^ " CD"^(string_of_int i)^"_"^x^"_val_pre;\n"  |> Pretty.text)
-		    ))y z))signals signals_options) in
+          (Util.map2i (fun i y z -> 
+            List.fold_left Pretty.append Pretty.empty 
+            (List.map2 (fun x y -> 
+              Pretty.append (Pretty.text ("bool CD"^(string_of_int i)^"_"^x^";\n"))
+              (match y with
+              | None -> Pretty.empty
+              | Some r -> Pretty.append (Systemj.get_data_type_promela r.Systemj.data ^ " CD"^(string_of_int i)^"_"^x^"_val = "^r.Systemj.v^";\n"  |> Pretty.text)
+              (Systemj.get_data_type_promela r.Systemj.data ^ " CD"^(string_of_int i)^"_"^x^"_val_pre;\n"  |> Pretty.text)
+              ))y z))signals signals_options) in
           let appf = if !formula = "" then Pretty.empty else (Pretty.text ("ltl {" ^ !formula ^ "}\n")) in
           let () = Pretty.print ~output:(output_string fd) 
-	    (Pretty.append promela_vardecs
-               (Pretty.append promela_gsigs
-		  (Pretty.append promela_channels 
-		     (Pretty.append appf
-			(List.reduce Pretty.append promela_model))))) in
+          (Pretty.append promela_vardecs
+          (Pretty.append promela_gsigs
+          (Pretty.append promela_channels 
+          (Pretty.append appf
+          (List.reduce Pretty.append promela_model))))) in
           close_out fd;
-	with
-	| Sys_error _ as s -> raise s in
+        with
+        | Sys_error _ as s -> raise s in
     let () = 
       if MyString.ends_with !outfile ".c" then
         let fd = open_out !outfile in
@@ -193,45 +193,88 @@ try
         let internal_signals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_internal_signal_declarations x) in
         let channel_strings = List.sort_unique compare (List.flatten (List.map (fun (x,_) -> x) channels)) in
         let c_model = Util.map8 
-          C.make_c
-          (List.init (List.length labeled_buchi_automatas) (fun x -> channel_strings)) internal_signals signals isignals
-          (List.init (List.length labeled_buchi_automatas) (fun x -> x)) (List.rev !init) asignals labeled_buchi_automatas in
+        C.make_c
+        (List.init (List.length labeled_buchi_automatas) (fun x -> channel_strings)) internal_signals signals isignals
+        (List.init (List.length labeled_buchi_automatas) (fun x -> x)) (List.rev !init) asignals labeled_buchi_automatas in
         let c_headers = Pretty.text ("#include <stdio.h>\n"^"typedef int bool;\n"^"#define true 1\n"^"#define false 0\n") in
-	let var_decs = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.get_var_declarations x) |> List.flatten in
-	let promela_vardecs = List.fold_left Pretty.append Pretty.empty
-	  (List.map (fun x -> 
-	    let (ttype,name) = (match x with | Systemj.SimTypedSymbol (t,Systemj.Symbol(y,_),_) -> t,y) in
-	    ((Systemj.get_data_type ttype) ^ " " ^ name ^ ";\n") |> Pretty.text) var_decs) in
+        let var_decs = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.get_var_declarations x) |> List.flatten in
+        let promela_vardecs = List.fold_left Pretty.append Pretty.empty
+        (List.map (fun x -> 
+          let (ttype,name) = (match x with | Systemj.SimTypedSymbol (t,Systemj.Symbol(y,_),_) -> t,y) in
+          ((Systemj.get_data_type ttype) ^ " " ^ name ^ ";\n") |> Pretty.text) var_decs) in
         let c_main = C.make_main (List.length labeled_buchi_automatas) in
         let c_channels = List.fold_left Pretty.append Pretty.empty (List.map (fun x -> Pretty.text ("bool "^x^" = false;\n"))channel_strings) in
         let asignals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_all_signal_declarations x) in
         let signals_options = List.map (fun x -> List.split x) asignals |> List.split |> (fun (_,y) -> y) in
         let signals = List.map (fun x -> List.split x) asignals |> List.split |> (fun (x,_) -> x) in
         let c_gsigs = List.fold_left Pretty.append Pretty.empty
-          (Util.map2i (fun i y z -> 
-	    List.fold_left Pretty.append Pretty.empty 
-	      (List.map2 (fun x y -> 
-		Pretty.append (Pretty.text ("bool CD"^(string_of_int i)^"_"^x^";\n"))
-		  (match y with
-		  | None -> Pretty.empty
-		  | Some r -> Pretty.append (Systemj.get_data_type_promela r.Systemj.data ^ " CD"^(string_of_int i)^"_"^x^"_val = "^r.Systemj.v^";\n"  
-						|> Pretty.text)
-		    (Systemj.get_data_type_promela r.Systemj.data ^ " CD"^(string_of_int i)^"_"^x^"_val_pre;\n"  |> Pretty.text)
-		  ))y z))signals signals_options) in
+        (Util.map2i (fun i y z -> 
+          List.fold_left Pretty.append Pretty.empty 
+          (List.map2 (fun x y -> 
+            Pretty.append (Pretty.text ("bool CD"^(string_of_int i)^"_"^x^";\n"))
+            (match y with
+            | None -> Pretty.empty
+            | Some r -> Pretty.append (Systemj.get_data_type_promela r.Systemj.data ^ " CD"^(string_of_int i)^"_"^x^"_val = "^r.Systemj.v^";\n"  
+            |> Pretty.text)
+            (Systemj.get_data_type_promela r.Systemj.data ^ " CD"^(string_of_int i)^"_"^x^"_val_pre;\n"  |> Pretty.text)
+            ))y z))signals signals_options) in
         let () = Pretty.print ~output:(output_string fd) 
-          (Pretty.append c_headers
-	     (Pretty.append promela_vardecs
-		(Pretty.append c_gsigs
-		   (Pretty.append c_channels 
-		      (Pretty.append(List.reduce Pretty.append c_model)
-			 c_main))))) in
+        (Pretty.append c_headers
+        (Pretty.append promela_vardecs
+        (Pretty.append c_gsigs
+        (Pretty.append c_channels 
+        (Pretty.append(List.reduce Pretty.append c_model)
+        c_main))))) in
+        close_out fd in
+    let () = 
+      if MyString.ends_with !outfile ".java" then
+        let fd = open_out !outfile in
+        let asignals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_all_signal_declarations x) in
+        let asignals = List.map (fun x -> List.sort_unique compare x) asignals in
+        let signals = List.map (fun x -> List.split x) asignals |> List.split |> (fun (x,_) -> x) in
+        let isignals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_input_signal_declarations x) in
+        let internal_signals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_internal_signal_declarations x) in
+        let channel_strings = List.sort_unique compare (List.flatten (List.map (fun (x,_) -> x) channels)) in
+        let java_model = Util.map8 
+        Java.make_java
+        (List.init (List.length labeled_buchi_automatas) (fun x -> channel_strings)) internal_signals signals isignals
+        (List.init (List.length labeled_buchi_automatas) (fun x -> x)) (List.rev !init) asignals labeled_buchi_automatas in
+        let java_headers = Pretty.text ("#include <stdio.h>\n"^"typedef int bool;\n"^"#define true 1\n"^"#define false 0\n") in
+        let var_decs = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.get_var_declarations x) |> List.flatten in
+        let promela_vardecs = List.fold_left Pretty.append Pretty.empty
+        (List.map (fun x -> 
+          let (ttype,name) = (match x with | Systemj.SimTypedSymbol (t,Systemj.Symbol(y,_),_) -> t,y) in
+          ((Systemj.get_data_type ttype) ^ " " ^ name ^ ";\n") |> Pretty.text) var_decs) in
+        let java_main = Java.make_main (List.length labeled_buchi_automatas) in
+        let java_channels = List.fold_left Pretty.append Pretty.empty (List.map (fun x -> Pretty.text ("bool "^x^" = false;\n"))channel_strings) in
+        let asignals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_all_signal_declarations x) in
+        let signals_options = List.map (fun x -> List.split x) asignals |> List.split |> (fun (_,y) -> y) in
+        let signals = List.map (fun x -> List.split x) asignals |> List.split |> (fun (x,_) -> x) in
+        let java_gsigs = List.fold_left Pretty.append Pretty.empty
+        (Util.map2i (fun i y z -> 
+          List.fold_left Pretty.append Pretty.empty 
+          (List.map2 (fun x y -> 
+            Pretty.append (Pretty.text ("bool CD"^(string_of_int i)^"_"^x^";\n"))
+            (match y with
+            | None -> Pretty.empty
+            | Some r -> Pretty.append (Systemj.get_data_type_promela r.Systemj.data ^ " CD"^(string_of_int i)^"_"^x^"_val = "^r.Systemj.v^";\n"  
+            |> Pretty.text)
+            (Systemj.get_data_type_promela r.Systemj.data ^ " CD"^(string_of_int i)^"_"^x^"_val_pre;\n"  |> Pretty.text)
+            ))y z))signals signals_options) in
+        let () = Pretty.print ~output:(output_string fd) 
+        (Pretty.append java_headers
+        (Pretty.append promela_vardecs
+        (Pretty.append java_gsigs
+        (Pretty.append java_channels 
+        (Pretty.append(List.reduce Pretty.append java_model)
+        java_main))))) in
         close_out fd in
     let () = 
       if !smt <> "" then
         let () = Smt.parse_option !smtopt in
         let () = Smt.make_smt labeled_buchi_automatas !smt in 
         () 
-    in
+        in
 (*
     let () = List.iter (fun x -> 
       let () = SS.output_hum Pervasives.stdout (SSL.sexp_of_list TableauBuchiAutomataGeneration.sexp_of_labeled_graph_node x) in

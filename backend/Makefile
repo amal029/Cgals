@@ -11,13 +11,13 @@ TYPECONV=`ocamlfind query type_conv`
 SEXPLIB=`ocamlfind query sexplib`
 PRETTYLIB=`ocamlfind query pretty`
 BATDIR=`ocamlfind query batteries`
-SRC=promela.ml c.ml smt.ml
+SRC=promela.ml c.ml smt.ml java.ml
 all: codegen.cmxa
 
 
 codegen.cmxa: code.cmx
 	$(CC) $(OCAMLOPTS) -I $(REPORTDIR) -I $(LANGUAGEDIR) -I	\
-	$(UTILDIR) promela.cmx smt.cmx c.cmx -o $@
+	$(UTILDIR) promela.cmx smt.cmx c.cmx java.cmx -o $@
 
 code.cmx:
 	$(CC) -pp "camlp4o -I $(TYPECONV) -I $(SEXPLIB) -I $(PRETTYLIB)	\
