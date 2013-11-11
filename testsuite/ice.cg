@@ -2,13 +2,13 @@
   int input signal A op+ = 0;
   output channel C;
   output channel M;
+  int i = extern T(i);
   loop {
     await(A);
     if(?A == 1){
       C!;||M!;
     }
     else C!;
-    int i = extern T ();
   }
 }
 ><
