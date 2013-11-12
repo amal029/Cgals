@@ -358,3 +358,14 @@ let remove_unreachable index lb channels internal_signals signals isignals asign
         ) lb) 
   done;
   !newlb
+
+let rec remove_dir d = 
+  if(Sys.is_directory d) then
+    let farray = Sys.readdir d in
+    let () = Unix.chdir d in
+    let () = Array.iter (fun x -> remove_dir x ) farray in
+    let () = Sys.chdir ".." in
+    Unix.rmdir d
+  else
+    Sys.remove d
+

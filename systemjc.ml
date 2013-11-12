@@ -281,9 +281,14 @@ try
         (List.init (List.length labeled_buchi_automatas) (fun x -> x)) (List.rev !init) asignals labeled_buchi_automatas in
 
         let file_name_without_extension = (fun (x,y) -> x) (MyString.split !file_name ".") in
+        let () = if(Sys.file_exists file_name_without_extension) then 
+          Util.remove_dir file_name_without_extension 
+        in
+        let () = Unix.mkdir file_name_without_extension 0o770 in
+
         let java_main = Java.make_main (List.length labeled_buchi_automatas) file_name_without_extension in
-        let fd_com = open_out "Interface.java" in
-        let fd_main = open_out "Main.java" in
+        let fd_com = open_out ((file_name_without_extension)^"/Interface.java") in
+        let fd_main = open_out ((file_name_without_extension)^"/Main.java") in
         let () = Pretty.print ~output:(output_string fd_com) (Java.make_interface java_channels java_interface_signals file_name_without_extension) in
         let () = Pretty.print ~output:(output_string fd_main) java_main in
         
@@ -295,7 +300,7 @@ try
         let jclass = List.map (fun x -> Pretty.append x ("}\n" |> Pretty.text)) jclass  in
 
         let () = List.iteri (fun i x -> 
-          let fd = open_out ("CD"^(string_of_int i)^".java") in
+          let fd = open_out ((file_name_without_extension)^"/CD"^(string_of_int i)^".java") in
           let () = Pretty.print ~output:(output_string fd) x in
           close_out fd
         ) jclass in
@@ -317,5 +322,5 @@ try
     () in ()
 with
 | End_of_file -> exit 0
-| Sys_error  _ -> print_endline usage_msg
+(* | Sys_error  _ -> print_endline usage_msg *)
 | _ as s -> raise s
