@@ -228,47 +228,75 @@ try
         close_out fd in
     let () = 
       if MyString.ends_with !outfile ".java" then
-        let fd = open_out !outfile in
         let asignals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_all_signal_declarations x) in
         let asignals = List.map (fun x -> List.sort_unique compare x) asignals in
         let signals = List.map (fun x -> List.split x) asignals |> List.split |> (fun (x,_) -> x) in
         let isignals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_input_signal_declarations x) in
         let internal_signals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_internal_signal_declarations x) in
         let channel_strings = List.sort_unique compare (List.flatten (List.map (fun (x,_) -> x) channels)) in
-        let java_model = Util.map8 
-        Java.make_java
-        (List.init (List.length labeled_buchi_automatas) (fun x -> channel_strings)) internal_signals signals isignals
-        (List.init (List.length labeled_buchi_automatas) (fun x -> x)) (List.rev !init) asignals labeled_buchi_automatas in
-        let java_headers = Pretty.text ("#include <stdio.h>\n"^"typedef int bool;\n"^"#define true 1\n"^"#define false 0\n") in
         let var_decs = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.get_var_declarations x) |> List.flatten in
         let promela_vardecs = List.fold_left Pretty.append Pretty.empty
         (List.map (fun x -> 
           let (ttype,name) = (match x with | Systemj.SimTypedSymbol (t,Systemj.Symbol(y,_),_) -> t,y) in
           ((Systemj.get_data_type ttype) ^ " " ^ name ^ ";\n") |> Pretty.text) var_decs) in
-        let java_main = Java.make_main (List.length labeled_buchi_automatas) in
-        let java_channels = List.fold_left Pretty.append Pretty.empty (List.map (fun x -> Pretty.text ("bool "^x^" = false;\n"))channel_strings) in
+        let java_channels = List.fold_left Pretty.append Pretty.empty (List.map (fun x -> Pretty.text ("public static boolean "^x^" = false;\n"))channel_strings) in
         let asignals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_all_signal_declarations x) in
         let signals_options = List.map (fun x -> List.split x) asignals |> List.split |> (fun (_,y) -> y) in
-        let signals = List.map (fun x -> List.split x) asignals |> List.split |> (fun (x,_) -> x) in
-        let java_gsigs = List.fold_left Pretty.append Pretty.empty
+        let java_interface_signals = List.fold_left Pretty.append Pretty.empty
         (Util.map2i (fun i y z -> 
           List.fold_left Pretty.append Pretty.empty 
           (List.map2 (fun x y -> 
-            Pretty.append (Pretty.text ("bool CD"^(string_of_int i)^"_"^x^";\n"))
-            (match y with
-            | None -> Pretty.empty
-            | Some r -> Pretty.append (Systemj.get_data_type_promela r.Systemj.data ^ " CD"^(string_of_int i)^"_"^x^"_val = "^r.Systemj.v^";\n"  
-            |> Pretty.text)
-            (Systemj.get_data_type_promela r.Systemj.data ^ " CD"^(string_of_int i)^"_"^x^"_val_pre;\n"  |> Pretty.text)
-            ))y z))signals signals_options) in
-        let () = Pretty.print ~output:(output_string fd) 
-        (Pretty.append java_headers
-        (Pretty.append promela_vardecs
-        (Pretty.append java_gsigs
-        (Pretty.append java_channels 
-        (Pretty.append(List.reduce Pretty.append java_model)
-        java_main))))) in
-        close_out fd in
+            if (not (List.exists (fun k -> k = x ) (List.nth internal_signals i))) then
+              Pretty.append (Pretty.text ("public static boolean CD"^(string_of_int i)^"_"^x^";\n"))
+              (match y with
+              | None -> Pretty.empty
+              | Some r -> Pretty.append ("public static "^Systemj.get_data_type_promela r.Systemj.data ^ " CD"^(string_of_int i)^"_"^x^"_val = "^r.Systemj.v^";\n"  
+              |> Pretty.text)
+              ("public static "^Systemj.get_data_type_promela r.Systemj.data ^ " CD"^(string_of_int i)^"_"^x^"_val_pre;\n"  |> Pretty.text)
+              )
+            else Pretty.empty
+            )y z
+          )
+        )signals signals_options) in
+        let java_internal_signals_decl = 
+        (Util.map2i (fun i y z -> 
+          List.fold_left Pretty.append Pretty.empty 
+          (List.map2 (fun x y -> 
+            if (List.exists (fun k -> k = x ) (List.nth internal_signals i)) then
+              Pretty.append (Pretty.text ("public static boolean CD"^(string_of_int i)^"_"^x^";\n"))
+              (match y with
+              | None -> Pretty.empty
+              | Some r -> Pretty.append ("public static "^Systemj.get_data_type_promela r.Systemj.data ^ " CD"^(string_of_int i)^"_"^x^"_val = "^r.Systemj.v^";\n"  
+              |> Pretty.text)
+              ("public static "^Systemj.get_data_type_promela r.Systemj.data ^ " CD"^(string_of_int i)^"_"^x^"_val_pre;\n"  |> Pretty.text)
+              )
+            else Pretty.empty
+            )y z
+          )
+        )signals signals_options) in
+
+        let java_model = Util.map9
+        Java.make_java
+        (List.init (List.length labeled_buchi_automatas) (fun x -> channel_strings)) internal_signals signals isignals
+        (List.init (List.length labeled_buchi_automatas) (fun x -> x)) (List.rev !init) asignals java_internal_signals_decl labeled_buchi_automatas in
+
+        let file_name_without_extension = (fun (x,y) -> x) (MyString.split !file_name ".") in
+        let java_headers = Pretty.text ("package "^file_name_without_extension^";\n") in
+        let java_main = Java.make_main (List.length labeled_buchi_automatas) file_name_without_extension in
+        let fd_com = open_out "Interface.java" in
+        let fd_main = open_out "Main.java" in
+        let () = Pretty.print ~output:(output_string fd_com) (Java.make_interface java_channels java_interface_signals file_name_without_extension) in
+        let () = Pretty.print ~output:(output_string fd_main) java_main in
+        let () = List.iteri (fun i model -> 
+          let fd = open_out ("CD"^(string_of_int i)^".java") in
+          let () = Pretty.print ~output:(output_string fd) 
+          (Pretty.append java_headers
+          (Pretty.append promela_vardecs model)) in
+          close_out fd
+        ) java_model in
+        let () = close_out fd_com in
+        close_out fd_com
+        in
     let () = 
       if !smt <> "" then
         let () = Smt.parse_option !smtopt in

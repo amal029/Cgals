@@ -49,16 +49,20 @@ let rec label from tf internal_signals channels index updates isignals asignals 
     | ("false",(_ as s)) | ((_ as s),"false") -> s
     | (_,_) -> "(" ^ lv ^ ")||(" ^ rv ^ ")")
   | Not (Proposition (x,_)) as s-> 
-    let v = (match x with 
+      let v = (match x with 
       | Expr x ->
-	  if (not (L.exists (fun t -> t = x) isignals)) then
-	    if x.[0] = '$' then 
-	      let () = output_hum stdout (sexp_of_logic s) in
-	      raise (Internal_error "^^^^^^^^^^^^ Not emit proposition impossible!")
-	    else 
-	      if not (L.exists (fun t -> t = x) channels) then ("CD"^(string_of_int index)^"_"^x) 
-	      else "(" ^ x ^ ")"
-	  else "false"
+          if (not (L.exists (fun t -> t = x) isignals)) then
+            if x.[0] = '$' then 
+              let () = output_hum stdout (sexp_of_logic s) in
+              raise (Internal_error "^^^^^^^^^^^^ Not emit proposition impossible!")
+            else 
+              if not (L.exists (fun t -> t = x) channels) then 
+                if(from = "java") then ("Interface.CD"^(string_of_int index)^"_"^x) 
+                else ("CD"^(string_of_int index)^"_"^x) 
+              else 
+                if(from = "java") then "(Interface." ^ x ^ ")"
+                else "(" ^ x ^ ")"
+          else "false"
       | DataExpr x -> build_data_expr from index asignals x
       | DataUpdate x -> raise (Internal_error ("Tried to update data " ^ (to_string_hum (Systemj.sexp_of_dataStmt x)) ^ " on a guard!!"))
       | Update x -> raise (Internal_error ("Tried to update " ^ x ^ " on a guard!!"))
@@ -69,15 +73,18 @@ let rec label from tf internal_signals channels index updates isignals asignals 
     | _ -> "!("^v^")")
   | Proposition (x,_) -> (match x with 
     | Expr x -> 
-	if (not (L.exists (fun t -> t = x) isignals)) then
-	  if x.[0] = '$' then "true"
-	  else 
-	  (* This can only ever happen here! *)
-	    (* if not (List.exists (fun (Update t) -> t = x) updates) then *)
-	    if not (L.exists (fun t -> t = x) channels) then ("CD"^(string_of_int index)^"_"^x) 
-	    else "(" ^ x ^ ")"
-	    (* else "true" *)
-	else "true"
+        if (not (L.exists (fun t -> t = x) isignals)) then
+          if x.[0] = '$' then "true"
+          else 
+            (* This can only ever happen here! *)
+            (* if not (List.exists (fun (Update t) -> t = x) updates) then *)
+            if not (L.exists (fun t -> t = x) channels) then 
+              if(from = "java") then ("Interface.CD"^(string_of_int index)^"_"^x) 
+              else ("CD"^(string_of_int index)^"_"^x) 
+            else 
+              if(from = "java") then "(Interface." ^ x ^ ")"
+              else "(" ^ x ^ ")"
+        else "true"
     | DataExpr x -> build_data_expr from index asignals x
     | DataUpdate x -> raise (Internal_error ("Tried to update data " ^ (to_string_hum (Systemj.sexp_of_dataStmt x)) ^ " on a guard!!"))
     | Update x -> raise (Internal_error ("Tried to update " ^ x ^ " on a guard!!"))
@@ -85,8 +92,8 @@ let rec label from tf internal_signals channels index updates isignals asignals 
   | True -> "true"
   | False -> "false"
   | _ as s -> 
-    let () = output_hum stdout (sexp_of_logic s) in
-    raise (Internal_error ("Got a non known proposition type when building transition labels" ))
+      let () = output_hum stdout (sexp_of_logic s) in
+      raise (Internal_error ("Got a non known proposition type when building transition labels" ))
 
 
 let rec get_updates index = function
@@ -169,6 +176,12 @@ let rec map8 f a b c d e g i j =
   | ([],[],[],[],[],[],[],[]) -> []
   | _ -> failwith "Lists not of equal length"
 
+let rec map9 f a b c d e g i j k = 
+  match (a,b,c,d,e,g,i,j,k) with
+  | ((h1::t1),(h2::t2),(h3::t3),(h4::t4),(h5::t5),(h6::t6),(h7::t7),(h8::t8),(h9::t9)) -> 
+    (f h1 h2 h3 h4 h5 h6 h7 h8 h9) :: map9 f t1 t2 t3 t4 t5 t6 t7 t8 t9
+  | ([],[],[],[],[],[],[],[],[]) -> []
+  | _ -> failwith "Lists not of equal length"
 
 let map2i f l1 l2 = 
   let rec ff f i  = function

@@ -1,6 +1,6 @@
 OCMLOPTS=-a
 OCMXALDEBUG=-g
-CC=ocamlopt
+CC=ocamlopt -g
 YACC=ocamlyacc
 LEX=ocamllex
 
