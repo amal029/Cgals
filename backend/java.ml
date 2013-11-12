@@ -62,7 +62,7 @@ let make_body asignals internal_signals channels o index signals isignals = func
           ((if not (L.exists (fun t -> t = x) channels) then 
             ((getInterfaceString internal_signals x)^"CD"^(string_of_int index)^"_"^x) else (getInterfaceString internal_signals x)^x)
           ^ " = true;\nSystem.out.println(\"Emitted: "^x^"\");\n") >> text) updates)
-        ++ ((L.fold_left (^) "" (L.map (Util.build_data_stmt asignals index "c") datastmts)) >> text)
+        ++ ((L.fold_left (^) "" (L.map (Util.build_data_stmt asignals index "java") datastmts)) >> text)
         ++ L.fold_left (++) empty (Util.map2i (fun i x y -> 
           (match y with
           | None -> Pretty.empty
@@ -92,17 +92,14 @@ let make_interface java_channels java_gsigs file_name_without_extension =
   ++ ("}\n" >> text)
 
 
-let make_process internal_signals channels o index signals isignals init asignals internal_signals_decl lgn = 
-  (("public class CD" ^ (string_of_int index) ^ "{\n") >> text) 
-  ++ internal_signals_decl
-  ++ (("public int state = " ^(String.lchop init)^"; // This must be from immortal mem\n") >> text)
+let make_process internal_signals channels o index signals isignals init asignals lgn = 
+  (("public int state = " ^(String.lchop init)^"; // This must be from immortal mem\n") >> text)
   ++ ("public void run(){\n" >> text)
   ++ ("switch (state){\n" >> text)
   ++ ((L.reduce (++) (L.map (fun x -> make_switch index (x.node,x.tlabels,x.guards)) lgn)) >> (4 >> indent))
   ++ ("default: System.err.println(\"System went to a wrong state !! \"+state); break;\n" >> text)
   ++ ("}\n}\n" >> text)
   ++ ((L.reduce (++) (L.map (fun x -> make_body asignals internal_signals channels o index signals isignals (x.node,x.tlabels,x.guards)) lgn)) >> (4 >> indent))
-  ++ ("}\n" >> text)
   ++ (" " >> line)
 
 let make_main index file_name = 
@@ -116,8 +113,8 @@ let make_main index file_name =
   ++ ("}\n" >> text)
   ++ ("}\n" >> text)
 
-let make_java channels internal_signals signals isignals index init asignals internal_signals_decl lgn = 
+let make_java channels internal_signals signals isignals index init asignals lgn = 
   let o = Hashtbl.create 1000 in
   let () = L.iter (fun x -> Util.get_outgoings o (x.node,x.guards)) lgn in
-  group ((make_process internal_signals channels o index signals isignals init asignals internal_signals_decl lgn) ++ (" " >> line))
+  group ((make_process internal_signals channels o index signals isignals init asignals lgn) ++ (" " >> line))
     

@@ -268,9 +268,11 @@ let rec get_simple_data_expr index asignals = function
     let signals = List.split asignals |> (fun (x,_) -> x) in
     if List.exists (fun y -> y = x) signals then 
       if !backend = "promela" then
-	"now.CD"^(string_of_int index)^"_"^x^"_val_pre"
+        "now.CD"^(string_of_int index)^"_"^x^"_val_pre"
+      else if !backend = "java" then
+        "Interface.CD"^(string_of_int index)^"_"^x^"_val_pre"
       else
-	"CD"^(string_of_int index)^"_"^x^"_val_pre"
+        "CD"^(string_of_int index)^"_"^x^"_val_pre"
     else 
       let () = Sexplib.Sexp.output_hum stdout (sexp_of_simpleDataExpr s) in
       let () = print_endline "" in
@@ -300,16 +302,19 @@ let get_allsym index asignals = function
     if List.exists (fun y -> y = x) signals then 
       let (x1,_) = List.findi (fun i y -> x = y) signals in
       let ttt = 
-	if !backend = "promela" then
-	  "now.CD"^(string_of_int index)^"_"^x^"_val"
-	else
-	  "CD"^(string_of_int index)^"_"^x^"_val" in
+        if !backend = "promela" then
+          "now.CD"^(string_of_int index)^"_"^x^"_val"
+        else if !backend = "java" then
+          "Interface.CD"^(string_of_int index)^"_"^x^"_val" 
+        else
+          "CD"^(string_of_int index)^"_"^x^"_val" 
+      in
       ttt ^ (((List.at ops x1) 
-		 |> (fun x ->
-		   match x with 
-		   | Some x -> x.operator 
-		   | None -> raise (Internal_error ((Reporting.get_line_and_column ln)^ ": signal has no type and operator"))) 
-		 |> get_operators))
+       |> (fun x ->
+         match x with 
+         | Some x -> x.operator 
+         | None -> raise (Internal_error ((Reporting.get_line_and_column ln)^ ": signal has no type and operator"))) 
+       |> get_operators))
     else 
       let () = Sexplib.Sexp.output_hum stdout (sexp_of_allsym s) in
       let () = print_endline "" in

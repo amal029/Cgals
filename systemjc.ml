@@ -234,13 +234,13 @@ try
         let isignals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_input_signal_declarations x) in
         let internal_signals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_internal_signal_declarations x) in
         let channel_strings = List.sort_unique compare (List.flatten (List.map (fun (x,_) -> x) channels)) in
-        let var_decs = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.get_var_declarations x) |> List.flatten in
-        let promela_vardecs = List.fold_left Pretty.append Pretty.empty
-        (List.map (fun x -> 
+        let var_decs = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.get_var_declarations x) in
+        let java_vardecs = (List.map (fun x -> List.fold_left Pretty.append Pretty.empty (List.map (fun x ->
           let (ttype,name) = (match x with | Systemj.SimTypedSymbol (t,Systemj.Symbol(y,_),_) -> t,y) in
-          ((Systemj.get_data_type ttype) ^ " " ^ name ^ ";\n") |> Pretty.text) var_decs) in
-        let java_channels = List.fold_left Pretty.append Pretty.empty (List.map (fun x -> Pretty.text ("public static boolean "^x^" = false;\n"))channel_strings) in
-        let asignals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_all_signal_declarations x) in
+          ("public "^(Systemj.get_data_type ttype) ^ " " ^ name ^ ";\n") |> Pretty.text) x)) var_decs) in
+        let java_channels = List.fold_left Pretty.append Pretty.empty 
+          (List.map (fun x -> Pretty.text ("public static boolean "^x^" = false;\n"))channel_strings) in
+(*         let asignals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_all_signal_declarations x) in *)
         let signals_options = List.map (fun x -> List.split x) asignals |> List.split |> (fun (_,y) -> y) in
         let java_interface_signals = List.fold_left Pretty.append Pretty.empty
         (Util.map2i (fun i y z -> 
@@ -275,25 +275,30 @@ try
           )
         )signals signals_options) in
 
-        let java_model = Util.map9
+        let java_model = Util.map8
         Java.make_java
         (List.init (List.length labeled_buchi_automatas) (fun x -> channel_strings)) internal_signals signals isignals
-        (List.init (List.length labeled_buchi_automatas) (fun x -> x)) (List.rev !init) asignals java_internal_signals_decl labeled_buchi_automatas in
+        (List.init (List.length labeled_buchi_automatas) (fun x -> x)) (List.rev !init) asignals labeled_buchi_automatas in
 
         let file_name_without_extension = (fun (x,y) -> x) (MyString.split !file_name ".") in
-        let java_headers = Pretty.text ("package "^file_name_without_extension^";\n") in
         let java_main = Java.make_main (List.length labeled_buchi_automatas) file_name_without_extension in
         let fd_com = open_out "Interface.java" in
         let fd_main = open_out "Main.java" in
         let () = Pretty.print ~output:(output_string fd_com) (Java.make_interface java_channels java_interface_signals file_name_without_extension) in
         let () = Pretty.print ~output:(output_string fd_main) java_main in
-        let () = List.iteri (fun i model -> 
+        
+        let jclass = List.mapi (fun i x -> 
+          (("package "^file_name_without_extension^";\npublic class CD"^(string_of_int i)^"{\n") |> Pretty.text) ) labeled_buchi_automatas in
+        let jclass = List.map2 (fun x y -> Pretty.append x y) jclass java_internal_signals_decl in
+        let jclass = List.map2 (fun x y -> Pretty.append x y) jclass java_vardecs in
+        let jclass = List.map2 (fun x y -> Pretty.append x y) jclass java_model in
+        let jclass = List.map (fun x -> Pretty.append x ("}\n" |> Pretty.text)) jclass  in
+
+        let () = List.iteri (fun i x -> 
           let fd = open_out ("CD"^(string_of_int i)^".java") in
-          let () = Pretty.print ~output:(output_string fd) 
-          (Pretty.append java_headers
-          (Pretty.append promela_vardecs model)) in
+          let () = Pretty.print ~output:(output_string fd) x in
           close_out fd
-        ) java_model in
+        ) jclass in
         let () = close_out fd_com in
         close_out fd_com
         in
