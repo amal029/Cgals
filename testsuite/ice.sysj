@@ -5,7 +5,7 @@
   /*  loop {*/
   {
   L:await(A);
-    if(?A == 1){
+    if(?A == 0){
       C!;||M!;
     }
     else C!;

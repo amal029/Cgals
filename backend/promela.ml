@@ -54,7 +54,7 @@ let make_body ff asignals internal_signals channels o index signals isignals = f
 		((if not (L.exists (fun t -> t = x) channels) then ("CD"^(string_of_int index)^"_"^x) else x)
 		 ^ " = false;\n" >> text)) !to_false)
 	      (* Add the data stmts *)
-	      ++ ((L.fold_left (^) "" (L.map (Util.build_data_stmt asignals index "promela") datastmts)) >> text)
+	      ++ ((L.fold_left (^) "" (L.map (Util.build_data_stmt asignals index "promela" internal_signals) datastmts)) >> text)
 	      ++ L.fold_left (++) empty (Util.map2i (fun i x y -> 
 		(match y with
 		| None -> Pretty.empty

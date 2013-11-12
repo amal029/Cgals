@@ -12,9 +12,9 @@ open TableauBuchiAutomataGeneration
 
 exception Internal_error of string
 
-let build_data_stmt asignals index from stmt = 
+let build_data_stmt asignals index from internal_signals stmt = 
   Systemj.backend := from; 
-  let stmt = Systemj.get_data_stmt index asignals
+  let stmt = Systemj.get_data_stmt index asignals internal_signals
     (match stmt with DataUpdate x -> x 
     | _ as s -> 
       output_hum stdout (sexp_of_proposition s);
@@ -23,9 +23,9 @@ let build_data_stmt asignals index from stmt =
   | "promela" -> "c_code {\n" ^ stmt ^ "};\n"
   | _ -> stmt
 
-let build_data_expr from index asignals expr =
+let build_data_expr from index asignals internal_signals expr =
   Systemj.backend := from; 
-  let expr = Systemj.get_data_expr index asignals expr in
+  let expr = Systemj.get_data_expr index asignals internal_signals  expr in
   match from with
   | "promela" -> "c_expr{" ^ expr ^ "}"
   | _ -> expr
@@ -57,13 +57,14 @@ let rec label from tf internal_signals channels index updates isignals asignals 
               raise (Internal_error "^^^^^^^^^^^^ Not emit proposition impossible!")
             else 
               if not (L.exists (fun t -> t = x) channels) then 
-                if(from = "java") then ("Interface.CD"^(string_of_int index)^"_"^x) 
+		if(from = "java" && not(List.exists (fun t -> t  = x) internal_signals)) then 
+                  ("Interface.CD"^(string_of_int index)^"_"^x) 
                 else ("CD"^(string_of_int index)^"_"^x) 
               else 
                 if(from = "java") then "(Interface." ^ x ^ ")"
                 else "(" ^ x ^ ")"
           else "false"
-      | DataExpr x -> build_data_expr from index asignals x
+      | DataExpr x -> build_data_expr from index asignals internal_signals x
       | DataUpdate x -> raise (Internal_error ("Tried to update data " ^ (to_string_hum (Systemj.sexp_of_dataStmt x)) ^ " on a guard!!"))
       | Update x -> raise (Internal_error ("Tried to update " ^ x ^ " on a guard!!"))
       | Label x -> raise (Internal_error ("Tried to put label " ^ x ^ " on a guard!!"))) in 
@@ -79,13 +80,13 @@ let rec label from tf internal_signals channels index updates isignals asignals 
             (* This can only ever happen here! *)
             (* if not (List.exists (fun (Update t) -> t = x) updates) then *)
             if not (L.exists (fun t -> t = x) channels) then 
-              if(from = "java") then ("Interface.CD"^(string_of_int index)^"_"^x) 
+              if(from = "java" && not(List.exists (fun t -> t  = x) internal_signals)) then 
+		("Interface.CD"^(string_of_int index)^"_"^x) 
               else ("CD"^(string_of_int index)^"_"^x) 
             else 
-              if(from = "java") then "(Interface." ^ x ^ ")"
-              else "(" ^ x ^ ")"
+              if(from = "java") then "(Interface." ^ x ^ ")" else "(" ^ x ^ ")"
         else "true"
-    | DataExpr x -> build_data_expr from index asignals x
+    | DataExpr x -> build_data_expr from index asignals internal_signals x
     | DataUpdate x -> raise (Internal_error ("Tried to update data " ^ (to_string_hum (Systemj.sexp_of_dataStmt x)) ^ " on a guard!!"))
     | Update x -> raise (Internal_error ("Tried to update " ^ x ^ " on a guard!!"))
     | Label x -> raise (Internal_error ("Tried to put label " ^ x ^ " on a guard!!"))) 

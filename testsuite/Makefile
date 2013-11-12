@@ -51,4 +51,4 @@ await: FORMULA=[]<> CD0_B
 	cc -DMEMLIM=1024 -O2 -DXUSAFE -w -o pan pan.c
 	./pan -m10000 -a -f
 clean:
-	rm -vf !(*.sysj|Makefile|*.cg)
+	rm -rf !(*.sysj|Makefile|*.cg)

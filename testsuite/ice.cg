@@ -2,7 +2,7 @@
   int input signal A op+ = 0;
   output channel C;
   output channel M;
-  int i = extern T(i);
+  /* int i = extern T(i); */
   loop {
     await(A);
     if(?A == 1){

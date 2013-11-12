@@ -62,7 +62,7 @@ let make_body asignals internal_signals channels o index signals isignals = func
           ((if not (L.exists (fun t -> t = x) channels) then 
             ((getInterfaceString internal_signals x)^"CD"^(string_of_int index)^"_"^x) else (getInterfaceString internal_signals x)^x)
           ^ " = true;\nSystem.out.println(\"Emitted: "^x^"\");\n") >> text) updates)
-        ++ ((L.fold_left (^) "" (L.map (Util.build_data_stmt asignals index "java") datastmts)) >> text)
+        ++ ((L.fold_left (^) "" (L.map (Util.build_data_stmt asignals index "java" internal_signals) datastmts)) >> text)
         ++ L.fold_left (++) empty (Util.map2i (fun i x y -> 
           (match y with
           | None -> Pretty.empty
@@ -103,15 +103,19 @@ let make_process internal_signals channels o index signals isignals init asignal
   ++ (" " >> line)
 
 let make_main index file_name = 
-  (("package "^file_name^";\n") >> text)
-  ++ ("public class Main {\n" >> text)
-  ++ ("public static void main(String args[]){\n" >> text)
-  ++ (L.fold_left (++) empty (L.init index (fun x -> "CD"^(string_of_int x)^" cd"^(string_of_int x)^" = new CD"^(string_of_int x)^"();\n" >> text)))
-  ++ ("while(true){\n" >> text) 
-  ++ (L.fold_left (++) empty (L.init index (fun x -> "cd"^(string_of_int x)^".run();\n" >> text)))
-  ++ ("}\n" >> text) 
-  ++ ("}\n" >> text)
-  ++ ("}\n" >> text)
+  let tt = 
+    (("package "^file_name^";\n") >> text)
+    ++ ("public class Main {\n" >> text)
+    ++ ("public static void main(String args[]){\n" >> text)
+    ++ (L.fold_left (++) empty (L.init index (fun x -> "CD"^(string_of_int x)^" cd"^(string_of_int x)^" = new CD"^(string_of_int x)^"();\n" >> text)))
+    ++ ("while(true){\n" >> text) 
+    ++ (L.fold_left (++) empty (L.init index (fun x -> "cd"^(string_of_int x)^".run();\n" >> text)))
+    ++ ("}\n" >> text) 
+    ++ ("}\n" >> text)
+    ++ ("}\n" >> text) in
+  let () = IFDEF DEBUG THEN print_endline "I am trying to make Java main" ELSE () ENDIF in
+  let () = IFDEF DEBUG THEN (print tt) ELSE () ENDIF in tt
+
 
 let make_java channels internal_signals signals isignals index init asignals lgn = 
   let o = Hashtbl.create 1000 in

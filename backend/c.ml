@@ -49,7 +49,7 @@ let make_body asignals internal_signals channels o index signals isignals = func
 	    ++ L.fold_left (++) empty (L.mapi (fun i x -> 
 	      ((if not (L.exists (fun t -> t = x) channels) then ("CD"^(string_of_int index)^"_"^x) else x)
 	       ^ " = true;\n printf(\"Emitted: "^x^"\\n\");\n") >> text) updates)
-	    ++ ((L.fold_left (^) "" (L.map (Util.build_data_stmt asignals index "c") datastmts)) >> text)
+	    ++ ((L.fold_left (^) "" (L.map (Util.build_data_stmt asignals index "c" internal_signals) datastmts)) >> text)
 	    ++ L.fold_left (++) empty (Util.map2i (fun i x y -> 
 	      (match y with
 	      | None -> Pretty.empty

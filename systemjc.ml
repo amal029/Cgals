@@ -305,7 +305,8 @@ try
           close_out fd
         ) jclass in
         let () = close_out fd_com in
-        close_out fd_com
+        close_out fd_com;
+        close_out fd_main
         in
     let () = 
       if !smt <> "" then
