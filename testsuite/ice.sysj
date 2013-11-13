@@ -21,6 +21,10 @@
   C?;
   if(?D==0) ?D = 1; else ?D = 0;
   emit D;
+  /* switch { */
+  /*   (t == extern F(extern F())) {} */
+  /*   _ {} */
+  /* } */
   /*  }*/
   pause;
 }
