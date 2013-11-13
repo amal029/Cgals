@@ -237,7 +237,7 @@ try
         let var_decs = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.get_var_declarations x) in
         let java_vardecs = (List.map (fun x -> List.fold_left Pretty.append Pretty.empty (List.map (fun x ->
           let (ttype,name) = (match x with | Systemj.SimTypedSymbol (t,Systemj.Symbol(y,_),_) -> t,y) in
-          ("public "^(Systemj.get_data_type ttype) ^ " " ^ name ^ ";\n") |> Pretty.text) x)) var_decs) in
+          ("public "^(Systemj.get_data_type_promela ttype) ^ " " ^ name ^ ";\n") |> Pretty.text) x)) var_decs) in
         let java_channels = List.fold_left Pretty.append Pretty.empty 
           (List.map (fun x -> Pretty.text ("public static boolean "^x^" = false;\n"))channel_strings) in
 (*         let asignals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_all_signal_declarations x) in *)
