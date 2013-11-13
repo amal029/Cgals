@@ -139,22 +139,22 @@ try
   ) in
 
   let () = 
-    let asignals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_all_signal_declarations x) in
-    let asignals = List.map (fun x -> List.sort_unique compare x) asignals in
-    let signals = List.map (fun x -> List.split x) asignals |> List.split |> (fun (x,_) -> x) in
-    let signals_options = List.map (fun x -> List.split x) asignals |> List.split |> (fun (_,y) -> y) in
-    let isignals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_input_signal_declarations x) in
-    let internal_signals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_internal_signal_declarations x) in
-    let channel_strings = List.sort_unique compare (List.flatten (List.map (fun (x,_) -> x) channels)) in
-    let var_decs = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.get_var_declarations x) |> List.flatten in
-    let prom_make = Util.map8 
-      Promela.make_promela 
-      (List.init (List.length labeled_buchi_automatas) (fun x -> channel_strings)) internal_signals signals isignals
-      (List.init (List.length labeled_buchi_automatas) (fun x -> x)) (List.rev !init) asignals labeled_buchi_automatas in
-    let (promela_model,labeled_buchi_automatas) = List.split prom_make in
     let () = 
       if !promela <> "" then
         try
+          let asignals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_all_signal_declarations x) in
+          let asignals = List.map (fun x -> List.sort_unique compare x) asignals in
+          let signals = List.map (fun x -> List.split x) asignals |> List.split |> (fun (x,_) -> x) in
+          let signals_options = List.map (fun x -> List.split x) asignals |> List.split |> (fun (_,y) -> y) in
+          let isignals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_input_signal_declarations x) in
+          let internal_signals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_internal_signal_declarations x) in
+          let channel_strings = List.sort_unique compare (List.flatten (List.map (fun (x,_) -> x) channels)) in
+          let var_decs = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.get_var_declarations x) |> List.flatten in
+          let prom_make = Util.map8 
+          Promela.make_promela 
+          (List.init (List.length labeled_buchi_automatas) (fun x -> channel_strings)) internal_signals signals isignals
+          (List.init (List.length labeled_buchi_automatas) (fun x -> x)) (List.rev !init) asignals labeled_buchi_automatas in
+          let (promela_model,labeled_buchi_automatas) = List.split prom_make in
           let fd = open_out !promela in
           let promela_vardecs = List.fold_left Pretty.append Pretty.empty
           (List.map (fun x -> 

@@ -282,14 +282,22 @@ let rec get_simple_data_expr index asignals internal_signals = function
         let () = print_endline "" in
         raise (Internal_error "^^^^^^^^^^^^^^^^ currently not supported")
   | Call (Symbol(x,_), s , ln) ->
+(*       let reference = (match !backend with | "java" -> "" | "c" | "promela" -> "&" | _ -> "" ) in *)
+      (* Passing ref will cause side-effect, for now I am just passing values to functions  *)
       let signals = List.split asignals |> (fun (x,_) -> x) in
       let args = List.map (fun x -> get_simple_data_expr index asignals internal_signals x) s in
-      let args = List.fold_left (^) "" (List.map (fun x ->  x^","  ) args) in
+      let args = List.fold_left (^) "" (List.map (fun x -> x^","  ) args) in
       let args = String.rchop args in
-      (* TODO: Need to produce diff coce based on target *)
-      let extern_call = x^"("^args^");\n" in
-      extern_call
-
+      let extern_call = ref "" in
+      if(!backend = "java") then
+        extern_call := "Interface."^x^"("^args^")"
+      else if(!backend = "c") then
+        extern_call := x^"("^args^")"
+      else if (!backend = "promela") then
+        extern_call := x^"("^args^")"
+      else
+        raise (Internal_error ("extern call for "^(!backend)^" is currently not supported"));
+      !extern_call
   | _ as s -> 
       let () = Sexplib.Sexp.output_hum stdout (sexp_of_simpleDataExpr s) in
       let () = print_endline "" in
