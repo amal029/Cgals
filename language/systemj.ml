@@ -8,6 +8,7 @@
 (* The current position for error reporting *)
 open Sexplib.Std
 module List = Batteries.List
+module String = Batteries.String
 
 let backend = ref ""
 
@@ -265,24 +266,34 @@ let rec get_simple_data_expr index asignals internal_signals = function
   | DataBrackets (x,_) -> "(" ^ get_simple_data_expr index asignals internal_signals x ^ ")"
   | Cast (x,y,_) -> "(" ^ "(" ^ get_data_type x ^ ")" ^ get_simple_data_expr index asignals internal_signals y ^ ")"
   | SignalOrChannelRef (Symbol(x,_),ln) as s ->
-    let signals = List.split asignals |> (fun (x,_) -> x) in
-    if List.exists (fun y -> y = x) signals then 
-      if !backend = "promela" then
-        "now.CD"^(string_of_int index)^"_"^x^"_val_pre"
-      else if !backend = "java" then
-	if (List.exists (fun t -> x=t) internal_signals) then
-          "CD"^(string_of_int index)^"_"^x^"_val_pre"
-	else
+      let signals = List.split asignals |> (fun (x,_) -> x) in
+      if List.exists (fun y -> y = x) signals then 
+        if !backend = "promela" then
+          "now.CD"^(string_of_int index)^"_"^x^"_val_pre"
+        else if !backend = "java" then
+          if (List.exists (fun t -> x=t) internal_signals) then
+            "CD"^(string_of_int index)^"_"^x^"_val_pre"
+        else
           "Interface.CD"^(string_of_int index)^"_"^x^"_val_pre"
-      else
-        "CD"^(string_of_int index)^"_"^x^"_val_pre"
-    else 
+          else
+            "CD"^(string_of_int index)^"_"^x^"_val_pre"
+      else 
+        let () = Sexplib.Sexp.output_hum stdout (sexp_of_simpleDataExpr s) in
+        let () = print_endline "" in
+        raise (Internal_error "^^^^^^^^^^^^^^^^ currently not supported")
+  | Call (Symbol(x,_), s , ln) ->
+      let signals = List.split asignals |> (fun (x,_) -> x) in
+      let args = List.map (fun x -> get_simple_data_expr index asignals internal_signals x) s in
+      let args = List.fold_left (^) "" (List.map (fun x ->  x^","  ) args) in
+      let args = String.rchop args in
+      (* TODO: Need to produce diff coce based on target *)
+      let extern_call = x^"("^args^");\n" in
+      extern_call
+
+  | _ as s -> 
       let () = Sexplib.Sexp.output_hum stdout (sexp_of_simpleDataExpr s) in
       let () = print_endline "" in
       raise (Internal_error "^^^^^^^^^^^^^^^^ currently not supported")
-  | _ as s -> let () = Sexplib.Sexp.output_hum stdout (sexp_of_simpleDataExpr s) in
-  	      let () = print_endline "" in
-  	      raise (Internal_error "^^^^^^^^^^^^^^^^ currently not supported")
 
 let get_data_expr index asignals internal_signals = function
   | LessThanEqual (x,y,_) -> get_simple_data_expr index asignals internal_signals x ^ "<= " ^ get_simple_data_expr index asignals internal_signals y 
@@ -308,9 +319,9 @@ let get_allsym index asignals internal_signals = function
         if !backend = "promela" then
           "now.CD"^(string_of_int index)^"_"^x^"_val"
         else if !backend = "java" then
-	  if (List.exists (fun t -> x=t) internal_signals) then
+          if (List.exists (fun t -> x=t) internal_signals) then
             "CD"^(string_of_int index)^"_"^x^"_val" 
-	  else
+          else
             "Interface.CD"^(string_of_int index)^"_"^x^"_val_pre"
         else
           "CD"^(string_of_int index)^"_"^x^"_val" 
