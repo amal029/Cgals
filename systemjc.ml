@@ -10,24 +10,31 @@ open TableauBuchiAutomataGeneration
 
 let (|>) x f = f x
 
-let usage_msg = "Usage: systemjc [options] <filename>\nsee -help for more options" in
+let usage_msg = "Usage: systemjc [OPTIONS] <filename>\nsee -help for more options" in
 
+let file_name = ref "" in
+let formula = ref "" in
+let promela = ref "" in
+let smt = ref "" in
+let smtopt = ref "" in
+let cfile = ref "" in
+let genjava = ref false in
+let speclist = Arg.align [
+    ("-formula", Arg.Set_string formula, "<file> "^
+        "      The propositional linear temporal logic formula to verify (see promela ltl man page)");
+    ("-promela", Arg.Set_string promela, "<file> "^
+        "      The name of the promela output file");
+    ("-smt2", Arg.Set_string smt, "<file> "^
+        "      The name of the SMT-LIB output file");
+    ("-sopt", Arg.Set_string smtopt, "<file> "^
+        "      The name of the option file for SMT-LIB output generation (optional)");
+    ("-C", Arg.Set_string cfile, "<file> "^
+        "      Generate C backend");
+    ("-java", Arg.Unit (fun () -> genjava := true) , " "^
+        "      Generate Java backend")] in
 
 try
-  let file_name = ref "" in
-  let formula = ref "" in
-  let promela = ref "" in
-  let smt = ref "" in
-  let smtopt = ref "" in
-  let outfile = ref "" in
-  let () = Arg.parse [
-    ("-formula", Arg.Set_string formula, " The propositional linear temporal logic formula to verify (see promela ltl man page)");
-    ("-promela", Arg.Set_string promela, " The name of the promela output file");
-    ("-smt2", Arg.Set_string smt, " The name of the SMT-LIB output file");
-    ("-sopt", Arg.Set_string smtopt, " The name of the option file for SMT-LIB output generation (optional)");
-    ("-o", Arg.Set_string outfile, " The name of the [llvm/C/Java] output file (Only C and Java backend implemented)")] 
-    (fun x -> file_name := x) usage_msg in
-
+  let () = Arg.parse speclist (fun x -> file_name := x) usage_msg in
   (* Initialize the error reporting structures *)
   let mytime = Sys.time() in
   let in_chan = open_in !file_name in
@@ -184,8 +191,8 @@ try
         with
         | Sys_error _ as s -> raise s in
     let () = 
-      if MyString.ends_with !outfile ".c" then
-        let fd = open_out !outfile in
+      if !cfile <> "" then
+        let fd = open_out !cfile in
         let asignals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_all_signal_declarations x) in
         let asignals = List.map (fun x -> List.sort_unique compare x) asignals in
         let signals = List.map (fun x -> List.split x) asignals |> List.split |> (fun (x,_) -> x) in
@@ -227,7 +234,7 @@ try
         c_main))))) in
         close_out fd in
     let () = 
-      if MyString.ends_with !outfile ".java" then
+      if !genjava then
         let asignals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_all_signal_declarations x) in
         let asignals = List.map (fun x -> List.sort_unique compare x) asignals in
         let signals = List.map (fun x -> List.split x) asignals |> List.split |> (fun (x,_) -> x) in
@@ -323,5 +330,5 @@ try
     () in ()
 with
 | End_of_file -> exit 0
-(* | Sys_error  _ -> print_endline usage_msg *)
+| Sys_error  _ -> Arg.usage speclist usage_msg
 | _ as s -> raise s
