@@ -21,13 +21,13 @@ let cfile = ref "" in
 let genjava = ref false in
 let speclist = Arg.align [
     ("-formula", Arg.Set_string formula, "<file> "^
-        "      The propositional linear temporal logic formula to verify (see promela ltl man page)");
+        "      The propositional linear temporal logic formula to verify \n\t\t\t (see promela ltl man page)");
     ("-promela", Arg.Set_string promela, "<file> "^
         "      The name of the promela output file");
     ("-smt2", Arg.Set_string smt, "<file> "^
         "      The name of the SMT-LIB output file");
     ("-sopt", Arg.Set_string smtopt, "<file> "^
-        "      The name of the option file for SMT-LIB output generation (optional)");
+        "      The name of the optional file for SMT-LIB output generation");
     ("-C", Arg.Set_string cfile, "<file> "^
         "      Generate C backend");
     ("-java", Arg.Unit (fun () -> genjava := true) , " "^
