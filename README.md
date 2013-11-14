@@ -15,9 +15,7 @@ guaranteeing functional and timing requirements. Finally, 'C' code is
 extracted from the verified models to be compiled with the compcert 'C'
 compiler, which is a verified 'C' compiler.
 
-
-Generating Safety Critical Java (SCJ) code level-0 and level-1 are
-planned.
+Safety critical Java code can also be generated.
 
 
 # INSTALL:
