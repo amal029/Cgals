@@ -387,6 +387,48 @@ and move_spar r = function
 		And(move (Systemj.Spar(t,r)),And(term h, NextTime(Not ( (collect_labels h))))))
   | [] -> False
 
+let rec ninst = function
+  | Systemj.Noop -> True
+  (* Special change, adding data to the system!! *)
+  | Systemj.Emit (s,Some uniq,_) -> True
+  | Systemj.Data (s,Some uniq) -> True
+  | Systemj.Emit (s,None,_) as t -> 
+    let () = output_hum stdout (Systemj.sexp_of_stmt t) in
+    raise (Internal_error "Emit stmt without a unique identifier cannot be initialized for data propositions")
+  | Systemj.Pause _ -> False
+  | Systemj.Present (e,t,Some el,_) -> Or(And((expr_to_logic e), inst t), And((Not (expr_to_logic e)), inst el))
+  | Systemj.Present (e,t,None,_) -> Or(And((expr_to_logic e), inst t), And((Not (expr_to_logic e)), True))
+  | Systemj.Block (sl,_) 
+  | Systemj.Spar (sl,_) -> 
+    if sl = [] then True 
+    else List.reduce (fun x y -> And (x,y)) (List.map inst sl)
+  | Systemj.While (_,s,ln) -> 
+    let ret = solve_logic (inst s) in
+    if ret <> False then 
+      raise (Internal_error ((Reporting.get_line_and_column ln) ^ "Instantaneous loop detected")) 
+    else ret
+  | Systemj.Suspend (_,s,_) | Systemj.Abort(_,s,_)  | Systemj.Trap (_,s,_) -> inst s
+  | Systemj.Signal _ | Systemj.Exit _ | Systemj.Channel _ -> True
+  | _ -> raise (Internal_error "Inst: Cannot get send/receive after rewriting!!")
+
+let rec surface = function
+  | Systemj.Data _ | Systemj.Emit _ | Systemj.Noop
+  | Systemj.Channel _  | Systemj.Signal _ | Systemj.Send _ 
+  | Systemj.Receive _ as s -> s
+  | Systemj.Pause _ -> Systemj.Noop
+  | Systemj.Present (e,s,None,t) -> Systemj.Present (e,surface s, None, t)
+  | Systemj.Present (e,s,Some x,t) -> Systemj.Present(e,surface s, Some (surface x), t)
+  | Systemj.Block (s,ln) -> surface_block ln s
+  | Systemj.Spar (s,ln) -> Systemj.Spar(List.map surface s, ln)
+  | Systemj.Abort (_,s,_) | Systemj.Suspend (_,s,_) 
+  | Systemj.While (_,s,_) -> surface s
+  | _ as s -> 
+    output_hum stdout (Systemj.sexp_of_stmt s);
+    raise (Internal_error "^^^^^^^^^^^^^^^^ Send/Receive after re-writing!")
+and surface_block ln = function
+  | h::t -> Systemj.Block([(surface h); if solve_logic (ninst (Systemj.Block (t,ln))) = True then surface (Systemj.Block (t,ln)) else Systemj.Noop],ln)
+  | [] -> Systemj.Noop
+
 let build_ltl stmt = 
   (* let shared = Or(Not( (collect_labels stmt)),term stmt) in *)
   (* let fdis = And(And(inst stmt, Proposition (Label "st")),NextTime(Not((collect_labels stmt)))) in *)

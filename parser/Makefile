@@ -3,6 +3,8 @@ OCMXALDEBUG=-g
 CC=ocamlopt -g
 YACC=ocamlyacc
 LEX=ocamllex
+INDUCTIONDIR=../induction
+LANGDIR=../language
 
 
 all: parser
@@ -10,9 +12,9 @@ all: parser
 parser:
 	$(YACC) -v parser.mly
 	$(LEX) lexer.mll
-	$(CC) -c parser.mli
+	$(CC) -I $(LANGDIR) -c parser.mli
 	$(CC) -c lexer.ml
-	$(CC) -pp "camlp4o pa_macro.cmo -DDEBUG" -c parser.ml
+	$(CC) -pp "camlp4o pa_macro.cmo -DDEBUG" -I $(LANGDIR) -I $(INDUCTIONDIR) -c parser.ml
 	$(CC) -a lexer.cmx parser.cmx -o parser.cmxa
 
 clean:

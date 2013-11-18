@@ -22,7 +22,7 @@
 /* Constant constructors */
 %token TPlus TMinus TTimes TDiv TPow TOP TSEMICOLON TCP TEqual TOB TCB TComma TLess TLessEqual TGreater TGreaterEqual TEqualEqual TMod TASYNC
 %token And Or Where TXCL TQ TSuspend TAbort TWhile TTrue TFalse TWhile TTrap TXor
-%token TLbrack TRbrack TColon TPresent TEof TLShift TRShift TElse TExit TEmit TCase
+%token TLbrack TRbrack TColon TPresent TEof TLShift TRShift TElse TExit TEmit TCase TWeak
 %token TMain TIn TOut TOtherwise TPar TFor TSignal TChannel TPause TColon
 %token TInt8 TInt16 TInt32 TInt64 TInt8s TInt16s TInt32s TInt64s TFloat8 TFloat32 TFloat64 TFloat16 TInt1s
 %token TAwait Timm TExtern TSplit TAT TSend TReceive TNotEqual TOpPlus TOpTimes TBegin TEnd THash TDo TSEMISEMI
@@ -111,6 +111,8 @@ par:
 
 await:
     | TAwait TOP expr TCP {Systemj.Abort($3,Systemj.While(Systemj.True,Systemj.Pause(None ,ln(),None),ln()),ln())}
+    | TAwait TOP Timm expr TCP {Systemj.Present($4,Systemj.Noop,
+						Some (Systemj.Abort($4,Systemj.While(Systemj.True,Systemj.Pause(None ,ln(),None),ln()),ln())),ln())}
     | symbol TColon TAwait TOP expr TCP {Systemj.Abort($5,Systemj.While(Systemj.True,Systemj.Pause(Some (match $1 with Systemj.Symbol (x,_) -> x)
 												      ,ln(),None),ln()),ln())}
 ;
@@ -128,12 +130,20 @@ receive:
 ;*/
 
 suspend:
-    /*| TSuspend TOP Timm expr TCP stmt {Systemj.Noop}*/
+    | TSuspend TOP Timm expr TCP stmt {Systemj.Block([Systemj.Abort($4,Systemj.While(Systemj.True,Systemj.Pause(None ,ln(),None),ln()),ln());
+						      Systemj.Suspend($4,$6,ln())],ln())}
     | TSuspend TOP expr TCP stmt {Systemj.Suspend($3,$5,ln())}
+    | TWeak TSuspend TOP expr TCP stmt {Systemj.Suspend($4,$6,ln())}
+    | TWeak TSuspend TOP Timm expr TCP stmt {
+      Systemj.Block([Systemj.Present($5,Systemj.Block([PropositionalLogic.surface $7;
+						       Systemj.Abort($5,Systemj.While(Systemj.True,Systemj.Pause(None ,ln(),None),ln()),ln())],ln()),
+				     None,ln());Systemj.Suspend($5,$7,ln())],ln())}
 ;
 abort:
-    | TAbort TOP Timm expr TCP stmt { Systemj.Present($4,Systemj.Noop,Some (Systemj.Abort($4,$6,ln())),ln())}
+    | TAbort TOP Timm expr TCP stmt {Systemj.Present($4,Systemj.Noop,Some (Systemj.Abort($4,$6,ln())),ln())}
     | TAbort TOP expr TCP stmt {Systemj.Abort($3,$5,ln())}
+    | TWeak TAbort TOP expr TCP stmt {Systemj.Abort($4,$6,ln())}
+    | TWeak TAbort TOP Timm expr TCP stmt {Systemj.Present($5,PropositionalLogic.surface $7, Some(Systemj.Abort($5,$7,ln())), ln())}
 ;
 
 present:

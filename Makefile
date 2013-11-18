@@ -12,16 +12,16 @@ all: compile
 compile:
 	$(MAKE) -e -C error/ all
 	$(MAKE) -e -C language/ all
-	$(MAKE) -e -C parser/ all
 	$(MAKE) -e -C induction/ all
+	$(MAKE) -e -C parser/ all
 	$(MAKE) -e -C util/ all
 	$(MAKE) -e -C backend/ all
 	ocamlfind $(CC) -pp "camlp4o pa_macro.cmo -UDEBUG -USDEBUG" -o	\
 	systemjc -syntax batteries.syntax -linkpkg -package batteries	\
-	-package sexplib -package pretty -package parmap \
-	-thread -I ./language -I ./error -I ./parser -I	\
-	./induction -I ./util -I ./backend $(ERRORLIB) $(LANGUAGELIB)	\
-	$(PARSERLIB) $(LOGICLIB) $(UTILLIB) $(CODEGENLIB) systemjc.ml
+	-package sexplib -package pretty -package parmap -thread -I	\
+	./language -I ./error -I ./parser -I ./induction -I ./util -I	\
+	./backend $(ERRORLIB) $(LANGUAGELIB) $(LOGICLIB) $(PARSERLIB)	\
+	$(UTILLIB) $(CODEGENLIB) systemjc.ml
 	ctags -R .
 
 clean:

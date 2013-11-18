@@ -266,42 +266,42 @@ let rec get_simple_data_expr index asignals internal_signals = function
   | DataBrackets (x,_) -> "(" ^ get_simple_data_expr index asignals internal_signals x ^ ")"
   | Cast (x,y,_) -> "(" ^ "(" ^ get_data_type x ^ ")" ^ get_simple_data_expr index asignals internal_signals y ^ ")"
   | SignalOrChannelRef (Symbol(x,_),ln) as s ->
-      let signals = List.split asignals |> (fun (x,_) -> x) in
-      if List.exists (fun y -> y = x) signals then 
-        if !backend = "promela" then
-          "now.CD"^(string_of_int index)^"_"^x^"_val_pre"
-        else if !backend = "java" then
-          if (List.exists (fun t -> x=t) internal_signals) then
-            "CD"^(string_of_int index)^"_"^x^"_val_pre"
+    let signals = List.split asignals |> (fun (x,_) -> x) in
+    if List.exists (fun y -> y = x) signals then 
+      if !backend = "promela" then
+        "now.CD"^(string_of_int index)^"_"^x^"_val_pre"
+      else if !backend = "java" then
+        if (List.exists (fun t -> x=t) internal_signals) then
+          "CD"^(string_of_int index)^"_"^x^"_val_pre"
         else
           "Interface.CD"^(string_of_int index)^"_"^x^"_val_pre"
-          else
-            "CD"^(string_of_int index)^"_"^x^"_val_pre"
+      else
+        "CD"^(string_of_int index)^"_"^x^"_val_pre"
       else 
         let () = Sexplib.Sexp.output_hum stdout (sexp_of_simpleDataExpr s) in
         let () = print_endline "" in
         raise (Internal_error "^^^^^^^^^^^^^^^^ currently not supported")
   | Call (Symbol(x,_), s , ln) ->
-(*       let reference = (match !backend with | "java" -> "" | "c" | "promela" -> "&" | _ -> "" ) in *)
+      (*       let reference = (match !backend with | "java" -> "" | "c" | "promela" -> "&" | _ -> "" ) in *)
       (* Passing ref will cause side-effect, for now I am just passing values to functions  *)
-      let signals = List.split asignals |> (fun (x,_) -> x) in
-      let args = List.map (fun x -> get_simple_data_expr index asignals internal_signals x) s in
-      let args = List.fold_left (^) "" (List.map (fun x -> x^","  ) args) in
-      let args = String.rchop args in
-      let extern_call = ref "" in
-      if(!backend = "java") then
-        extern_call := "Interface."^x^"("^args^")"
-      else if(!backend = "c") then
-        extern_call := x^"("^args^")"
-      else if (!backend = "promela") then
-        extern_call := x^"("^args^")"
-      else
-        raise (Internal_error ("extern call for "^(!backend)^" is currently not supported"));
-      !extern_call
+    let signals = List.split asignals |> (fun (x,_) -> x) in
+    let args = List.map (fun x -> get_simple_data_expr index asignals internal_signals x) s in
+    let args = List.fold_left (^) "" (List.map (fun x -> x^","  ) args) in
+    let args = String.rchop args in
+    let extern_call = ref "" in
+    if(!backend = "java") then
+      extern_call := "Interface."^x^"("^args^")"
+    else if(!backend = "c") then
+      extern_call := x^"("^args^")"
+    else if (!backend = "promela") then
+      extern_call := x^"("^args^")"
+    else
+      raise (Internal_error ("extern call for "^(!backend)^" is currently not supported"));
+    !extern_call
   | _ as s -> 
-      let () = Sexplib.Sexp.output_hum stdout (sexp_of_simpleDataExpr s) in
-      let () = print_endline "" in
-      raise (Internal_error "^^^^^^^^^^^^^^^^ currently not supported")
+    let () = Sexplib.Sexp.output_hum stdout (sexp_of_simpleDataExpr s) in
+    let () = print_endline "" in
+    raise (Internal_error "^^^^^^^^^^^^^^^^ currently not supported")
 
 let get_data_expr index asignals internal_signals = function
   | LessThanEqual (x,y,_) -> get_simple_data_expr index asignals internal_signals x ^ "<= " ^ get_simple_data_expr index asignals internal_signals y 
@@ -335,11 +335,11 @@ let get_allsym index asignals internal_signals = function
           "CD"^(string_of_int index)^"_"^x^"_val" 
       in
       ttt ^ (((List.at ops x1) 
-       |> (fun x ->
-         match x with 
-         | Some x -> x.operator 
-         | None -> raise (Internal_error ((Reporting.get_line_and_column ln)^ ": signal has no type and operator"))) 
-       |> get_operators))
+		 |> (fun x ->
+		   match x with 
+		   | Some x -> x.operator 
+		   | None -> raise (Internal_error ((Reporting.get_line_and_column ln)^ ": signal has no type and operator"))) 
+		 |> get_operators))
     else 
       let () = Sexplib.Sexp.output_hum stdout (sexp_of_allsym s) in
       let () = print_endline "" in
