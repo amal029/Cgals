@@ -424,7 +424,7 @@ let rec surface = function
   | Systemj.While (_,s,_) -> surface s
   | _ as s -> 
     output_hum stdout (Systemj.sexp_of_stmt s);
-    raise (Internal_error "^^^^^^^^^^^^^^^^ Send/Receive after re-writing!")
+    raise (Internal_error "Cannot handle this stmt")
 and surface_block ln = function
   | h::t -> Systemj.Block([(surface h); if solve_logic (ninst (Systemj.Block (t,ln))) = True then surface (Systemj.Block (t,ln)) else Systemj.Noop],ln)
   | [] -> Systemj.Noop
