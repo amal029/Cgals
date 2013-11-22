@@ -60,17 +60,17 @@ let make_body asignals internal_signals channels o index signals isignals = func
 	    ++ L.fold_left (++) empty (L.mapi (fun i x ->
 	      ((if not (L.exists (fun t -> t = x) channels) then ("CD"^(string_of_int index)^"_"^x) else x)
 	       ^ " = false;\n" >> text)) !to_false)
-	    ++ (("goto " ^ x ^ ";\n") >> text)
+	    ++ (("CD"^(string_of_int index)^"_L = &&"^x^"; return;\n") >> text)
 	    ++ ("}\n" >> text)
 	  else empty
 	) o guards
-      else [("goto " ^ n ^ ";\n">> text)]
+      else [("CD"^(string_of_int index)^"_L = &&"^n^"; return;\n">> text)]
     )) 
 
 let make_process internal_signals channels o index signals isignals init asignals lgn = 
   (("void CD" ^ (string_of_int index) ^ "(") >> text) 
   ++ ("){\n" >> text)
-  ++ (("goto " ^ init ^ ";\n") >> text)
+  ++ (("if(CD"^(string_of_int index)^"_L == NULL) goto " ^ init ^ "; else goto *CD"^(string_of_int index)^"_L;\n") >> text)
   ++ ((L.reduce (++) (L.map (fun x -> make_body asignals internal_signals channels o index signals isignals (x.node,x.tlabels,x.guards)) lgn)) >> (4 >> indent))
   ++ ("}\n" >> text)
   ++ (" " >> line)

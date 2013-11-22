@@ -225,13 +225,15 @@ try
             |> Pretty.text)
             (Systemj.get_data_type_promela r.Systemj.data ^ " CD"^(string_of_int i)^"_"^x^"_val_pre;\n"  |> Pretty.text)
             ))y z))signals signals_options) in
+        let c_labels = List.fold_left (Pretty.append) Pretty.empty (List.mapi (fun i x -> ("void *CD"^(string_of_int i)^"_L;\n") |> Pretty.text) labeled_buchi_automatas) in
         let () = Pretty.print ~output:(output_string fd) 
         (Pretty.append c_headers
         (Pretty.append promela_vardecs
         (Pretty.append c_gsigs
+        (Pretty.append c_labels
         (Pretty.append c_channels 
         (Pretty.append(List.reduce Pretty.append c_model)
-        c_main))))) in
+        c_main)))))) in
         close_out fd in
     let () = 
       if !genjava then
