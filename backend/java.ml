@@ -139,7 +139,7 @@ let make_scj_wrapper fnwe size =
     ("private static final long DURATION = 10;\n" >> text) ++
     ("private static final long MISSION_MEMORY_SIZE = 1024;\n " >> text) ++
     ("private static final long IMMORTAL_MEMORY_SIZE = 1024;\n " >> text) ++
-    ("\n// Mission implementations - goes to Mission memory" >> text) ++
+    ("\n// Mission implementations - goes to Mission memory\n" >> text) ++
     ("@Override\nprotected void initialize() {\n" >> text) ++
     ("int i = 0;\n" >> text) ++
     (
