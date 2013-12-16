@@ -33,12 +33,14 @@ let speclist = Arg.align [
           | "smt2" -> settings.smt2 <- true
           | _ as a -> failwith ("Invalid argument "^a)
         )),
-     "      Supported output languages are: promela,smt2,c,java (with scj)"
+     "      Supported output languages are:\n\
+     \                      promela,smt2,c,java (with scj)"
     );
     ("-sopt", Arg.Set_string smtopt, 
      "<file>     The name of the optional file for SMT-LIB output generation");
     ("-formula", Arg.Set_string formula, 
-     "<file>     The propositional linear temporal logic formula to verify \n\t\t\t (see promela ltl man page)");
+     "<file>     The propositional linear temporal logic formula to verify\n\
+     \                      (see promela ltl man page)");
     ("-o", Arg.Set_string ofile, 
      "<file>     Output filename (package name for java)")
   ] in
