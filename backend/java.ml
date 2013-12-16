@@ -127,12 +127,12 @@ let make_java channels internal_signals signals isignals index init asignals lgn
   let () = L.iter (fun x -> Util.get_outgoings o (x.node,x.guards)) lgn in
   group ((make_process internal_signals channels o index signals isignals init asignals lgn) ++ (" " >> line))
 
-let make_scj_wrapper fnwe size =
+let make_scj_wrapper basename dirname size =
   let headers = 
-    ("package "^fnwe^".scj;\n" >> text) ++
+    ("package "^basename^".scj;\n" >> text) ++
     ("import javax.realtime.*;\n" >> text) ++
     ("import javax.safetycritical.*;\n\n" >> text) ++
-    ("import "^fnwe^".*;\n\n" >> text) in
+    ("import "^basename^".*;\n\n" >> text) in
   let main = 
     ("public class Level0Mission extends CyclicExecutive implements Safelet<CyclicExecutive>{\n" >> text) ++
     ("private static final long PERIOD = 10;\n" >> text) ++
@@ -186,11 +186,11 @@ let make_scj_wrapper fnwe size =
       	public void handleAsyncEvent() { cd.run(); }                    \n\
       	public void setClockDomain(ClockDomain cdin){ this.cd = cdin; } \n\
       }" >> text) in
-  let () = Unix.mkdir (fnwe^"/scj") 0o770 in
-  let fd = open_out (fnwe^"/scj/Level0Mission.java") in
+  let () = Unix.mkdir (dirname^"/"^basename^"/scj") 0o770 in
+  let fd = open_out (dirname^"/"^basename^"/scj/Level0Mission.java") in
   let () = print ~output:(output_string fd) (headers ++ main) in
   let () = close_out fd in
-  let fd = open_out (fnwe^"/scj/SchedulableGALSObject.java") in
+  let fd = open_out (dirname^"/"^basename^"/scj/SchedulableGALSObject.java") in
   let () = print ~output:(output_string fd) (headers ++ galsobj) in
   let () = close_out fd in
   ()

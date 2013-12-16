@@ -10,39 +10,35 @@ open TableauBuchiAutomataGeneration
 
 let (|>) x f = f x
 
-type otype = {
-  mutable promela: bool;
-  mutable java: bool;
-  mutable smt2: bool;
-  mutable c: bool
+type configuration = {
+  mutable formula : string;
+  mutable smtopt: string;
+  mutable oPromela: string;
+  mutable oJava: string;
+  mutable oSmt2: string;
+  mutable oC: string
 }
 
 let usage_msg = "Usage: systemjc [OPTIONS] <filename>\nsee -help for more options" in
-let ofile = ref "" in
-let settings = {promela=false;java=false;smt2=false;c=false} in
+let conf = {
+  formula="";smtopt="";oPromela="";oJava="";
+  oSmt2="";oC=""
+} in
 let file_name = ref "" in
-let formula = ref "" in
-let smtopt = ref "" in
 let speclist = Arg.align [
-    ("-type", Arg.Symbol 
-       (["java";"c";"promela";"smt2"], 
-        (function 
-          | "java" -> settings.java <- true
-          | "c" -> settings.c <- true
-          | "promela" -> settings.promela <- true
-          | "smt2" -> settings.smt2 <- true
-          | _ as a -> failwith ("Invalid argument "^a)
-        )),
-     "      Supported output languages are:\n\
-     \                      promela,smt2,c,java (with scj)"
-    );
-    ("-sopt", Arg.Set_string smtopt, 
+    ("-promela", Arg.String (fun x ->  conf.oPromela <- x),
+     "<file>     The name of the promela output file");
+    ("-smt2", Arg.String (fun x -> conf.oSmt2 <- x), 
+     "<file>     The name of the SMT-LIB output file");
+    ("-C", Arg.String (fun x -> conf.oC <- x), 
+     "<file>     Generate C backend");
+    ("-java", Arg.String (fun x -> conf.oJava <- x), 
+     "<package>  Generate Java backend");
+    ("-sopt", Arg.String (fun x -> conf.smtopt <- x), 
      "<file>     The name of the optional file for SMT-LIB output generation");
-    ("-formula", Arg.Set_string formula, 
+    ("-formula", Arg.String (fun x -> conf.formula <- x), 
      "<file>     The propositional linear temporal logic formula to verify\n\
-     \                      (see promela ltl man page)");
-    ("-o", Arg.Set_string ofile, 
-     "<file>     Output filename (package name for java)")
+     \                      (see promela ltl man page)")
   ] in
 
 try
@@ -159,7 +155,7 @@ try
 
   let () = 
     let () = 
-      if settings.promela then
+      if conf.oPromela <> "" then
         try
           let asignals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_all_signal_declarations x) in
           let asignals = List.map (fun x -> List.sort_unique compare x) asignals in
@@ -174,7 +170,7 @@ try
               (List.init (List.length labeled_buchi_automatas) (fun x -> channel_strings)) internal_signals signals isignals
               (List.init (List.length labeled_buchi_automatas) (fun x -> x)) (List.rev !init) asignals labeled_buchi_automatas in
           let (promela_model,labeled_buchi_automatas) = List.split prom_make in
-          let fd = open_out ((function | "" -> !file_name^".pml" | _ as x -> x) !ofile) in
+          let fd = open_out conf.oPromela in
           let promela_vardecs = List.fold_left Pretty.append Pretty.empty
               (List.map (fun x -> 
                    let (ttype,name) = (match x with | Systemj.SimTypedSymbol (t,Systemj.Symbol(y,_),_) -> t,y) in
@@ -192,7 +188,7 @@ try
                              | Some r -> Pretty.append (Systemj.get_data_type_promela r.Systemj.data ^ " CD"^(string_of_int i)^"_"^x^"_val = "^r.Systemj.v^";\n"  |> Pretty.text)
                                            (Systemj.get_data_type_promela r.Systemj.data ^ " CD"^(string_of_int i)^"_"^x^"_val_pre;\n"  |> Pretty.text)
                             ))y z))signals signals_options) in
-          let appf = if !formula = "" then Pretty.empty else (Pretty.text ("ltl {" ^ !formula ^ "}\n")) in
+          let appf = if conf.formula = "" then Pretty.empty else (Pretty.text ("ltl {" ^ conf.formula ^ "}\n")) in
           let () = Pretty.print ~output:(output_string fd) 
               (Pretty.append promela_vardecs
                  (Pretty.append promela_gsigs
@@ -203,8 +199,8 @@ try
         with
         | Sys_error _ as s -> raise s in
     let () = 
-      if settings.c then
-        let fd = open_out ((function | "" -> !file_name^".c" | _ as x -> x) !ofile) in
+      if conf.oC <> "" then
+        let fd = open_out conf.oC in
         let asignals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_all_signal_declarations x) in
         let asignals = List.map (fun x -> List.sort_unique compare x) asignals in
         let signals = List.map (fun x -> List.split x) asignals |> List.split |> (fun (x,_) -> x) in
@@ -248,7 +244,7 @@ try
                               c_main)))))) in
         close_out fd in
     let () = 
-      if settings.java then
+      if conf.oJava <> "" then
         let asignals = (match ast with | Systemj.Apar (x,_) -> List.map Systemj.collect_all_signal_declarations x) in
         let asignals = List.map (fun x -> List.sort_unique compare x) asignals in
         let signals = List.map (fun x -> List.split x) asignals |> List.split |> (fun (x,_) -> x) in
@@ -301,7 +297,7 @@ try
             (List.init (List.length labeled_buchi_automatas) (fun x -> channel_strings)) internal_signals signals isignals
             (List.init (List.length labeled_buchi_automatas) (fun x -> x)) (List.rev !init) asignals labeled_buchi_automatas in
 
-        let fnwe = (function | "" -> Filename.chop_extension !file_name | _ as x -> x) !ofile in
+        let fnwe = conf.oJava in
         let () = if(Sys.file_exists fnwe) then 
             Util.remove_dir fnwe
         in
@@ -314,7 +310,7 @@ try
         let () = Pretty.print ~output:(output_string fd_com) (Java.make_interface java_channels java_interface_signals (Filename.basename fnwe)) in
         let () = Pretty.print ~output:(output_string fd_main) java_main in
         let () = Pretty.print ~output:(output_string fd_cdintf) (Java.make_cdintf (Filename.basename fnwe)) in
-        let () = Java.make_scj_wrapper (Filename.basename fnwe) (List.length labeled_buchi_automatas) in
+        let () = Java.make_scj_wrapper (Filename.basename fnwe) (Filename.dirname fnwe) (List.length labeled_buchi_automatas) in
 
         let jclass = List.mapi (fun i x -> 
             (("package "^(Filename.basename fnwe)^
@@ -335,9 +331,9 @@ try
         close_out fd_main
     in
     let () = 
-      if settings.smt2 then
-        let () = Smt.parse_option !smtopt in
-        let () = Smt.make_smt labeled_buchi_automatas ((function | "" -> !file_name^".smt2" | _ as x -> x) !ofile) in 
+      if conf.oSmt2 <> "" then
+        let () = Smt.parse_option conf.smtopt in
+        let () = Smt.make_smt labeled_buchi_automatas conf.oSmt2 in 
         () 
     in
 (*
