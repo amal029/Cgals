@@ -1,0 +1,16 @@
+{
+	output channel C;
+	int signal A op+ = 0;
+	{await(A); if(?A == 2) C!;}|| { pause;pause;?A = 2 ; emit A;}
+	pause;
+
+
+}
+><
+{
+	input channel C;
+
+	C?;
+	int e = extern Calc(extern get(123),2);
+	pause;
+}
