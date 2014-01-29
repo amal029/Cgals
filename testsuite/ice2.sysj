@@ -1,0 +1,148 @@
+{
+  int signal A op+ = 0;
+  output channel C;
+  output channel M;
+  output channel C2;
+  output channel M2;
+  output channel C3;
+  output channel M3;
+  output channel C4;
+  output channel M4;
+  output channel C5;
+  output channel M5;
+  /*  loop {*/
+  {
+  L:await(A);
+    if(?A == 0){
+      C!;||M!;||C2!;||M2!;||C3!;||M3!;||C4!;||M4!;||C5!;||M5!;
+    }
+    else C!;||C2!;||C3!;||C4!;||C5!;
+    /*  }*/
+    pause;
+  }||{emit A;pause;pause;pause;}
+}
+><
+{
+  int output signal D op+ = 0;
+  input channel C;
+  /*  loop {*/
+  C?;
+  if(?D==0) ?D = 1; else ?D = 0;
+  emit D;
+  /* switch { */
+  /*   (t == extern F(extern F())) {} */
+  /*   _ {} */
+  /* } */
+  /*  }*/
+  pause;
+}
+><
+{
+  output signal TT;
+  input channel M;
+  /*  loop {*/
+  M?;
+  emit TT;
+  /*  }*/
+  pause;
+}
+><
+{
+  int output signal D op+ = 0;
+  input channel C2;
+  /*  loop {*/
+  C2?;
+  if(?D==0) ?D = 1; else ?D = 0;
+  emit D;
+  /* switch { */
+  /*   (t == extern F(extern F())) {} */
+  /*   _ {} */
+  /* } */
+  /*  }*/
+  pause;
+}
+><
+{
+  output signal TT;
+  input channel M2;
+  /*  loop {*/
+  M2?;
+  emit TT;
+  /*  }*/
+  pause;
+}
+><
+{
+  int output signal D op+ = 0;
+  input channel C3;
+  /*  loop {*/
+  C3?;
+  if(?D==0) ?D = 1; else ?D = 0;
+  emit D;
+  /* switch { */
+  /*   (t == extern F(extern F())) {} */
+  /*   _ {} */
+  /* } */
+  /*  }*/
+  pause;
+}
+><
+{
+  output signal TT;
+  input channel M3;
+  /*  loop {*/
+  M3?;
+  emit TT;
+  /*  }*/
+  pause;
+}
+><
+{
+  int output signal D op+ = 0;
+  input channel C4;
+  /*  loop {*/
+  C4?;
+  if(?D==0) ?D = 1; else ?D = 0;
+  emit D;
+  /* switch { */
+  /*   (t == extern F(extern F())) {} */
+  /*   _ {} */
+  /* } */
+  /*  }*/
+  pause;
+}
+><
+{
+  output signal TT;
+  input channel M4;
+  /*  loop {*/
+  M4?;
+  emit TT;
+  /*  }*/
+FIN:pause;
+}
+><
+{
+  int output signal D op+ = 0;
+  input channel C5;
+  /*  loop {*/
+  C5?;
+  if(?D==0) ?D = 1; else ?D = 0;
+  emit D;
+  /* switch { */
+  /*   (t == extern F(extern F())) {} */
+  /*   _ {} */
+  /* } */
+  /*  }*/
+  pause;
+}
+><
+{
+  output signal TT;
+  input channel M5;
+  /*  loop {*/
+  M5?;
+  emit TT;
+  /*  }*/
+FIN:pause;
+}
