@@ -119,7 +119,7 @@
   M4?;
   emit TT;
   /*  }*/
-FIN:pause;
+  pause;
 }
 ><
 {
