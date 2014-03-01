@@ -12,12 +12,13 @@ let (++) = append
 let (>>) x f = f x
 let wctt_opt = ref (Hashtbl.create 10)
 let wcrt_opt = ref (Hashtbl.create 10)
+let group = Hashtbl.create 10
 
 exception Internal_error of string
 
 let print_states lba = let ss = List.reduce (^) (List.mapi (fun y f ->  
-  (List.reduce (^) (List.map (fun k -> "(declare-fun CD"^(string_of_int
-  y)^"_"^k.node.name^" () Real)\n") f) )) lba) in ss 
+    (List.reduce (^) (List.map (fun k -> "(declare-fun CD"^(string_of_int
+                                                              y)^"_"^k.node.name^" () Real)\n") f) )) lba) in ss 
 
 let string_of_direction = function
   | Ack -> "Ack"
@@ -35,95 +36,104 @@ let print_sequentiality lba =
   let ors = ref [] in
   let ss = ref "" in
   ss := List.reduce (^) (List.mapi (fun y f ->
-    let doc = List.fold_left (^) ("(assert (and " ) 
-      (List.map (fun x -> 
-        if (x.tlabels = Proposition (Label "st",[None])) then
-          ("(>= CD"^(string_of_int y)^"_"^x.node.name^" 0) ")
-        else
-          List.reduce (^) (List.map (fun k -> 
-            let str = ref "" in
-            (if List.exists (fun tt -> tt.node.name = k) f then(
-              (* Insering micro states *)
-              x.node.incoming_chan <- (List.unique x.node.incoming_chan);
-              (if (List.is_empty x.node.incoming_chan = false)  then
-                  let ors2 = ref [] in
-                  let () = List.iter (fun z -> 
-                    (match z with
-                    | Proposition (Label (s),[Some ((ChanPause (a,b,c)) as p)]) ->
-                      let microst = ("CD"^(string_of_int y)^"_"^x.node.name^"-"^(string_of_tchan p)) in
-		      (*                         let tutu = ("(declare-fun "^microst^" () Int)") in *)
-                      adecl := microst :: !adecl;
-                      let multdep = ref [] in
-                      List.iter(fun u ->
-                        (* micrsteps depends on the previous state on the same CD *)
-                        let wctt1 = (match Hashtbl.find_option !wctt_opt y with | Some (t) -> t | None -> "1") in
-                        str := (!str^" (>= "^microst^" (+ CD"^(string_of_int y)^"_"^k^" "^wctt1^")) ");
-                        (match (p, (match u with | (inchan,Systemj.ChanPause (g,h,l)) -> (inchan,g,h,l) )) with
-                        | (ChanPause (Ack,Start,cn) (*("$AckStart",cn)*), (inchan,Systemj.Req,Systemj.Start,l)) 
-                        | (ChanPause (Ack,End,cn) (*("$AckEnd",cn)*), (inchan,Systemj.Req,Systemj.End,l))
-                        | (ChanPause (Req,End,cn) (*("$ReqEnd",cn)*), (inchan,Systemj.Ack,Systemj.Start,l)) 
-                            when (match String.split cn "_" with | (x,_) -> x) = (match String.split l "_" with | (x,_) -> x) -> 
-                          (* macrostate can finish when any of one of deps finish for the same microst  *)
-                          let cdnum = int_of_string (String.lchop ~n:2 (List.at (String.nsplit inchan "_") 0)) in
-                          let wctt1 = (match Hashtbl.find_option !wctt_opt cdnum with | Some (t) -> t | None -> "1") in
-                          multdep := (" (>= "^microst^" (+ "^inchan^" "^wctt1^")) ") :: !multdep;
-                        | _ -> ()
-                        );
-                        ors2 := ("(= CD"^(string_of_int y)^"_"^x.node.name^" "^microst^") ") :: !ors2;
-                      ) x.node.incoming_chan;
-                      str := (!str ^ (match !multdep with
-                      | [] -> ""
-                      | _::_ -> 
-                        let mys = List.fold_left (^) ("(and ") !multdep in
-                        let mys = (mys ^ " )") in
-                        mys))
-
-                    | _ -> () )
-                  ) x.tls in
-                  if(not (List.is_empty !ors2)) then
-                    ors := (((List.fold_left (^) ("(assert (or ") !ors2) ^ "))\n")) :: !ors;
+      let doc = List.fold_left (^) ("(assert (and " ) 
+          (List.map (fun x -> 
+               if (x.tlabels = Proposition (Label "st",[None])) then
+                 ("(>= CD"^(string_of_int y)^"_"^x.node.name^" 0) ")
                else
-                  let wctt1 = (match Hashtbl.find_option !wctt_opt y with | Some (t) -> t | None -> "1") in
-                  str := ("(>= CD"^(string_of_int y)^"_"^x.node.name^" (+ CD"^(string_of_int y)^"_"^k^" "^wctt1^")) ")
-              )
-             )
-             else str := "");
-            !str
-          ) x.node.incoming)) f) in
-    doc ^ "))\n"
-  ) lba); 
+                 List.reduce (^) (List.map (fun k -> 
+                     let str = ref "" in
+                     (if List.exists (fun tt -> tt.node.name = k) f then(
+                         (* Insering micro states *)
+                         x.node.incoming_chan <- (List.unique x.node.incoming_chan);
+                         (if (List.is_empty x.node.incoming_chan = false)  then
+                            let ors2 = ref [] in
+                            let () = List.iter (fun z -> 
+                                (match z with
+                                 | Proposition (Label (s),[Some ((ChanPause (a,b,c)) as p)]) ->
+                                   let microst = ("CD"^(string_of_int y)^"_"^x.node.name^"-"^(string_of_tchan p)) in
+                                   (*                         let tutu = ("(declare-fun "^microst^" () Int)") in *)
+                                   adecl := microst :: !adecl;
+                                   let multdep = ref [] in
+                                   List.iter(fun u ->
+                                       (* micrsteps depends on the previous state on the same CD *)
+                                       let wctt1 = (match Hashtbl.find_option !wctt_opt y with | Some (t) -> t | None -> "1") in
+                                       str := (!str^" (>= "^microst^" (+ CD"^(string_of_int y)^"_"^k^" "^wctt1^")) ");
+                                       (match (p, (match u with | (inchan,Systemj.ChanPause (g,h,l)) -> (inchan,g,h,l) )) with
+                                         | (ChanPause (Ack,Start,cn) (*("$AckStart",cn)*), (inchan,Systemj.Req,Systemj.Start,l)) 
+                                         | (ChanPause (Ack,End,cn) (*("$AckEnd",cn)*), (inchan,Systemj.Req,Systemj.End,l))
+                                         | (ChanPause (Req,End,cn) (*("$ReqEnd",cn)*), (inchan,Systemj.Ack,Systemj.Start,l)) 
+                                           when (match String.split cn "_" with | (x,_) -> x) = (match String.split l "_" with | (x,_) -> x) -> 
+                                           (* macrostate can finish when any of one of deps finish for the same microst  *)
+                                           let cdnum = int_of_string (String.lchop ~n:2 (List.at (String.nsplit inchan "_") 0)) in
+                                           let wctt1 = (match Hashtbl.find_option !wctt_opt cdnum with | Some (t) -> t | None -> "1") in
+                                           multdep := (" (>= "^microst^" (+ "^inchan^" "^wctt1^")) ") :: !multdep;
+                                         | _ -> ()
+                                       );
+                                       ors2 := ("(= CD"^(string_of_int y)^"_"^x.node.name^" "^microst^") ") :: !ors2;
+                                     ) x.node.incoming_chan;
+                                   str := (!str ^ (match !multdep with
+                                       | [] -> ""
+                                       | _::_ -> 
+                                         let mys = List.fold_left (^) ("(and ") !multdep in
+                                         let mys = (mys ^ " )") in
+                                         mys))
+
+                                 | _ -> () )
+                              ) x.tls in
+                            if(not (List.is_empty !ors2)) then
+                              ors := (((List.fold_left (^) ("(assert (or ") !ors2) ^ "))\n")) :: !ors;
+                          else
+                            let wctt1 = (match Hashtbl.find_option !wctt_opt y with | Some (t) -> t | None -> "1") in
+                            str := ("(>= CD"^(string_of_int y)^"_"^x.node.name^" (+ CD"^(string_of_int y)^"_"^k^" "^wctt1^")) ")
+                         )
+                       )
+                      else str := "");
+                     !str
+                   ) x.node.incoming)) f) in
+      doc ^ "))\n"
+    ) lba); 
 
   adecl := List.unique !adecl;
   ors := List.unique !ors;
   ss := (
     (match List.is_empty !adecl with 
-    | false -> (List.reduce (^) (List.map (fun x -> ("(declare-fun "^x^" () Real)\n")) (!adecl)))
-    | true -> "")
+     | false -> (List.reduce (^) (List.map (fun x -> ("(declare-fun "^x^" () Real)\n")) (!adecl)))
+     | true -> "")
     ^ !ss ^ 
-      (match List.is_empty !ors with
-      | false -> List.reduce (^) !ors
-      | true -> "")
+    (match List.is_empty !ors with
+     | false -> List.reduce (^) !ors
+     | true -> "")
   );
   !ss
 
 let print_constraint lba =
   let ss = 
     (List.mapi (fun r q ->
-      List.mapi (fun rr tt -> 
-        if( r < rr ) then(
-          List.reduce (^) (List.map (fun x ->
-            List.reduce (^) (List.map (fun y ->
-              let wctt1 = (match Hashtbl.find_option !wctt_opt r with | Some (t) -> t | None -> "1") in
-              let wctt2 = (match Hashtbl.find_option !wctt_opt (r+1) with | Some (t) -> t | None -> "1") in
-              ("(assert (or (>= CD"^(string_of_int r)^"_"^x.node.name^" (+ CD"^(string_of_int rr)^"_"^y.node.name^" "^wctt2^")) "^
-                  "(>= CD"^(string_of_int rr)^"_"^y.node.name^" (+ CD"^(string_of_int r)^"_"^x.node.name^" "^wctt1^"))))\n")
-            ) tt)
-          ) q)
-        )
-        else
-          ""
-    ) lba;
-      )lba) >> List.flatten >> List.reduce (^) 
+         List.mapi (fun rr tt -> 
+             if( r < rr ) then(
+               List.reduce (^) (List.map (fun x ->
+                   List.reduce (^) (List.map (fun y ->
+                       let wctt1 = (match Hashtbl.find_option !wctt_opt r with | Some (t) -> t | None -> "1") in
+                       let wctt2 = (match Hashtbl.find_option !wctt_opt (r+1) with | Some (t) -> t | None -> "1") in
+                       let xnum = string_of_int r in
+                       let ynum = string_of_int rr in
+                       match Hashtbl.find_option group xnum with
+                       | None ->
+                         ""
+                       | Some g ->
+                         if( List.exists (fun y -> y = ynum) g ) then
+                           ("(assert (or (>= CD"^(string_of_int r)^"_"^x.node.name^" (+ CD"^(string_of_int rr)^"_"^y.node.name^" "^wctt2^")) "^
+                            "(>= CD"^(string_of_int rr)^"_"^y.node.name^" (+ CD"^(string_of_int r)^"_"^x.node.name^" "^wctt1^"))))\n")
+                         else
+                           ""
+                     ) tt)
+                 ) q)
+             )
+             else
+               ""
+           ) lba;
+       )lba) >> List.flatten >> List.reduce (^) 
   in
   ss       
 
@@ -132,49 +142,49 @@ let rec get_chan_prop logic node cc =
   | Not (Proposition (Label (t),p)) as s -> ()
   | Proposition (Label (t),p) as s ->
     (match p with
-    | [Some (Systemj.ChanPause ((Systemj.Ack|Systemj.Req), _,_))] ->
-      cc := (node,s) :: !cc;
-    | [None] -> ()
-    | _ -> ())
+     | [Some (Systemj.ChanPause ((Systemj.Ack|Systemj.Req), _,_))] ->
+       cc := (node,s) :: !cc;
+     | [None] -> ()
+     | _ -> ())
   | _ -> ()
 
 let remove_loop n = 
   if List.exists (fun x -> 
-    (match x with
-    | Proposition (_, [Some (ChanPause (Ack,Start,c))]) ->
-      List.exists (fun x ->
-        (match x with
-        | (_, ChanPause (Req,Start,cc)) when 
-            (match String.split c "_" with |(j,k) -> j) = (match String.split cc "_" with |(j,k) -> j) -> true
-        | _ -> false
-        )
-      ) n.node.incoming_chan
-    | Proposition (_, [Some (ChanPause (Ack,End,c))]) ->
-      List.exists (fun x ->
-        (match x with
-        | (_, ChanPause (Req,End,cc)) when 
-            (match String.split c "_" with |(j,k) -> j) = (match String.split cc "_" with |(j,k) -> j) -> true
-        | _ -> false
-        )
-      ) n.node.incoming_chan
-    | Proposition (_, [Some (ChanPause (Req,End,c))]) ->
-      List.exists (fun x ->
-        (match x with
-        | (_, ChanPause (Ack,Start,cc)) when 
-            (match String.split c "_" with |(j,k) -> j) = (match String.split cc "_" with |(j,k) -> j) -> true
-        | _ -> false
-        )
-      ) n.node.incoming_chan
-    | Proposition (_, [Some (ChanPause (Req,Start,c))]) -> true
-    | _ -> false)
-  ) n.tls then
-(*     let tt = List.filter (fun x -> x <> n.node.name) n.node.incoming in *)
+      (match x with
+       | Proposition (_, [Some (ChanPause (Ack,Start,c))]) ->
+         List.exists (fun x ->
+             (match x with
+              | (_, ChanPause (Req,Start,cc)) when 
+                  (match String.split c "_" with |(j,k) -> j) = (match String.split cc "_" with |(j,k) -> j) -> true
+              | _ -> false
+             )
+           ) n.node.incoming_chan
+       | Proposition (_, [Some (ChanPause (Ack,End,c))]) ->
+         List.exists (fun x ->
+             (match x with
+              | (_, ChanPause (Req,End,cc)) when 
+                  (match String.split c "_" with |(j,k) -> j) = (match String.split cc "_" with |(j,k) -> j) -> true
+              | _ -> false
+             )
+           ) n.node.incoming_chan
+       | Proposition (_, [Some (ChanPause (Req,End,c))]) ->
+         List.exists (fun x ->
+             (match x with
+              | (_, ChanPause (Ack,Start,cc)) when 
+                  (match String.split c "_" with |(j,k) -> j) = (match String.split cc "_" with |(j,k) -> j) -> true
+              | _ -> false
+             )
+           ) n.node.incoming_chan
+       | Proposition (_, [Some (ChanPause (Req,Start,c))]) -> true
+       | _ -> false)
+    ) n.tls then
+    (*     let tt = List.filter (fun x -> x <> n.node.name) n.node.incoming in *)
     let a = ref [] in
     let b = ref [] in
     (try
-      List.iter2 (fun x y ->  if x <> n.node.name then( a := x :: !a; b := y :: !b ) ) n.node.incoming n.guards
-    with
-    | _ as s -> raise s);
+       List.iter2 (fun x y ->  if x <> n.node.name then( a := x :: !a; b := y :: !b ) ) n.node.incoming n.guards
+     with
+     | _ as s -> raise s);
     n.node.incoming <- !a;
     n.guards <- !b
   else
@@ -193,28 +203,28 @@ let insert_incoming i1 cdn1 i2 cdn2 =
   match first with 
   | (a,s,((Systemj.ChanPause (Systemj.Ack, Systemj.Start,_)) as pp) (*"ack",true*) ) -> 
     (match second with 
-    | (aa,ss,((Systemj.ChanPause (Systemj.Req, Systemj.Start,_)) as p) (*"req",false*) ) when a = aa ->
-      s.node.incoming_chan <- (("CD"^(string_of_int cdn2)^"_"^ss.node.name),p) :: s.node.incoming_chan;
-    | (aa,ss,Systemj.ChanPause (Systemj.Req, Systemj.End,_) (*"req",true*) ) when a = aa ->
-      ss.node.incoming_chan <- (("CD"^(string_of_int cdn1)^"_"^s.node.name),pp) :: ss.node.incoming_chan;
-    | _ -> ())
+     | (aa,ss,((Systemj.ChanPause (Systemj.Req, Systemj.Start,_)) as p) (*"req",false*) ) when a = aa ->
+       s.node.incoming_chan <- (("CD"^(string_of_int cdn2)^"_"^ss.node.name),p) :: s.node.incoming_chan;
+     | (aa,ss,Systemj.ChanPause (Systemj.Req, Systemj.End,_) (*"req",true*) ) when a = aa ->
+       ss.node.incoming_chan <- (("CD"^(string_of_int cdn1)^"_"^s.node.name),pp) :: ss.node.incoming_chan;
+     | _ -> ())
   | (a,s,Systemj.ChanPause (Systemj.Ack, Systemj.End,_) (*"ack",false*) ) ->
     (match second with 
-    | (aa,ss,((Systemj.ChanPause (Systemj.Req, Systemj.End,_)) as p) (*"req",true*) ) when a = aa ->
-      s.node.incoming_chan <- (("CD"^(string_of_int cdn2)^"_"^ss.node.name),p) :: s.node.incoming_chan;
-    | _ -> ())
+     | (aa,ss,((Systemj.ChanPause (Systemj.Req, Systemj.End,_)) as p) (*"req",true*) ) when a = aa ->
+       s.node.incoming_chan <- (("CD"^(string_of_int cdn2)^"_"^ss.node.name),p) :: s.node.incoming_chan;
+     | _ -> ())
   | (a,s,((Systemj.ChanPause (Systemj.Req, Systemj.End,_)) as pp) (*"req",true*) ) ->
     (match second with
-    | (aa,ss,((Systemj.ChanPause (Systemj.Ack, Systemj.Start,_) as p)) (*"ack",true*) ) when a = aa ->
-      s.node.incoming_chan <- (("CD"^(string_of_int cdn2)^"_"^ss.node.name),p) :: s.node.incoming_chan;
-    | (aa,ss,Systemj.ChanPause (Systemj.Ack, Systemj.End,_) (*"ack",false*) ) when a = aa ->
-      ss.node.incoming_chan <- (("CD"^(string_of_int cdn1)^"_"^s.node.name), pp) :: ss.node.incoming_chan;
-    | _ -> ())
+     | (aa,ss,((Systemj.ChanPause (Systemj.Ack, Systemj.Start,_) as p)) (*"ack",true*) ) when a = aa ->
+       s.node.incoming_chan <- (("CD"^(string_of_int cdn2)^"_"^ss.node.name),p) :: s.node.incoming_chan;
+     | (aa,ss,Systemj.ChanPause (Systemj.Ack, Systemj.End,_) (*"ack",false*) ) when a = aa ->
+       ss.node.incoming_chan <- (("CD"^(string_of_int cdn1)^"_"^s.node.name), pp) :: ss.node.incoming_chan;
+     | _ -> ())
   | (a,s,((Systemj.ChanPause (Systemj.Req, Systemj.Start,_)) as pp) (*"req",false*) ) ->
     (match second with
-    | (aa,ss,Systemj.ChanPause (Systemj.Ack, Systemj.Start,_) (*"ack",true*) ) when a = aa ->
-      ss.node.incoming_chan <- (("CD"^(string_of_int cdn1)^"_"^s.node.name), pp ):: ss.node.incoming_chan;
-    | _ -> ())
+     | (aa,ss,Systemj.ChanPause (Systemj.Ack, Systemj.Start,_) (*"ack",true*) ) when a = aa ->
+       ss.node.incoming_chan <- (("CD"^(string_of_int cdn1)^"_"^s.node.name), pp ):: ss.node.incoming_chan;
+     | _ -> ())
 (* | _ -> () *)
 
 
@@ -226,17 +236,36 @@ let parse_option o =
          let line = input_line ic in
          let lrval = String.split (String.trim line) "=" in
          let rval = (match lrval with | (l,r) -> String.trim r) in
-         let lval = String.nsplit (match lrval with | (l,r) -> String.trim l) "." in
-         (match lval with
-         | ["CD";num;"WCTT"] ->
-           (* let cdnum = (int_of_string num) in *)
-           Hashtbl.replace !wctt_opt (int_of_string num) rval
-         | ["CD";num;"WCRT"] ->
-           (* let cdnum = (int_of_string num) in *)
-           Hashtbl.replace !wcrt_opt (int_of_string num) rval
-         | _ as t -> raise (Internal_error ("Wrong smt option format : "^
-					       (SSL.string_of_sexp (SSL.sexp_of_list SSL.sexp_of_string t))))
-         );()
+         let lval = (match lrval with | (l,r) -> String.trim l) in
+         let index = 0 in
+         (* Distributing clock-domains *)
+         if (lval = "group") then
+           let dlist = Str.split (Str.regexp "|") rval in
+           let dlist = List.map (fun x -> Str.split (Str.regexp ",") x ) dlist in
+           List.iter (fun x -> 
+               List.iter(fun y ->
+                   match Hashtbl.find_option group y with
+                   | Some _ ->
+                     raise (Internal_error ("Duplicated CD number in group"))
+                   | None ->
+                     Hashtbl.add group y x
+                 ) x
+             ) dlist
+(*           List.iter (fun x -> Hashtbl.add *)
+(*            List.iter (fun x -> print_endline x ) dlist *)
+         else
+           let lval = String.nsplit lval "." in
+           (match lval with
+            | ["CD";num;"WCTT"] ->
+              (* let cdnum = (int_of_string num) in *)
+              Hashtbl.replace !wctt_opt (int_of_string num) rval
+            | ["CD";num;"WCRT"] ->
+              (* let cdnum = (int_of_string num) in *)
+              Hashtbl.replace !wcrt_opt (int_of_string num) rval
+            | _ as t -> raise (Internal_error ("Wrong smt option format : "^
+                                               (SSL.string_of_sexp (SSL.sexp_of_list SSL.sexp_of_string t))))
+           );
+           ()
        done
      with
      | End_of_file -> ()
@@ -251,14 +280,14 @@ let get_last_node lb =
 
 let print_wcrt lba =
   let wcrt = List.fold_left (^) ("") (List.mapi (fun i x -> 
-    let node = get_last_node x in
-    List.fold_left (^) ("") (List.map (fun l ->
-      (match (Hashtbl.find_option !wcrt_opt i,Hashtbl.find_option !wctt_opt i) with
-      | (Some (x),Some(z)) -> ("(assert (and (<= (+ CD"^(string_of_int i)^"_"^(l.node.name)^" "^z^") "^x^")))\n")
-      | _ -> ("; CD "^(string_of_int i)^" : none\n")
-      )
-    ) node)
-  ) lba) in
+      let node = get_last_node x in
+      List.fold_left (^) ("") (List.map (fun l ->
+          (match (Hashtbl.find_option !wcrt_opt i,Hashtbl.find_option !wctt_opt i) with
+           | (Some (x),Some(z)) -> ("(assert (and (<= (+ CD"^(string_of_int i)^"_"^(l.node.name)^" "^z^") "^x^")))\n")
+           | _ -> ("; CD "^(string_of_int i)^" : none\n")
+          )
+        ) node)
+    ) lba) in
   let wcrt = ("; -- WCRT constraints -- \n"^wcrt) in
   wcrt
 
@@ -266,38 +295,38 @@ let print_wcrt lba =
 let make_smt lba filename =
   let cc = ref [] in
   let () = List.iter (fun x -> 
-    let o = Hashtbl.create 1000 in
-    let () = List.iter (fun x -> Util.get_outgoings o (x.node,x.guards)) x in
-    let cc2 = ref [] in 
-    List.iter (fun y ->  
-      List.iter (fun k -> get_chan_prop k y cc2 ) y.tls ) x;
-    cc := !cc2 :: !cc) lba in
-  
+      let o = Hashtbl.create 1000 in
+      let () = List.iter (fun x -> Util.get_outgoings o (x.node,x.guards)) x in
+      let cc2 = ref [] in 
+      List.iter (fun y ->  
+          List.iter (fun k -> get_chan_prop k y cc2 ) y.tls ) x;
+      cc := !cc2 :: !cc) lba in
+
   cc := List.rev !cc;
 
   let () = List.iteri (fun i x ->
-    List.iteri (fun y z ->
-      if(i <> y) then(
-        List.iter (fun i1 ->
-            List.iter (fun i2 ->
-              insert_incoming i1 i i2 y
-            ) z
-          ) x
-      )
-    ) !cc
-  ) !cc in
+      List.iteri (fun y z ->
+          if(i <> y) then(
+            List.iter (fun i1 ->
+                List.iter (fun i2 ->
+                    insert_incoming i1 i i2 y
+                  ) z
+              ) x
+          )
+        ) !cc
+    ) !cc in
 
   let () = List.iter (fun x -> List.iter (fun x -> remove_loop x) x) lba in
 
   let fd = open_out filename in   
   let decl_stuff = 
     ("(set-option :produce-proofs true)\n" >> text) ++
-      ("(set-logic QF_LRA)\n" >> text) ++
-      ((print_states lba) >> text) ++
-      ((print_sequentiality lba) >> text) ++
-      ((print_constraint lba) >> text) ++
-      ((print_wcrt lba) >> text)++
-      ("(check-sat)\n(get-model)\n(get-proof)\n" >> text)
+    ("(set-logic QF_LRA)\n" >> text) ++
+    ((print_states lba) >> text) ++
+    ((print_sequentiality lba) >> text) ++
+    ((print_constraint lba) >> text) ++
+    ((print_wcrt lba) >> text)++
+    ("(check-sat)\n(get-model)\n(get-proof)\n" >> text)
   in
   let () = print ~output:(output_string fd) decl_stuff in
   close_out fd
