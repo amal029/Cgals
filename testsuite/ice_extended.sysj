@@ -1,75 +1,75 @@
 {
-	int signal A op+ = 0;
-	signal B;
-	input signal Conv1Fault;
-	input signal Conv2Fault;
-	output signal C1;
-	output signal C2;
-	output channel C;
-	output channel M;
-	output channel F;
-	{
-		loop {
-			await(A);
-			emit C1;
-			if(Conv1Fault){
-				F!;||M!;
-			}
-			else if(Conv2Fault){
-				C!;
-			}
-			else{
-				if(?A == 1){
-					F!;||M!;
-				}
-				else C!;
-			}
-			emit C2;
-			pause;
-		}
+  int signal A op+ = 0;
+  signal B;
+  input signal Conv1Fault;
+  input signal Conv2Fault;
+  output signal C1;
+  output signal C2;
+  output channel C;
+  output channel M;
+  output channel F;
+  {
+    loop {
+      await(A);
+      emit C1;
+      if(Conv1Fault){
+	F!;||M!;
+      }
+      else if(Conv2Fault){
+	C!;
+      }
+      else{
+	if(?A == 1){
+	  F!;||M!;
 	}
-	||
-	{
-		pause;?A = 1; emit A; pause; pause;
-	}
+	else C!;
+      }
+      emit C2;
+      pause;
+    }
+  }
+  ||
+    {
+      pause;?A = 1; emit A; pause; pause;
+    }
 }
 ><
 {
-	int output signal D op+ = 0;
-	output channel STORE1;
-	input channel C;
-	input channel F;
-	{
-		loop{F?;?D=1;emit D;pause;}
-	}
-	||
-	{
-		loop {
-			C?;
-			?D=2;emit D;
-			STORE1!;
-			pause;
-		}
-	}
+  int output signal D op+ = 0;
+  output channel STORE1;
+  input channel C;
+  input channel F;
+  {
+    loop{F?;?D=1;emit D;pause;}
+  }
+  ||
+    {
+      loop {
+	C?;
+	?D=2;emit D;
+	STORE1!;
+	pause;
+      }
+    }
 }
 ><
 {
-	output signal TT;
-	output channel STORE2;
-	input channel M;
-	loop {
-		M?;
-		emit TT;
-		STORE2!;
-		pause;
-	}
+  output signal TT;
+  output channel STORE2;
+  input channel M;
+  loop {
+    M?;
+    emit TT;
+    STORE2!;
+    pause;
+  }
 }
 ><
 {
-	input channel STORE1;
-	input channel STORE2;
-	output signal enSt1;
-	output signal enSt2;
+  input channel STORE1;
+  input channel STORE2;
+  output signal enSt1;
+  output signal enSt2;
 
-	{loop{STORE1?;emit enSt1;pause;}} || {loop{STORE2?;emit enSt2;pause;}}
+  {loop{STORE1?;emit enSt1;pause;}} || {loop{STORE2?;emit enSt2;pause;}}
 }
