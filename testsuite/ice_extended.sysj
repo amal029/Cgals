@@ -1,37 +1,47 @@
+/*ltl {([](!CD0_Conv2Fault || !CD0_Conv1Fault)) -> [](CD0_A -> <> (CD3_enSt2 || CD3_enSt1))}*/
+/* ltl {([](!CD0_Conv2Fault && !CD0_Conv1Fault)) -> [](CD0_A -> <> (CD3_enSt2))} */
+/*ltl {([](CD0_Conv2Fault && !CD0_Conv1Fault)) -> [](CD0_A -> <> CD3_enSt1)}*/
+/* ltl {[]((CD0_Conv2Fault && CD0_Conv1Fault) -> <>CD0_STOP)} */
+/*ltl {([](CD0_Conv1Fault && !CD0_Conv2Fault)) -> [](CD0_A -> <> CD3_enSt2)}*/
+/* ltl {[]((CD3_enSt1 && !CD3_enSt2)||(!CD3_enSt1 && CD3_enSt2)||(!CD3_enSt1 && !CD3_enSt2)) && */
+/*      ((CD0_C1 && !CD0_C2)||(!CD0_C2 && CD0_C1)||(!CD0_C1 && !CD0_C2))} */
 {
   int signal A op+ = 0;
   signal B;
   input signal Conv1Fault;
   input signal Conv2Fault;
+  output signal STOP;
   output signal C1;
   output signal C2;
   output channel C;
   output channel M;
   output channel F;
   {
-    loop {
-      await(A);
-      emit C1;
-      if(Conv1Fault){
-	F!;||M!;
-      }
-      else if(Conv2Fault){
-	C!;
-      }
-      else{
-	if(?A == 1){
+    abort(Conv2Fault && Conv1Fault) {
+      loop {
+	await(A);
+	emit C1;
+	if(Conv1Fault && !Conv2Fault){
 	  F!;||M!;
 	}
-	else C!;
+	else if(Conv2Fault && !Conv1Fault){
+	  C!;
+	}
+	else if (!Conv1Fault && !Conv2Fault){
+	  if(?A == 1){
+	    F!;||M!;
+	  }
+	  else C!;
+	}
+	emit C2;
+	pause;
       }
-      emit C2;
-      pause;
     }
+    loop {emit STOP; pause;}
   }
-  ||
-    {
-      pause;?A = 1; emit A; pause; pause;
-    }
+  ||{
+    pause;?A = 1; emit A; pause; pause;
+  }
 }
 ><
 {
