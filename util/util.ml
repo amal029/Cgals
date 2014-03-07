@@ -15,10 +15,10 @@ exception Internal_error of string
 let build_data_stmt asignals index from internal_signals stmt = 
   Systemj.backend := from; 
   let stmt = Systemj.get_data_stmt index asignals internal_signals
-      (match stmt with DataUpdate x -> x 
-                     | _ as s -> 
-                       output_hum stdout (sexp_of_proposition s);
-                       raise (Internal_error "^^^^^^^^^^^^^^^ is not a data-type statment")) in
+    (match stmt with DataUpdate x -> x 
+    | _ as s -> 
+      output_hum stdout (sexp_of_proposition s);
+      raise (Internal_error "^^^^^^^^^^^^^^^ is not a data-type statment")) in
   match from with
   | "promela" -> "c_code {\n" ^ stmt ^ "};\n"
   | _ -> stmt
@@ -30,86 +30,71 @@ let build_data_expr from index asignals internal_signals expr =
   | "promela" -> "c_expr{" ^ expr ^ "}"
   | _ -> expr
 
-let rec getisigguards is ints = function
-  | And (x,y) | Or (x,y) -> 
-    let lv = getisigguards is ints x in
-    let rv = getisigguards is ints y in
-    lv @ rv
-  | Proposition (x,_) | Not (Proposition (x,_)) -> 
-    (match x with
-     | Expr x ->
-       if (L.exists (fun t -> t = x) is) then
-         [x]
-       else []
-    | _ -> [] )
-  | _ -> []
-
-
 let rec label from tf internal_signals channels index updates isignals asignals = function
   | And (x,y) -> 
     let lv = (label from tf internal_signals channels index updates isignals asignals x)  in
     let rv = (label from tf internal_signals channels index updates isignals asignals y) in
     let () = IFDEF DEBUG THEN output_hum stdout (sexp_of_list sexp_of_string [lv;rv]) ELSE () ENDIF in
     (match (lv,rv) with
-     | ("false",_) | (_,"false") -> "false"
-     | ("true","true") -> "true"
-     | ("true",(_ as s)) | ((_ as s),"true") -> s
-     | (_,_) -> "(" ^ lv ^ ")&&(" ^ rv ^ ")")
+    | ("false",_) | (_,"false") -> "false"
+    | ("true","true") -> "true"
+    | ("true",(_ as s)) | ((_ as s),"true") -> s
+    | (_,_) -> "(" ^ lv ^ ")&&(" ^ rv ^ ")")
   | Or (x,y) -> 
     let lv = (label from tf internal_signals channels index updates isignals asignals x)  in
     let rv = (label from tf internal_signals channels index updates isignals asignals y) in
     (match (lv,rv) with
-     | ("true",_) | (_,"true") -> "true"
-     | ("false","false") -> "false"
-     | ("false",(_ as s)) | ((_ as s),"false") -> s
-     | (_,_) -> "(" ^ lv ^ ")||(" ^ rv ^ ")")
+    | ("true",_) | (_,"true") -> "true"
+    | ("false","false") -> "false"
+    | ("false",(_ as s)) | ((_ as s),"false") -> s
+    | (_,_) -> "(" ^ lv ^ ")||(" ^ rv ^ ")")
   | Not (Proposition (x,_)) as s-> 
-    let v = (match x with 
-        | Expr x ->
+      let v = (match x with 
+      | Expr x ->
           if (not (L.exists (fun t -> t = x) isignals)) then
             if x.[0] = '$' then 
               let () = output_hum stdout (sexp_of_logic s) in
               raise (Internal_error "^^^^^^^^^^^^ Not emit proposition impossible!")
             else 
-            if not (L.exists (fun t -> t = x) channels) then 
-              if(from = "java" && not(List.exists (fun t -> t  = x) internal_signals)) then 
-                ("Interface.CD"^(string_of_int index)^"_"^x) 
-              else ("CD"^(string_of_int index)^"_"^x) 
-            else 
-            if(from = "java") then "(Interface." ^ x ^ ")"
-            else "(" ^ x ^ ")"
-          else ("CD"^(string_of_int index)^"_"^x)
-        | DataExpr x -> build_data_expr from index asignals internal_signals x
-        | DataUpdate x -> raise (Internal_error ("Tried to update data " ^ (to_string_hum (Systemj.sexp_of_dataStmt x)) ^ " on a guard!!"))
-        | Update x -> raise (Internal_error ("Tried to update " ^ x ^ " on a guard!!"))
-        | Label x -> raise (Internal_error ("Tried to put label " ^ x ^ " on a guard!!"))) in 
+              if not (L.exists (fun t -> t = x) channels) then 
+		if(from = "java" && not(List.exists (fun t -> t  = x) internal_signals)) then 
+                  ("Interface.CD"^(string_of_int index)^"_"^x) 
+                else ("CD"^(string_of_int index)^"_"^x) 
+              else 
+                if(from = "java") then "(Interface." ^ x ^ ")"
+                else "(" ^ x ^ ")"
+          else "false"
+      | DataExpr x -> build_data_expr from index asignals internal_signals x
+      | DataUpdate x -> raise (Internal_error ("Tried to update data " ^ (to_string_hum (Systemj.sexp_of_dataStmt x)) ^ " on a guard!!"))
+      | Update x -> raise (Internal_error ("Tried to update " ^ x ^ " on a guard!!"))
+      | Label x -> raise (Internal_error ("Tried to put label " ^ x ^ " on a guard!!"))) in 
     (match v with
-     | "false" -> "true"
-     | "true" -> "false"
-     | _ -> "!("^v^")")
+    | "false" -> "true"
+    | "true" -> "false"
+    | _ -> "!("^v^")")
   | Proposition (x,_) -> (match x with 
-      | Expr x -> 
+    | Expr x -> 
         if (not (L.exists (fun t -> t = x) isignals)) then
           if x.[0] = '$' then "true"
           else 
             (* This can only ever happen here! *)
             (* if not (List.exists (fun (Update t) -> t = x) updates) then *)
-          if not (L.exists (fun t -> t = x) channels) then 
-            if(from = "java" && not(List.exists (fun t -> t  = x) internal_signals)) then 
-              ("Interface.CD"^(string_of_int index)^"_"^x) 
-            else ("CD"^(string_of_int index)^"_"^x) 
-          else 
-          if(from = "java") then "(Interface." ^ x ^ ")" else "(" ^ x ^ ")"
-        else ("CD"^(string_of_int index)^"_"^x)
-      | DataExpr x -> build_data_expr from index asignals internal_signals x
-      | DataUpdate x -> raise (Internal_error ("Tried to update data " ^ (to_string_hum (Systemj.sexp_of_dataStmt x)) ^ " on a guard!!"))
-      | Update x -> raise (Internal_error ("Tried to update " ^ x ^ " on a guard!!"))
-      | Label x -> raise (Internal_error ("Tried to put label " ^ x ^ " on a guard!!"))) 
+            if not (L.exists (fun t -> t = x) channels) then 
+              if(from = "java" && not(List.exists (fun t -> t  = x) internal_signals)) then 
+		("Interface.CD"^(string_of_int index)^"_"^x) 
+              else ("CD"^(string_of_int index)^"_"^x) 
+            else 
+              if(from = "java") then "(Interface." ^ x ^ ")" else "(" ^ x ^ ")"
+        else "true"
+    | DataExpr x -> build_data_expr from index asignals internal_signals x
+    | DataUpdate x -> raise (Internal_error ("Tried to update data " ^ (to_string_hum (Systemj.sexp_of_dataStmt x)) ^ " on a guard!!"))
+    | Update x -> raise (Internal_error ("Tried to update " ^ x ^ " on a guard!!"))
+    | Label x -> raise (Internal_error ("Tried to put label " ^ x ^ " on a guard!!"))) 
   | True -> "true"
   | False -> "false"
   | _ as s -> 
-    let () = output_hum stdout (sexp_of_logic s) in
-    raise (Internal_error ("Got a non known proposition type when building transition labels" ))
+      let () = output_hum stdout (sexp_of_logic s) in
+      raise (Internal_error ("Got a non known proposition type when building transition labels" ))
 
 
 let rec get_updates index = function
@@ -117,21 +102,21 @@ let rec get_updates index = function
   | Or(x,y) -> (get_updates index x) @ (get_updates index y)
   | Not (Proposition (x,_)) | Proposition (x,_) as s ->
     (match x with 
-     | Expr x -> 
-       if x.[0] = '$' then 
-         [(Hashtbl.find (L.nth !update_tuple_tbl_ll index) s)]
-       else []
-     | _ -> [])
+    | Expr x -> 
+      if x.[0] = '$' then 
+	[(Hashtbl.find (L.nth !update_tuple_tbl_ll index) s)]
+      else []
+    | _ -> [])
   | _ -> []
 
 let get_outgoings o = function
   | ({name=n;incoming=i},guards) ->
     try
       List.iter2 (fun x g -> 
-          match Hashtbl.find_option o x with
-          | Some ll -> Hashtbl.replace o x ((n,g) :: ll)
-          | None -> Hashtbl.add o x [(n,g)]
-        ) i guards
+	match Hashtbl.find_option o x with
+	| Some ll -> Hashtbl.replace o x ((n,g) :: ll)
+	| None -> Hashtbl.add o x [(n,g)]
+      ) i guards
     with
     | _ as s -> 
       output_hum stdout (sexp_of_list sexp_of_string i);
@@ -163,7 +148,7 @@ let rec solve nff q o ret lgn =
     ret := element :: !ret;
     (* Call it recursively again *)
     solve nff q o ret lgn
-
+      
 
 (* Reachability using BF traversal *)
 let reachability nff lgn = 
@@ -209,52 +194,52 @@ let map2i f l1 l2 =
 let get_update_sigs index g =
   let updates = get_updates index g in
   let updates = L.sort_unique compare ((L.map 
-                                          (fun x -> (match x with | Update x ->x | _ ->  raise (Internal_error "Cannot happen!!"))))
-                                         (L.filter (fun x -> (match x with | Update _ ->true | _ -> false)) updates)) in
+    (fun x -> (match x with | Update x ->x | _ ->  raise (Internal_error "Cannot happen!!"))))
+    (L.filter (fun x -> (match x with | Update _ ->true | _ -> false)) updates)) in
   updates
 
 let rec eval node updates channels internal_signals signals isignals asignals index outnode = function
   | And (x,y) -> 
-    let lv = eval node updates channels internal_signals signals isignals asignals index outnode x in
-    let rv = eval node updates channels internal_signals signals isignals asignals index outnode y in
-    (match (lv,rv) with
-     | (false,_) | (_,false) -> false
-     | (true,true) -> true
-     | _ -> true
-    )
+      let lv = eval node updates channels internal_signals signals isignals asignals index outnode x in
+      let rv = eval node updates channels internal_signals signals isignals asignals index outnode y in
+      (match (lv,rv) with
+      | (false,_) | (_,false) -> false
+      | (true,true) -> true
+      | _ -> true
+      )
   | Or (x,y) ->
-    let lv = eval node updates channels internal_signals signals isignals asignals index outnode x in
-    let rv = eval node updates channels internal_signals signals isignals asignals index outnode y in
-    (match (lv,rv) with
-     | (true,_) | (_,true) -> true
-     | (false,false) -> false
-     | _ -> true
-    )
+      let lv = eval node updates channels internal_signals signals isignals asignals index outnode x in
+      let rv = eval node updates channels internal_signals signals isignals asignals index outnode y in
+      (match (lv,rv) with
+      | (true,_) | (_,true) -> true
+      | (false,false) -> false
+      | _ -> true
+      )
   | Proposition (x,_) -> 
-    (match x with 
-     | Expr x -> 
-       if x.[0] = '$' || (L.exists (fun y -> x=y )channels)    then 
-         true
-       else(
-         let ii = L.exists (fun y -> x = y ) isignals in
-         let up = L.exists (fun y -> x = y ) updates in
-         ii || up
-       );
-     | _ -> true (* Ignoring data atm *)
-    )
+      (match x with 
+      | Expr x -> 
+          if x.[0] = '$' || (L.exists (fun y -> x=y )channels)    then 
+            true
+          else(
+            let ii = L.exists (fun y -> x = y ) isignals in
+            let up = L.exists (fun y -> x = y ) updates in
+            ii || up
+          );
+      | _ -> true (* Ignoring data atm *)
+      )
   | Not (Proposition (x,_)) as s->
-    (match x with 
-     | Expr x -> 
-       if x.[0] = '$' then 
-         let () = output_hum Pervasives.stdout (sexp_of_logic s) in
-         raise (Internal_error "^^^^^^^^^^^^ Not emit proposition impossible!")
-       else(
-         let ii = L.exists (fun y -> x = y ) isignals in
-         let up = L.for_all (fun y -> x <> y ) updates in
-         ii || up
-       )
-     | _ -> true (* Ignoring data atm *)
-    )
+      (match x with 
+      | Expr x -> 
+          if x.[0] = '$' then 
+            let () = output_hum Pervasives.stdout (sexp_of_logic s) in
+            raise (Internal_error "^^^^^^^^^^^^ Not emit proposition impossible!")
+          else(
+            let ii = L.exists (fun y -> x = y ) isignals in
+            let up = L.for_all (fun y -> x <> y ) updates in
+            ii || up
+          )
+      | _ -> true (* Ignoring data atm *)
+      )
   | True -> true
   | False -> false
   | _ as s -> 
@@ -266,31 +251,31 @@ let rec remove_dollars = function
   | Or (True,x) -> remove_dollars x
   | Or (x,True) -> remove_dollars x
   | Or (x,y) -> 
-    let lval = remove_dollars x in
-    let rval = remove_dollars y in
-    (match (lval,rval) with
-     | (True,True) -> True
-     | (True,y) -> y
-     | (x,True) -> x
-     | (x,y) as t -> Or (x,y))
+      let lval = remove_dollars x in
+      let rval = remove_dollars y in
+      (match (lval,rval) with
+      | (True,True) -> True
+      | (True,y) -> y
+      | (x,True) -> x
+      | (x,y) as t -> Or (x,y))
   | And (True,True) -> True
   | And (True,x) -> remove_dollars x
   | And (x,True) -> remove_dollars x
   | And (x,y) -> 
-    let lval = remove_dollars x in
-    let rval = remove_dollars y in
-    (match (lval,rval) with
-     | (True,True) -> True
-     | (True,y) -> y
-     | (x,True) -> x
-     | (x,y) as t -> And (x,y))
+      let lval = remove_dollars x in
+      let rval = remove_dollars y in
+      (match (lval,rval) with
+      | (True,True) -> True
+      | (True,y) -> y
+      | (x,True) -> x
+      | (x,y) as t -> And (x,y))
   | Proposition (Expr x,_) | Not Proposition (Expr x,_) as s when x.[0] = '$' ->
 (*
       print_endline ("SSSS "^x);
       output_hum stdout (sexp_of_proposition (Hashtbl.find (L.nth !update_tuple_tbl_ll 0) s));
       print_endline ("de "^x);
 *)
-    True
+       True
   | _ as t -> t (* Ignoring data *)    
 
 let remove_unreachable index lb channels internal_signals signals isignals asignals =
@@ -298,31 +283,31 @@ let remove_unreachable index lb channels internal_signals signals isignals asign
   let () = L.iter (fun x -> get_outgoings o (x.node,x.guards)) lb in
   let unreachables_all = 
     L.flatten (L.map (fun node ->    
-        let updates = L.map (fun x -> get_update_sigs index x) node.guards in
-        let olists = match Hashtbl.find_option o node.node.name with | Some (l) -> l | _ -> [] in
-        let unreachables = L.map (fun outgoing -> 
+      let updates = L.map (fun x -> get_update_sigs index x) node.guards in
+      let olists = match Hashtbl.find_option o node.node.name with | Some (l) -> l | _ -> [] in
+      let unreachables = L.map (fun outgoing -> 
 
-            let result = 
-              (match node.tlabels with
-               | Proposition (Label "st",_) ->
-                 false
-               | _ ->
-                 L.for_all2 (fun update incoming -> 
-                     if (incoming <> node.node.name) then(
-                       not(eval node update channels internal_signals signals isignals asignals index 
-                             ((fun (a,b) -> a ) outgoing) ((fun (a,b) -> b) outgoing) ) 
-                     )
-                     else(
-                       true
-                     )
-                   ) updates node.node.incoming (* assuming order of updates, incoming and guards are the same *)
-              ) in
+        let result = 
+          (match node.tlabels with
+          | Proposition (Label "st",_) ->
+              false
+          | _ ->
+            L.for_all2 (fun update incoming -> 
+              if (incoming <> node.node.name) then(
+                not(eval node update channels internal_signals signals isignals asignals index 
+                    ((fun (a,b) -> a ) outgoing) ((fun (a,b) -> b) outgoing) ) 
+              )
+              else(
+                true
+              )
+            ) updates node.node.incoming (* assuming order of updates, incoming and guards are the same *)
+          ) in
 
-            if result then
-              (fun (a,b) -> Some (a,node.node.name,b)) outgoing (* (node, incoming) node need to rem incoming and its corrs guards *)
-            else
-              None
-          ) olists in
+        if result then
+           (fun (a,b) -> Some (a,node.node.name,b)) outgoing (* (node, incoming) node need to rem incoming and its corrs guards *)
+        else
+          None
+       ) olists in
 (*
       L.iter (function
         | Some (x,y,g) -> 
@@ -332,29 +317,29 @@ let remove_unreachable index lb channels internal_signals signals isignals asign
         | None -> ()
        ) unreachables;
 *)
-        unreachables
-      ) lb )
+      unreachables
+  ) lb )
   in 
 
   let unreachables_all = L.filter (fun x -> x <> None) unreachables_all in
   (* First removing edges (incomings) *)
   let () = L.iter (fun n -> 
-      L.iter (function Some (remn,remin,uguard) ->
-          if(n.node.name = remn) then(
-            let ig = L.map2 (fun incoming guard -> 
-                if not ((incoming = remin) && ((remove_dollars uguard) = (remove_dollars guard))) then 
-                  Some (incoming,guard) 
-                else 
-                  None 
-              ) n.node.incoming n.guards in
-            let ig = L.filter (function | Some _ -> true | None -> false ) ig in
-            let ig = L.map (function | Some ((_) as a) -> a ) ig in
-            let ig = L.split ig in
-            let () = (fun (i,g) -> n.node.incoming <- i; n.guards <- g) ig in
-            ()
-          )
-        ) unreachables_all
-    ) lb in
+    L.iter (function Some (remn,remin,uguard) ->
+      if(n.node.name = remn) then(
+        let ig = L.map2 (fun incoming guard -> 
+          if not ((incoming = remin) && ((remove_dollars uguard) = (remove_dollars guard))) then 
+            Some (incoming,guard) 
+          else 
+            None 
+         ) n.node.incoming n.guards in
+        let ig = L.filter (function | Some _ -> true | None -> false ) ig in
+        let ig = L.map (function | Some ((_) as a) -> a ) ig in
+        let ig = L.split ig in
+        let () = (fun (i,g) -> n.node.incoming <- i; n.guards <- g) ig in
+        ()
+      )
+    ) unreachables_all
+  ) lb in
   (* Second traverse the graph and remove unreachable nodes *)
   let newlb = ref [] in
   let st = L.filter (fun x -> match x.tlabels with | Proposition (Label "st",_) -> true | _ -> false ) lb in
@@ -362,16 +347,16 @@ let remove_unreachable index lb channels internal_signals signals isignals asign
   let r = ref true in
   while !r do
     r := L.fold_left (||) false (L.map (fun node ->
-        if L.for_all (fun x -> x.node.name <> node.node.name ) !newlb then
+      if L.for_all (fun x -> x.node.name <> node.node.name ) !newlb then
           if L.exists (fun x -> L.exists (fun y-> x = y.node.name ) !newlb  ) node.node.incoming then(
             newlb := node :: !newlb;
             true
           )
           else
             false
-        else
-          false
-      ) lb) 
+      else
+        false
+        ) lb) 
   done;
   !newlb
 
