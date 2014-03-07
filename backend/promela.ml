@@ -27,6 +27,17 @@ let make_body ff asignals internal_signals channels o index signals isignals = f
       (* Now add the transitions *)
       ++ ("atomic {\n" >> text)
       (* Input signal traversal *)
+      ++ (L.fold_left (++) empty (
+          let unique_list = L.sort_unique compare (L.flatten (L.map (fun g ->
+              Util.getisigguards isignals internal_signals g
+            ) guards)) in
+          L.map (fun x -> 
+              ("if\n" >> text)
+              ++ ((":: (true) -> CD"^(string_of_int index)^"_"^x^" = true;\n") >> text)
+              ++ ((":: (true) -> CD"^(string_of_int index)^"_"^x^" = false;\n") >> text)
+              ++ ("fi;\n" >> text)
+            ) unique_list 
+        ))
       ++ ("\nif\n" >> text)
       ++ (L.reduce (++) (
           if o <> [] then
@@ -63,13 +74,6 @@ let make_body ff asignals internal_signals channels o index signals isignals = f
                          ("CD"^(string_of_int index)^"_"^x^"_val_pre = CD" ^ (string_of_int index)^"_"^x^"_val;\n" >> Pretty.text)
                          ++ ("CD"^(string_of_int index)^"_"^x^"_val = "^r.Systemj.v^";\n"  >> Pretty.text)
                       ))asignals_names asignals_options)
-		  ++ (L.fold_left (++) empty (
-				    L.map (fun x -> 
-					   ("if\n" >> text)
-					   ++ ((":: (true) -> CD"^(string_of_int index)^"_"^x^" = true;\n") >> text)
-					   ++ ((":: (true) -> CD"^(string_of_int index)^"_"^x^" = false;\n") >> text)
-					   ++ ("fi;\n" >> text)
-					  ) isignals ))
                   ++ (("goto " ^ x ^ ";\n") >> text)
                 else begin ff := x::!ff; ("goto " ^ n ^ ";\n" >> text) end
               ) o guards
