@@ -1,0 +1,103 @@
+{
+	int input signal A op+ = 0;
+	signal B;
+	input signal Conv1Fault;
+	input signal Conv2Fault;
+	output signal STOP;
+	output signal C1;
+	output signal C2;
+	output channel C;
+	output channel M;
+	output channel F;
+	input channel DONE;
+	{
+		abort(Conv2Fault && Conv1Fault) {
+			emit C2;
+			loop {
+				await(A);
+				emit C1;
+				if(Conv1Fault && !Conv2Fault){
+					F!;||M!;
+				}
+				else if(Conv2Fault && !Conv1Fault){
+					C!;
+				}
+				else if (!Conv1Fault && !Conv2Fault){
+					if(?A == 1){
+						F!;||M!;
+					}
+					else C!;
+				}
+				DONE?;
+				emit C2;
+				pause;
+			}
+		}
+		loop {emit STOP; pause;}
+	}
+	||{
+		loop {pause; pause;}
+	}
+}
+><
+{
+	int output signal D op+ = 0;
+	output channel STORE1;
+	input channel C;
+	input channel F;
+	{
+		loop{F?;?D=1;emit D;pause;}
+	}
+	||
+	{
+		loop {
+			C?;
+			?D=2;emit D;
+			STORE1!;
+			pause;
+		}
+	}
+}
+><
+{
+	output signal TT;
+	output channel STORE2;
+	input channel M;
+	loop {
+		M?;
+		emit TT;
+		STORE2!;
+		pause;
+	}
+}
+><
+{
+	input channel STORE1;
+	input channel STORE2;
+	output signal enSt1;
+	output signal enSt2;
+	output channel DONE;
+
+	loop {
+		abort (enSt2 || enSt1) {
+			{STORE1?;emit enSt1;pause;} || {STORE2?;emit enSt2;pause;}
+		}
+		DONE!;
+	}
+}
+/* TESTED all these properties work fine!! */
+/* SHIT WORK IF CONV2 FAILS */
+/* ltl p2 {[](((!CD0_Conv2Fault && !CD0_Conv1Fault) U (([](!CD0_Conv1Fault && CD0_Conv2Fault)))) -> <>CD0_A -> <>CD3_enSt1)} */
+
+/* OTHER THAN THE START STATE, if all hell breaks loose we stop */
+/* ltl {[](((!CD0_Conv2Fault && !CD0_Conv1Fault) U (CD0_Conv2Fault && CD0_Conv1Fault)) -> <>CD0_STOP)} */
+
+/* Everything works fine if no failure */
+/* ltl p1 {[]((!CD0_Conv2Fault && !CD0_Conv1Fault) -> <>CD0_A -> <>(CD3_enSt2 || CD3_enSt1))} */
+
+/* SHIT WORKS IF CONV1 FAILS */
+/* ltl p1 {[](((!CD0_Conv2Fault && !CD0_Conv1Fault) U (([](CD0_Conv1Fault && !CD0_Conv2Fault)))) -> <>CD0_A -> <>CD3_enSt2)} */
+
+/* Mutual exclusion, independent of fault it always works */
+/* ltl {[](((CD3_enSt1 && !CD3_enSt2)||(!CD3_enSt1 && CD3_enSt2)||(!CD3_enSt1 && !CD3_enSt2)) && */
+/*      ((CD0_C1 && !CD0_C2)||(!CD0_C1 && CD0_C2)||(!CD0_C1 && !CD0_C2)))} */
