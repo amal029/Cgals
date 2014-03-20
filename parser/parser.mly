@@ -204,7 +204,7 @@ otherwise:
 ;
 
 datastmtlist:
-    | datastmtlist dataStmts {$2::$1}
+    | datastmtlist dataStmts {$1@[$2]}
     | dataStmts {[$1]}
 ;
 
