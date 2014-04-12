@@ -4,6 +4,7 @@ module SSL = Sexplib.Std
 module String = Batteries.String 
 module Hashtbl = Batteries.Hashtbl
 module Enum = Batteries.Enum
+module Random = Batteries.Random
 open Systemj
 open Pretty 
 open TableauBuchiAutomataGeneration 
@@ -41,7 +42,7 @@ let print_sequentiality lba =
                if (x.tlabels = Proposition (Label "st",[None])) then
                  ("(>= CD"^(string_of_int y)^"_"^x.node.name^" 0) ")
                else
-                 List.reduce (^) (List.map (fun k -> 
+                 List.reduce (^) (List.map2 (fun k iWCRT -> 
                      let str = ref "" in
                      (if List.exists (fun tt -> tt.node.name = k) f then(
                          (* Insering micro states *)
@@ -57,17 +58,21 @@ let print_sequentiality lba =
                                    let multdep = ref [] in
                                    List.iter(fun u ->
                                        (* micrsteps depends on the previous state on the same CD *)
-                                       let wctt1 = (match Hashtbl.find_option !wctt_opt y with | Some (t) -> t | None -> "1") in
-                                       str := (!str^" (>= "^microst^" (+ CD"^(string_of_int y)^"_"^k^" "^wctt1^")) ");
+(*                                        let wctt1 = (match Hashtbl.find_option !wctt_opt y with | Some (t) -> t | None -> "1") in *)
+                                       str := (!str^" (>= "^microst^" (+ CD"^(string_of_int y)^"_"^k^" "^iWCRT^")) ");
                                        (match (p, (match u with | (inchan,Systemj.ChanPause (g,h,l)) -> (inchan,g,h,l) )) with
                                          | (ChanPause (Ack,Start,cn) (*("$AckStart",cn)*), (inchan,Systemj.Req,Systemj.Start,l)) 
                                          | (ChanPause (Ack,End,cn) (*("$AckEnd",cn)*), (inchan,Systemj.Req,Systemj.End,l))
                                          | (ChanPause (Req,End,cn) (*("$ReqEnd",cn)*), (inchan,Systemj.Ack,Systemj.Start,l)) 
                                            when (match String.split cn "_" with | (x,_) -> x) = (match String.split l "_" with | (x,_) -> x) -> 
                                            (* macrostate can finish when any of one of deps finish for the same microst  *)
-                                           let cdnum = int_of_string (String.lchop ~n:2 (List.at (String.nsplit inchan "_") 0)) in
-                                           let wctt1 = (match Hashtbl.find_option !wctt_opt cdnum with | Some (t) -> t | None -> "1") in
-                                           multdep := (" (>= "^microst^" (+ "^inchan^" "^wctt1^")) ") :: !multdep;
+                                           let cd_nodename = (String.nsplit inchan "_") in
+                                           let cdnum = int_of_string (String.lchop ~n:2 (List.at cd_nodename 0)) in
+                                           let node_list = List.at lba cdnum in 
+                                           let node_from_other_cd = List.find (fun x -> x.node.name = (List.at cd_nodename 1) ) node_list in
+                                           let oWCRT = match node_from_other_cd.node.oWCRT with | Some l -> l | None -> "0" in
+(*                                            let wctt1 = (match Hashtbl.find_option !wctt_opt cdnum with | Some (t) -> t | None -> "1") in *)
+                                           multdep := (" (>= "^microst^" (+ "^inchan^" "^oWCRT^")) ") :: !multdep;
                                          | _ -> ()
                                        );
                                        ors2 := ("(= CD"^(string_of_int y)^"_"^x.node.name^" "^microst^") ") :: !ors2;
@@ -84,13 +89,13 @@ let print_sequentiality lba =
                             if(not (List.is_empty !ors2)) then
                               ors := (((List.fold_left (^) ("(assert (or ") !ors2) ^ "))\n")) :: !ors;
                           else
-                            let wctt1 = (match Hashtbl.find_option !wctt_opt y with | Some (t) -> t | None -> "1") in
-                            str := ("(>= CD"^(string_of_int y)^"_"^x.node.name^" (+ CD"^(string_of_int y)^"_"^k^" "^wctt1^")) ")
+(*                             let wctt1 = (match Hashtbl.find_option !wctt_opt y with | Some (t) -> t | None -> "1") in *)
+                            str := ("(>= CD"^(string_of_int y)^"_"^x.node.name^" (+ CD"^(string_of_int y)^"_"^k^" "^iWCRT^")) ")
                          )
                        )
                       else str := "");
                      !str
-                   ) x.node.incoming)) f) in
+                   ) x.node.incoming x.node.iWCRT)) f) in
       doc ^ "))\n"
     ) lba); 
 
@@ -114,8 +119,8 @@ let print_constraint lba =
              if( r < rr ) then(
                List.reduce (^) (List.map (fun x ->
                    List.reduce (^) (List.map (fun y ->
-                       let wctt1 = (match Hashtbl.find_option !wctt_opt r with | Some (t) -> t | None -> "1") in
-                       let wctt2 = (match Hashtbl.find_option !wctt_opt (r+1) with | Some (t) -> t | None -> "1") in
+(*                        let wctt1 = (match Hashtbl.find_option !wctt_opt r with | Some (t) -> t | None -> "1") in *)
+(*                        let wctt2 = (match Hashtbl.find_option !wctt_opt (r+1) with | Some (t) -> t | None -> "1") in *)
                        let xnum = string_of_int r in
                        let ynum = string_of_int rr in
                        match Hashtbl.find_option group xnum with
@@ -123,8 +128,10 @@ let print_constraint lba =
                          ""
                        | Some g ->
                          if( List.exists (fun y -> y = ynum) g ) then
-                           ("(assert (or (>= CD"^(string_of_int r)^"_"^x.node.name^" (+ CD"^(string_of_int rr)^"_"^y.node.name^" "^wctt2^")) "^
-                            "(>= CD"^(string_of_int rr)^"_"^y.node.name^" (+ CD"^(string_of_int r)^"_"^x.node.name^" "^wctt1^"))))\n")
+                           let oWCRT2 = match y.node.oWCRT with | Some l ->l | None -> "0" in 
+                           let oWCRT1 = match x.node.oWCRT with | Some l ->l | None -> "0" in 
+                           ("(assert (or (>= CD"^(string_of_int r)^"_"^x.node.name^" (+ CD"^(string_of_int rr)^"_"^y.node.name^" "^oWCRT2^")) "^
+                            "(>= CD"^(string_of_int rr)^"_"^y.node.name^" (+ CD"^(string_of_int r)^"_"^x.node.name^" "^oWCRT1^"))))\n")
                          else
                            ""
                      ) tt)
@@ -291,12 +298,69 @@ let print_wcrt lba =
   let wcrt = ("; -- WCRT constraints -- \n"^wcrt) in
   wcrt
 
+let insert_iWCRT lba =
+  let () = Random.init (int_of_float (Unix.gettimeofday ())) in
+  let () = List.iter (fun node_set -> 
+      List.iter (fun node ->
+          List.iter (fun incoming -> 
+             node.node.iWCRT <- (string_of_int ((Random.int 9)+1)) :: node.node.iWCRT
+            ) node.node.incoming
+        ) node_set
+    ) lba in
+
+(*   Debugging *)
+(*
+  let () = List.iteri (fun i x -> 
+      print_endline ("CD "^(string_of_int i));
+      List.iter (fun x ->
+          print_endline ("Node : "^x.node.name);
+          print_endline ("incoming : ");
+          List.iter2 (fun y z -> print_endline (y^" wcrt :"^z)) x.node.incoming x.node.iWCRT
+        ) x
+    )lba in
+*)
+
+(*   Now calc WCRT of outgoing edges *)
+  let oWCRTs = Hashtbl.create 1000 in
+  let () = List.iter (fun cd_nodes -> 
+      let () = Hashtbl.clear oWCRTs in
+      let () = List.iter (fun node -> 
+          List.iter2 (fun incoming iwcrt ->
+              match Hashtbl.find_option oWCRTs incoming with
+              | Some l -> 
+                if ((int_of_string iwcrt) > (int_of_string l)) then
+                  Hashtbl.replace oWCRTs incoming iwcrt
+              | None -> Hashtbl.add oWCRTs incoming iwcrt
+            ) node.node.incoming node.node.iWCRT
+        ) cd_nodes in
+(*       We now have owcrt of nodes, but incoming is a string so find the node from lba and insert owcrt *)
+      Hashtbl.iter (fun k v -> 
+(*         There are some nodes in the set 'incoming' but NOT in lba!!! WTF! *)
+          try
+            let node = List.find (fun node -> k = node.node.name ) cd_nodes in
+            node.node.oWCRT <- Some v
+          with | Not_found -> ()
+        ) oWCRTs
+    ) lba in
+
+(*   Debugging *)
+(*
+  List.iter (fun x ->  
+      List.iter (fun x -> 
+          print_endline ("Node "^x.node.name^" WCRT : "^((function Some x -> x | None -> "0" ) x.node.oWCRT));
+        ) x
+    ) lba;
+*)
+
+  ()
+
 
 let make_smt lba filename =
   let cc = ref [] in
   let () = List.iter (fun x -> 
-      let o = Hashtbl.create 1000 in
-      let () = List.iter (fun x -> Util.get_outgoings o (x.node,x.guards)) x in
+(*     o is not used here so I am commenting this out *)
+(*       let o = Hashtbl.create 1000 in *)
+(*       let () = List.iter (fun x -> Util.get_outgoings o (x.node,x.guards)) x in *)
       let cc2 = ref [] in 
       List.iter (fun y ->  
           List.iter (fun k -> get_chan_prop k y cc2 ) y.tls ) x;
@@ -317,6 +381,9 @@ let make_smt lba filename =
     ) !cc in
 
   let () = List.iter (fun x -> List.iter (fun x -> remove_loop x) x) lba in
+
+(*   Inserting WCRT for incoming edges *)
+  let () = insert_iWCRT lba in
 
   let fd = open_out filename in   
   let decl_stuff = 
