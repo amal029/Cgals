@@ -11,9 +11,9 @@ open TableauBuchiAutomataGeneration
 open PropositionalLogic 
 let (++) = append 
 let (>>) x f = f x
-let wctt_opt = ref (Hashtbl.create 10)
-let wcrt_opt = ref (Hashtbl.create 10)
-let group = Hashtbl.create 10
+(* let wctt_opt = ref (Hashtbl.create 10) *)
+(* let wcrt_opt = ref (Hashtbl.create 10) *)
+let grouplist = ref [] 
 
 exception Internal_error of string
 
@@ -112,7 +112,7 @@ let print_sequentiality lba =
   );
   !ss
 
-let print_constraint lba =
+let print_constraint lba group =
   let ss = 
     (List.mapi (fun r q ->
          List.mapi (fun rr tt -> 
@@ -246,20 +246,21 @@ let parse_option o =
          let lval = (match lrval with | (l,r) -> String.trim l) in
          let index = 0 in
          (* Distributing clock-domains *)
-         if (lval = "group") then
-           let dlist = Str.split (Str.regexp "|") rval in
-           let dlist = List.map (fun x -> Str.split (Str.regexp ",") x ) dlist in
-           List.iter (fun x -> 
-               List.iter(fun y ->
-                   match Hashtbl.find_option group y with
-                   | Some _ ->
-                     raise (Internal_error ("Duplicated CD number in group"))
-                   | None ->
-                     Hashtbl.add group y x
-                 ) x
-             ) dlist
-(*           List.iter (fun x -> Hashtbl.add *)
-(*            List.iter (fun x -> print_endline x ) dlist *)
+         (if (lval = "group") then
+            let group = Hashtbl.create 10 in
+            let dlist = Str.split (Str.regexp "|") rval in
+            let dlist = List.map (fun x -> Str.split (Str.regexp ",") x ) dlist in
+            let () = List.iter (fun x -> 
+                List.iter(fun y ->
+                    match Hashtbl.find_option group y with
+                    | Some _ ->
+                      raise (Internal_error ("Duplicated CD number in group"))
+                    | None ->
+                      Hashtbl.add group y x
+                  ) x
+              ) dlist in
+            grouplist := !grouplist @ [group] )
+(*
          else
            let lval = String.nsplit lval "." in
            (match lval with
@@ -272,7 +273,7 @@ let parse_option o =
             | _ as t -> raise (Internal_error ("Wrong smt option format : "^
                                                (SSL.string_of_sexp (SSL.sexp_of_list SSL.sexp_of_string t))))
            );
-           ()
+*)
        done
      with
      | End_of_file -> ()
@@ -285,6 +286,7 @@ let get_last_node lb =
   let incoming_list = List.concat (List.map (fun x -> x.node.incoming) lb) in
   List.filter (fun x -> List.for_all (fun y -> x.node.name <> y ) incoming_list ) lb
 
+(*
 let print_wcrt lba =
   let wcrt = List.fold_left (^) ("") (List.mapi (fun i x -> 
       let node = get_last_node x in
@@ -297,6 +299,7 @@ let print_wcrt lba =
     ) lba) in
   let wcrt = ("; -- WCRT constraints -- \n"^wcrt) in
   wcrt
+*)
 
 let insert_iWCRT lba =
   let () = Random.init (int_of_float (Unix.gettimeofday ())) in
@@ -385,18 +388,29 @@ let make_smt lba filename =
 (*   Inserting WCRT for incoming edges *)
   let () = insert_iWCRT lba in
 
-  let fd = open_out filename in   
   let decl_stuff = 
     ("(set-option :produce-proofs true)\n" >> text) ++
     ("(set-logic QF_LRA)\n" >> text) ++
     ((print_states lba) >> text) ++
-    ((print_sequentiality lba) >> text) ++
-    ((print_constraint lba) >> text) ++
-    ((print_wcrt lba) >> text)++
-    ("(check-sat)\n(get-model)\n(get-proof)\n" >> text)
+    ((print_sequentiality lba) >> text)
   in
-  let () = print ~output:(output_string fd) decl_stuff in
-  close_out fd
+  if ((List.is_empty !grouplist) = true) then
+    let fd = open_out filename in   
+    let decl_stuff = decl_stuff ++ 
+                     ((print_constraint lba (Hashtbl.create 1)) >> text) ++
+                     ("(check-sat)\n(get-model)\n(get-proof)\n" >> text) in
+    let () = print ~output:(output_string fd) decl_stuff in
+    close_out fd;
+  else
+    List.iteri (fun i group -> 
+        let fd = open_out (filename^(string_of_int i)^".smt2") in   
+        let decl_stuff = decl_stuff ++ 
+                         ((print_constraint lba group) >> text) ++
+                         ("(check-sat)\n(get-model)\n(get-proof)\n" >> text) 
+        in
+        let () = print ~output:(output_string fd) decl_stuff in
+        close_out fd
+      ) !grouplist
 
 
 
