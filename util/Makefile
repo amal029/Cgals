@@ -11,13 +11,12 @@ TYPECONV=`ocamlfind query type_conv`
 SEXPLIB=`ocamlfind query sexplib`
 PRETTYLIB=`ocamlfind query pretty`
 BATDIR=`ocamlfind query batteries`
-SRC=util.ml
+SRC=util.ml dot.ml
 all: util.cmxa
 
 
 util.cmxa: util.cmx
-	$(CC) $(OCAMLOPTS) -I $(REPORTDIR) -I $(LANGUAGEDIR) util.cmx \
-	-o $@
+	$(CC) $(OCAMLOPTS) -I $(REPORTDIR) -I $(LANGUAGEDIR) util.cmx dot.cmx -o $@
 
 util.cmx:
 	$(CC) -pp "camlp4o -I $(TYPECONV) -I $(SEXPLIB) -I $(PRETTYLIB)	\

@@ -75,10 +75,13 @@ try
   let () = IFDEF DEBUG THEN List.iter (fun x -> 
       let () = SS.output_hum Pervasives.stdout (SSL.sexp_of_list TableauBuchiAutomataGeneration.sexp_of_labeled_graph_node x) in
       print_endline "\n\n\n\n\n\n-----------------------------------------------------\n\n\n\n") labeled_buchi_automatas ELSE () ENDIF in
+  let () = Dot.generate_dot labeled_buchi_automatas ((Filename.chop_extension !file_name)^"_lgba") in
+
   let () = List.iter ModelSystem.propagate_guards_from_st labeled_buchi_automatas in
   let () = IFDEF DEBUG THEN List.iter (fun x -> 
       let () = SS.output_hum Pervasives.stdout (SSL.sexp_of_list TableauBuchiAutomataGeneration.sexp_of_labeled_graph_node x) in
       print_endline "\n\n\n\n\n\n-----------------------------------------------------\n\n\n\n") labeled_buchi_automatas ELSE () ENDIF in
+
   let init = ref [] in
   let labeled_buchi_automatas = 
     List.map (fun x -> 
