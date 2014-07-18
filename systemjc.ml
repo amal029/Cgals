@@ -16,13 +16,14 @@ type configuration = {
   mutable oPromela: string;
   mutable oJava: string;
   mutable oSmt2: string;
-  mutable oC: string
+  mutable oC: string;
+  mutable dot: bool ref
 }
 
 let usage_msg = "Usage: systemjc [OPTIONS] <filename>\nsee -help for more options" in
 let conf = {
   formula="";smtopt="";oPromela="";oJava="";
-  oSmt2="";oC=""
+  oSmt2="";oC="";dot=ref false
 } in
 let file_name = ref "" in
 let speclist = Arg.align [
@@ -38,7 +39,9 @@ let speclist = Arg.align [
      "<file>     The name of the optional file for SMT-LIB output generation");
     ("-formula", Arg.String (fun x -> conf.formula <- x), 
      "<file>     The propositional linear temporal logic formula to verify\n\
-     \                      (see promela ltl man page)")
+     \                      (see promela ltl man page)");
+    ("-dot", Arg.Set conf.dot, 
+     "           Generate dot files for the Buchi automatas")
   ] in
 
 try
@@ -75,12 +78,17 @@ try
   let () = IFDEF DEBUG THEN List.iter (fun x -> 
       let () = SS.output_hum Pervasives.stdout (SSL.sexp_of_list TableauBuchiAutomataGeneration.sexp_of_labeled_graph_node x) in
       print_endline "\n\n\n\n\n\n-----------------------------------------------------\n\n\n\n") labeled_buchi_automatas ELSE () ENDIF in
-  let () = Dot.generate_dot labeled_buchi_automatas ((Filename.chop_extension !file_name)^"_lgba") in
+  let () = if conf.!dot then
+      Dot.generate_dot labeled_buchi_automatas ((Filename.chop_extension !file_name)^"_lgba_01_") 
+  in
 
   let () = List.iter ModelSystem.propagate_guards_from_st labeled_buchi_automatas in
   let () = IFDEF DEBUG THEN List.iter (fun x -> 
       let () = SS.output_hum Pervasives.stdout (SSL.sexp_of_list TableauBuchiAutomataGeneration.sexp_of_labeled_graph_node x) in
       print_endline "\n\n\n\n\n\n-----------------------------------------------------\n\n\n\n") labeled_buchi_automatas ELSE () ENDIF in
+  let () = if conf.!dot then
+      Dot.generate_dot labeled_buchi_automatas ((Filename.chop_extension !file_name)^"_lgba_02_") 
+  in
 
   let init = ref [] in
   let labeled_buchi_automatas = 
@@ -139,8 +147,15 @@ try
       let () = print_endline "....Building SystemJ model......" in
       let () = SS.output_hum Pervasives.stdout (SSL.sexp_of_list TableauBuchiAutomataGeneration.sexp_of_labeled_graph_node x) in
       print_endline "\n\n\n\n\n\n-----------------------------------------------------\n\n\n\n") labeled_buchi_automatas ELSE () ENDIF in
+  let () = if conf.!dot then
+      Dot.generate_dot labeled_buchi_automatas ((Filename.chop_extension !file_name)^"_lgba_03_") 
+  in
+
   (* Remove the unreachable nodes from the generated graph *)
   let labeled_buchi_automatas = List.map (Util.reachability []) labeled_buchi_automatas in
+  let () = if conf.!dot then
+      Dot.generate_dot labeled_buchi_automatas ((Filename.chop_extension !file_name)^"_lgba_04_") 
+  in
 
   (* Removing unreachable edges and corresponding nodes before generating any backend codes - HJ *)
   let labeled_buchi_automatas = (
