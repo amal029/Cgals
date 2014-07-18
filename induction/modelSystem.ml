@@ -25,6 +25,10 @@ let tbl = Hashtbl.create 100
 let replaced = Hashtbl.create 100
 (* let guards = Hashtbl.create 100 *)
 
+(**
+ * This function removes nodes which are merged in ModelSystem.make.
+ *  But they are still in the list tbl (only connnectivity is removed)
+ *)
 let replace = function
   | {node=n} -> 
     n.incoming <- List.mapi (fun i x ->
@@ -33,6 +37,10 @@ let replace = function
          | Some y -> y)) n.incoming
 
 
+(** 
+ * This function merges two equivalent nodes if their tls is same
+ *  First, incoming and guards are merged into a single node
+*)
 let make = function
   | {node=n;tls=llabels} as s  -> 
     try
@@ -53,7 +61,11 @@ let make = function
       (* Add to tbl if not there already *)
       Hashtbl.add tbl (PropSet.of_enum (List.enum llabels)) s
 
-
+(**
+ * 1. This function searches all the nodes who have its parent (incoming) 'Init' (means a first node without parent)
+ * 2. Then searches all the nodes again and propagate guards from 'Init' to the next node
+ * 3. Removes all the 'first' nodes which are not starting node (st)
+*)
 let propagate_guards_from_st nodeset = 
   let sts = List.filter (fun {node=n;} -> n.incoming = ["Init"]) nodeset in
   let () = List.iter (fun {node=n} ->

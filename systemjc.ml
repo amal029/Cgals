@@ -92,7 +92,7 @@ try
 
   let init = ref [] in
   let labeled_buchi_automatas = 
-    List.map (fun x -> 
+    List.mapi (fun i x -> 
         let () = List.iter ModelSystem.make x in
         let () = List.iter ModelSystem.replace (List.of_enum (Hashtbl.values ModelSystem.tbl)) in 
         let () = Hashtbl.clear ModelSystem.replaced in 
@@ -129,6 +129,7 @@ try
               (* This is deleting the rest of the nodes with incoming as Init *)
               (* n.incoming <- List.remove_all n.incoming "Init"; *)
           ) ret in
+
         (* There are other nodes without "st", these can be logic
            	 formulas, in that case we need to find the nodes, which these
            	 nodes are a subformula of!  Note: 1.) I only look at Init nodes
@@ -170,6 +171,9 @@ try
         (List.init (List.length labeled_buchi_automatas) (fun x -> channel_strings)) internal_signals signals isignals asignals in
     labeled_buchi_automatas
   ) in
+  let () = if conf.!dot then
+      Dot.generate_dot labeled_buchi_automatas ((Filename.chop_extension !file_name)^"_lgba_05_") 
+  in
 
   let () = 
     let () = 
