@@ -35,13 +35,18 @@ let genEachCD lgbaCD =
 (*   L.iter (fun x -> print_endline x.node.name ) lgbaCD *)
   
 
-let generate_dot lgba filename =
+let generate_dot ?(th=None) lgba filename =
   let dotdoc = Pretty.empty in
-  let gvs = L.map (fun x -> genEachCD x ) lgba in
-  let () = L.iteri (fun i x -> 
+  match th with
+  | None -> 
+    let gvs = L.map (fun x -> genEachCD x ) lgba in
+    L.iteri (fun i x -> 
+        let fd = open_out (filename^"CD"^(string_of_int i)^".gv") in
+        let () = Pretty.print ~output:(output_string fd) x in
+        close_out fd
+      ) gvs 
+  | Some i -> 
+    let x = genEachCD (L.first lgba) in
     let fd = open_out (filename^"CD"^(string_of_int i)^".gv") in
     let () = Pretty.print ~output:(output_string fd) x in
     close_out fd
-  ) gvs in
-
-  ()

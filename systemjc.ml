@@ -140,6 +140,10 @@ try
         let torep = (List.filter(fun {tlabels=t} -> (match t with | PL.Proposition (PL.Label x,_) -> x <> "st" | _ -> true))
             (List.filter (fun{node=n} -> n.incoming=["Init"])ret)) in
         let () = List.iter(fun {node=n} -> n.incoming <- List.remove_all n.incoming "Init";) ret in
+        let () = if conf.!dot then
+            Dot.generate_dot ~th:(Some i) [ret] ((Filename.chop_extension !file_name)^"_lgba_03_") 
+        in
+
         let (_,ret) = List.partition (fun {node=n} -> n.incoming = [] && n.name <> st_node.node.name) ret in
         let () = List.iter (ModelSystem.find_subformula_equivalents ret) torep in
         ret) labeled_buchi_automatas in
@@ -149,13 +153,13 @@ try
       let () = SS.output_hum Pervasives.stdout (SSL.sexp_of_list TableauBuchiAutomataGeneration.sexp_of_labeled_graph_node x) in
       print_endline "\n\n\n\n\n\n-----------------------------------------------------\n\n\n\n") labeled_buchi_automatas ELSE () ENDIF in
   let () = if conf.!dot then
-      Dot.generate_dot labeled_buchi_automatas ((Filename.chop_extension !file_name)^"_lgba_03_") 
+      Dot.generate_dot labeled_buchi_automatas ((Filename.chop_extension !file_name)^"_lgba_04_") 
   in
 
   (* Remove the unreachable nodes from the generated graph *)
   let labeled_buchi_automatas = List.map (Util.reachability []) labeled_buchi_automatas in
   let () = if conf.!dot then
-      Dot.generate_dot labeled_buchi_automatas ((Filename.chop_extension !file_name)^"_lgba_04_") 
+      Dot.generate_dot labeled_buchi_automatas ((Filename.chop_extension !file_name)^"_lgba_05_") 
   in
 
   (* Removing unreachable edges and corresponding nodes before generating any backend codes - HJ *)
@@ -172,7 +176,7 @@ try
     labeled_buchi_automatas
   ) in
   let () = if conf.!dot then
-      Dot.generate_dot labeled_buchi_automatas ((Filename.chop_extension !file_name)^"_lgba_05_") 
+      Dot.generate_dot labeled_buchi_automatas ((Filename.chop_extension !file_name)^"_lgba_06_") 
   in
 
   let () = 
