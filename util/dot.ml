@@ -33,10 +33,17 @@ let genEachCD lgbaCD =
     ) "" lgbaCD ) |> text )
   ++ ("}" |> text)
 (*   L.iter (fun x -> print_endline x.node.name ) lgbaCD *)
+
+let generate_ltls ltls filename =
+  L.iteri (fun i ltl ->
+      let ltl_string = guards_to_string ltl in
+      let fd = open_out (filename^"CD"^(string_of_int i)^".txt") in
+      let () = Pretty.print ~output:(output_string fd) (ltl_string |> text) in
+      close_out fd
+    ) ltls
   
 
 let generate_dot ?(th=None) lgba filename =
-  let dotdoc = Pretty.empty in
   match th with
   | None -> 
     let gvs = L.map (fun x -> genEachCD x ) lgba in

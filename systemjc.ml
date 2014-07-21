@@ -68,6 +68,10 @@ try
       let () = SS.output_hum Pervasives.stdout (PropositionalLogic.sexp_of_logic x) in
       print_endline "\n\n\n\n\n\n-----------------------------------------------\n\n\n\n") ltls ELSE () ENDIF in
   let () = print_endline "....Building Buchi Automata ..." in
+  let () = if conf.!dot then
+      Dot.generate_ltls ltls ((Filename.chop_extension !file_name)^"_ltls")
+  in
+
   (* let buchi_automatas = List.mapi TableauBuchiAutomataGeneration.create_graph ltls in *)
   let buchi_automatas = Parmap.parmapi ~ncores:4 TableauBuchiAutomataGeneration.create_graph (Parmap.L ltls) in
   (* let ccount = List.init (List.length ltls) (fun x -> x) in *)
