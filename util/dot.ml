@@ -31,6 +31,9 @@ let genEachCD lgbaCD =
       conc^(L.fold_left2 (fun conc incoming guard -> 
           conc^incoming^" -> "^n.node.name^" [ label=\""^(guards_to_string guard)^"\" ]\n") "" n.node.incoming n.guards)
     ) "" lgbaCD ) |> text )
+  ++ ((L.fold_left (fun conc n ->
+      conc^n.node.name^"[ prop=\""^guards_to_string n.tlabels^"\"]\n"
+  ) "" lgbaCD ) |> text)
   ++ ("}" |> text)
 (*   L.iter (fun x -> print_endline x.node.name ) lgbaCD *)
 
