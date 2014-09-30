@@ -1,5 +1,5 @@
 # CC=ocamlopt -annot -warn-error +a+8 -g
-CC=ocamlopt -annot -g
+CC=ocamlopt -annot -g -bin-annot
 OCAMLOPTS=-a
 LANGUAGELIB=systemj.cmxa
 REPORTLIB=error.cmxa

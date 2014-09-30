@@ -1,6 +1,6 @@
 LANGDIR=../language
 LANGLIB=systemj.cmxa
-CC=ocamlopt -annot -g
+CC=ocamlopt -annot -g -bin-annot
 SRC=reporting.ml
 
 all: error
