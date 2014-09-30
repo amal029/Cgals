@@ -1,6 +1,6 @@
 OCMLOPTS=-a
 OCMXALDEBUG=-g
-CC=ocamlopt -g -bin-annot
+CC=ocamlopt -g
 YACC=ocamlyacc
 LEX=ocamllex
 INDUCTIONDIR=../induction

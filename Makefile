@@ -1,4 +1,4 @@
-CC=ocamlopt -annot -g -bin-annot
+CC=ocamlopt -annot -g
 PARSERLIB=parser.cmxa
 LANGUAGELIB=systemj.cmxa
 LOGICLIB=logic.cmxa
@@ -22,6 +22,7 @@ compile:
 	./language -I ./error -I ./parser -I ./induction -I ./util -I	\
 	./backend $(ERRORLIB) $(LANGUAGELIB) $(LOGICLIB) $(PARSERLIB)	\
 	$(UTILLIB) $(CODEGENLIB) systemjc.ml
+	ctags -R .
 
 clean:
 	$(MAKE) -e -C language/ clean

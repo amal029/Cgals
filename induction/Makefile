@@ -1,4 +1,4 @@
-CCC ?= ocamlopt -annot -g -bin-annot
+CCC ?= ocamlopt -annot -g
 OCAMLOPTS=-a
 LANGUAGELIB=systemj.cmxa
 REPORTLIB=error.cmxa
