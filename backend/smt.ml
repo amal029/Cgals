@@ -80,7 +80,7 @@ let print_sequentiality lba =
                                    str := (!str ^ (match !multdep with
                                        | [] -> ""
                                        | _::_ -> 
-                                         let mys = List.fold_left (^) ("(and ") !multdep in
+                                         let mys = List.fold_left (^) ("(or ") !multdep in
                                          let mys = (mys ^ " )") in
                                          mys))
 
