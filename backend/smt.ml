@@ -49,16 +49,15 @@ let print_sequentiality lba =
                          x.node.incoming_chan <- (List.unique x.node.incoming_chan);
                          (if (List.is_empty x.node.incoming_chan = false)  then
                             let ors2 = ref [] in
+			    let g = ref false in
                             let () = List.iter (fun z -> 
                                 (match z with
                                  | Proposition (Label (s),[Some ((ChanPause (a,b,c)) as p)]) ->
+				    if !g = false then g := (match (a,b) with (Req,Start) -> true | _ -> false); 
                                    let microst = ("CD"^(string_of_int y)^"_"^x.node.name^"-"^(string_of_tchan p)) in
-                                   (*                         let tutu = ("(declare-fun "^microst^" () Int)") in *)
                                    adecl := microst :: !adecl;
                                    let multdep = ref [] in
                                    List.iter(fun u ->
-                                       (* micrsteps depends on the previous state on the same CD *)
-(*                                        let wctt1 = (match Hashtbl.find_option !wctt_opt y with | Some (t) -> t | None -> "1") in *)
                                        str := (!str^" (>= "^microst^" (+ CD"^(string_of_int y)^"_"^k^" "^iWCRT^")) ");
                                        (match (p, (match u with | (inchan,Systemj.ChanPause (g,h,l)) -> (inchan,g,h,l) )) with
                                          | (ChanPause (Ack,Start,cn) (*("$AckStart",cn)*), (inchan,Systemj.Req,Systemj.Start,l)) 
@@ -80,14 +79,14 @@ let print_sequentiality lba =
                                    str := (!str ^ (match !multdep with
                                        | [] -> ""
                                        | _::_ -> 
-                                         let mys = List.fold_left (^) ("(and ") !multdep in
+                                         let mys = List.fold_left (^) ("(or ") !multdep in
                                          let mys = (mys ^ " )") in
                                          mys))
 
                                  | _ -> () )
                               ) x.tls in
                             if(not (List.is_empty !ors2)) then
-                              ors := (((List.fold_left (^) ("(assert (or ") !ors2) ^ "))\n")) :: !ors;
+                              ors := (((List.fold_left (^) ("(assert ("^if !g then "and" else "or" ^" ") !ors2) ^ "))\n")) :: !ors;
                           else
 (*                             let wctt1 = (match Hashtbl.find_option !wctt_opt y with | Some (t) -> t | None -> "1") in *)
                             str := ("(>= CD"^(string_of_int y)^"_"^x.node.name^" (+ CD"^(string_of_int y)^"_"^k^" "^iWCRT^")) ")
@@ -207,8 +206,11 @@ let getnames = function
 let insert_incoming i1 cdn1 i2 cdn2 =
   let first = getnames i1 in
   let second = getnames i2 in
+  let (o,_,_) = second in
   match first with 
   | (a,s,((Systemj.ChanPause (Systemj.Ack, Systemj.Start,_)) as pp) (*"ack",true*) ) -> 
+     if s.node.name = "N177" then
+       print_endline "tutu1";
     (match second with 
      | (aa,ss,((Systemj.ChanPause (Systemj.Req, Systemj.Start,_)) as p) (*"req",false*) ) when a = aa ->
        s.node.incoming_chan <- (("CD"^(string_of_int cdn2)^"_"^ss.node.name),p) :: s.node.incoming_chan;
@@ -216,11 +218,15 @@ let insert_incoming i1 cdn1 i2 cdn2 =
        ss.node.incoming_chan <- (("CD"^(string_of_int cdn1)^"_"^s.node.name),pp) :: ss.node.incoming_chan;
      | _ -> ())
   | (a,s,Systemj.ChanPause (Systemj.Ack, Systemj.End,_) (*"ack",false*) ) ->
+     if s.node.name = "N177" then
+       print_endline "tutu2";
     (match second with 
      | (aa,ss,((Systemj.ChanPause (Systemj.Req, Systemj.End,_)) as p) (*"req",true*) ) when a = aa ->
        s.node.incoming_chan <- (("CD"^(string_of_int cdn2)^"_"^ss.node.name),p) :: s.node.incoming_chan;
      | _ -> ())
   | (a,s,((Systemj.ChanPause (Systemj.Req, Systemj.End,_)) as pp) (*"req",true*) ) ->
+     if s.node.name = "N177" then
+       print_endline "tutu3";
     (match second with
      | (aa,ss,((Systemj.ChanPause (Systemj.Ack, Systemj.Start,_) as p)) (*"ack",true*) ) when a = aa ->
        s.node.incoming_chan <- (("CD"^(string_of_int cdn2)^"_"^ss.node.name),p) :: s.node.incoming_chan;
@@ -228,6 +234,8 @@ let insert_incoming i1 cdn1 i2 cdn2 =
        ss.node.incoming_chan <- (("CD"^(string_of_int cdn1)^"_"^s.node.name), pp) :: ss.node.incoming_chan;
      | _ -> ())
   | (a,s,((Systemj.ChanPause (Systemj.Req, Systemj.Start,_)) as pp) (*"req",false*) ) ->
+     if s.node.name = "N177" then
+       print_endline ("tutu4: " ^ a ^ "," ^ o);
     (match second with
      | (aa,ss,Systemj.ChanPause (Systemj.Ack, Systemj.Start,_) (*"ack",true*) ) when a = aa ->
        ss.node.incoming_chan <- (("CD"^(string_of_int cdn1)^"_"^s.node.name), pp ):: ss.node.incoming_chan;
@@ -307,6 +315,7 @@ let insert_iWCRT lba =
       List.iter (fun node ->
           List.iter (fun incoming -> 
              node.node.iWCRT <- (string_of_int ((Random.int 9)+1)) :: node.node.iWCRT
+             (* node.node.iWCRT <- (string_of_int 1) :: node.node.iWCRT *)
             ) node.node.incoming
         ) node_set
     ) lba in
