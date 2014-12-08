@@ -49,11 +49,11 @@ let print_sequentiality lba =
                          x.node.incoming_chan <- (List.unique x.node.incoming_chan);
                          (if (List.is_empty x.node.incoming_chan = false)  then
                             let ors2 = ref [] in
-			    let g = ref false in
+                            let g = ref false in
                             let () = List.iter (fun z -> 
                                 (match z with
                                  | Proposition (Label (s),[Some ((ChanPause (a,b,c)) as p)]) ->
-				    if !g = false then g := (match (a,b) with (Req,Start) -> true | _ -> false); 
+                                   if !g = false then g := (match (a,b) with (Req,Start) -> true | _ -> false); 
                                    let microst = ("CD"^(string_of_int y)^"_"^x.node.name^"-"^(string_of_tchan p)) in
                                    adecl := microst :: !adecl;
                                    let multdep = ref [] in
@@ -70,7 +70,6 @@ let print_sequentiality lba =
                                            let node_list = List.at lba cdnum in 
                                            let node_from_other_cd = List.find (fun x -> x.node.name = (List.at cd_nodename 1) ) node_list in
                                            let oWCRT = match node_from_other_cd.node.oWCRT with | Some l -> l | None -> "0" in
-(*                                            let wctt1 = (match Hashtbl.find_option !wctt_opt cdnum with | Some (t) -> t | None -> "1") in *)
                                            multdep := (" (>= "^microst^" (+ "^inchan^" "^oWCRT^")) ") :: !multdep;
                                          | _ -> ()
                                        );
@@ -86,9 +85,8 @@ let print_sequentiality lba =
                                  | _ -> () )
                               ) x.tls in
                             if(not (List.is_empty !ors2)) then
-                              ors := (((List.fold_left (^) ("(assert ("^if !g then "and" else "or" ^" ") !ors2) ^ "))\n")) :: !ors;
+                              ors := (((List.fold_left (^) ("(assert ("^if !g then "and " else "or " ^" ") !ors2) ^ "))\n")) :: !ors;
                           else
-(*                             let wctt1 = (match Hashtbl.find_option !wctt_opt y with | Some (t) -> t | None -> "1") in *)
                             str := ("(>= CD"^(string_of_int y)^"_"^x.node.name^" (+ CD"^(string_of_int y)^"_"^k^" "^iWCRT^")) ")
                          )
                        )
@@ -118,8 +116,6 @@ let print_constraint lba group =
              if( r < rr ) then(
                List.reduce (^) (List.map (fun x ->
                    List.reduce (^) (List.map (fun y ->
-(*                        let wctt1 = (match Hashtbl.find_option !wctt_opt r with | Some (t) -> t | None -> "1") in *)
-(*                        let wctt2 = (match Hashtbl.find_option !wctt_opt (r+1) with | Some (t) -> t | None -> "1") in *)
                        let xnum = string_of_int r in
                        let ynum = string_of_int rr in
                        match Hashtbl.find_option group xnum with
@@ -209,8 +205,6 @@ let insert_incoming i1 cdn1 i2 cdn2 =
   let (o,_,_) = second in
   match first with 
   | (a,s,((Systemj.ChanPause (Systemj.Ack, Systemj.Start,_)) as pp) (*"ack",true*) ) -> 
-     if s.node.name = "N177" then
-       print_endline "tutu1";
     (match second with 
      | (aa,ss,((Systemj.ChanPause (Systemj.Req, Systemj.Start,_)) as p) (*"req",false*) ) when a = aa ->
        s.node.incoming_chan <- (("CD"^(string_of_int cdn2)^"_"^ss.node.name),p) :: s.node.incoming_chan;
@@ -218,15 +212,11 @@ let insert_incoming i1 cdn1 i2 cdn2 =
        ss.node.incoming_chan <- (("CD"^(string_of_int cdn1)^"_"^s.node.name),pp) :: ss.node.incoming_chan;
      | _ -> ())
   | (a,s,Systemj.ChanPause (Systemj.Ack, Systemj.End,_) (*"ack",false*) ) ->
-     if s.node.name = "N177" then
-       print_endline "tutu2";
     (match second with 
      | (aa,ss,((Systemj.ChanPause (Systemj.Req, Systemj.End,_)) as p) (*"req",true*) ) when a = aa ->
        s.node.incoming_chan <- (("CD"^(string_of_int cdn2)^"_"^ss.node.name),p) :: s.node.incoming_chan;
      | _ -> ())
   | (a,s,((Systemj.ChanPause (Systemj.Req, Systemj.End,_)) as pp) (*"req",true*) ) ->
-     if s.node.name = "N177" then
-       print_endline "tutu3";
     (match second with
      | (aa,ss,((Systemj.ChanPause (Systemj.Ack, Systemj.Start,_) as p)) (*"ack",true*) ) when a = aa ->
        s.node.incoming_chan <- (("CD"^(string_of_int cdn2)^"_"^ss.node.name),p) :: s.node.incoming_chan;
@@ -234,14 +224,10 @@ let insert_incoming i1 cdn1 i2 cdn2 =
        ss.node.incoming_chan <- (("CD"^(string_of_int cdn1)^"_"^s.node.name), pp) :: ss.node.incoming_chan;
      | _ -> ())
   | (a,s,((Systemj.ChanPause (Systemj.Req, Systemj.Start,_)) as pp) (*"req",false*) ) ->
-     if s.node.name = "N177" then
-       print_endline ("tutu4: " ^ a ^ "," ^ o);
     (match second with
      | (aa,ss,Systemj.ChanPause (Systemj.Ack, Systemj.Start,_) (*"ack",true*) ) when a = aa ->
        ss.node.incoming_chan <- (("CD"^(string_of_int cdn1)^"_"^s.node.name), pp ):: ss.node.incoming_chan;
      | _ -> ())
-(* | _ -> () *)
-
 
 let parse_option o =
   if o <> "" then
@@ -294,45 +280,18 @@ let get_last_node lb =
   let incoming_list = List.concat (List.map (fun x -> x.node.incoming) lb) in
   List.filter (fun x -> List.for_all (fun y -> x.node.name <> y ) incoming_list ) lb
 
-(*
-let print_wcrt lba =
-  let wcrt = List.fold_left (^) ("") (List.mapi (fun i x -> 
-      let node = get_last_node x in
-      List.fold_left (^) ("") (List.map (fun l ->
-          (match (Hashtbl.find_option !wcrt_opt i,Hashtbl.find_option !wctt_opt i) with
-           | (Some (x),Some(z)) -> ("(assert (and (<= (+ CD"^(string_of_int i)^"_"^(l.node.name)^" "^z^") "^x^")))\n")
-           | _ -> ("; CD "^(string_of_int i)^" : none\n")
-          )
-        ) node)
-    ) lba) in
-  let wcrt = ("; -- WCRT constraints -- \n"^wcrt) in
-  wcrt
-*)
-
 let insert_iWCRT lba =
   let () = Random.init (int_of_float (Unix.gettimeofday ())) in
   let () = List.iter (fun node_set -> 
       List.iter (fun node ->
           List.iter (fun incoming -> 
-             node.node.iWCRT <- (string_of_int ((Random.int 9)+1)) :: node.node.iWCRT
-             (* node.node.iWCRT <- (string_of_int 1) :: node.node.iWCRT *)
+              node.node.iWCRT <- (string_of_int ((Random.int 9)+1)) :: node.node.iWCRT
+              (* node.node.iWCRT <- (string_of_int 1) :: node.node.iWCRT *)
             ) node.node.incoming
         ) node_set
     ) lba in
 
-(*   Debugging *)
-(*
-  let () = List.iteri (fun i x -> 
-      print_endline ("CD "^(string_of_int i));
-      List.iter (fun x ->
-          print_endline ("Node : "^x.node.name);
-          print_endline ("incoming : ");
-          List.iter2 (fun y z -> print_endline (y^" wcrt :"^z)) x.node.incoming x.node.iWCRT
-        ) x
-    )lba in
-*)
-
-(*   Now calc WCRT of outgoing edges *)
+  (*   Now calc WCRT of outgoing edges *)
   let oWCRTs = Hashtbl.create 1000 in
   let () = List.iter (fun cd_nodes -> 
       let () = Hashtbl.clear oWCRTs in
@@ -354,25 +313,12 @@ let insert_iWCRT lba =
           with | Not_found -> ()
         ) oWCRTs
     ) lba in
-
-(*   Debugging *)
-(*
-  List.iter (fun x ->  
-      List.iter (fun x -> 
-          print_endline ("Node "^x.node.name^" WCRT : "^((function Some x -> x | None -> "0" ) x.node.oWCRT));
-        ) x
-    ) lba;
-*)
-
   ()
 
 
 let make_smt lba filename =
   let cc = ref [] in
   let () = List.iter (fun x -> 
-(*     o is not used here so I am commenting this out *)
-(*       let o = Hashtbl.create 1000 in *)
-(*       let () = List.iter (fun x -> Util.get_outgoings o (x.node,x.guards)) x in *)
       let cc2 = ref [] in 
       List.iter (fun y ->  
           List.iter (fun k -> get_chan_prop k y cc2 ) y.tls ) x;
@@ -394,7 +340,7 @@ let make_smt lba filename =
 
   let () = List.iter (fun x -> List.iter (fun x -> remove_loop x) x) lba in
 
-(*   Inserting WCRT for incoming edges *)
+  (*   Inserting WCRT for incoming edges *)
   let () = insert_iWCRT lba in
 
   let decl_stuff = 

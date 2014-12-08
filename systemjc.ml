@@ -153,7 +153,7 @@ try
         ret) labeled_buchi_automatas in
   (* This map is for each clock-domain *)
   let () = IFDEF DEBUG THEN List.iter (fun x -> 
-      let () = print_endline "....Building SystemJ model......" in
+      let () = print_endline ".... Debug ......" in
       let () = SS.output_hum Pervasives.stdout (SSL.sexp_of_list TableauBuchiAutomataGeneration.sexp_of_labeled_graph_node x) in
       print_endline "\n\n\n\n\n\n-----------------------------------------------------\n\n\n\n") labeled_buchi_automatas ELSE () ENDIF in
   let () = if conf.!dot then
