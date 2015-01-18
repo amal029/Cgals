@@ -35,6 +35,12 @@ robot_c: FORMULA = [] (!CD1_VIOLATED)
 conveyor: FILE = conveyor_belt
 conveyor: FORMULA = [] (!CD0_VIOLATED && !CD1_VIOLATED)
 
+robot_c2: FILE = robot_motion_controller2
+robot_c2: FORMULA = [] (CD1_SC2 -> !CD1_SC1 U CD1_objectpicked)
+
+conveyor2: FILE = conveyor_belt2
+conveyor2: FORMULA = [] ((CD0_S1 || !CD0_sent) && (CD1_MOVE || !CD1_mv_belt))
+
 washing: FILE = washing
 washing: FORMULA = [] !(CD0_WASHING && CD0_DRYING)
 
