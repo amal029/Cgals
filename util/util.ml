@@ -293,13 +293,15 @@ let remove_unreachable index lb channels internal_signals signals isignals asign
                  false
                | _ ->
                  L.for_all2 (fun update incoming -> 
-                     if (incoming <> node.node.name) then(
+(*                      if (incoming <> node.node.name) then( *)
                        not(eval node update channels internal_signals signals isignals asignals index 
                              ((fun (a,b) -> a ) outgoing) ((fun (a,b) -> b) outgoing) ) 
+(*
                      )
                      else(
                        true
                      )
+*)
                    ) updates node.node.incoming (* assuming order of updates, incoming and guards are the same *)
               ) in
 
