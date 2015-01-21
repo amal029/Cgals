@@ -35,8 +35,7 @@ let make_body asignals internal_signals channels o index signals isignals = func
     let o = (match Hashtbl.find_option o n with Some x -> x | None -> []) in
     let (o,guards) = L.split o in
     (* Now add the transitions *)
-    (("/*"^(string_of_logic tlabel)^"*/"^"\n") >> text)
-    ++ (("public void CD"^(string_of_int index)^"_"^n^"() {\n") >> text)
+    ("case "^(String.lchop n)^":/*"^(string_of_logic tlabel)^"*/"^"\n" >> text)
     ++ (L.reduce (++) (
         if o <> [] then
           L.map2 (fun x g ->
@@ -76,13 +75,12 @@ let make_body asignals internal_signals channels o index signals isignals = func
                         ((getInterfaceString internal_signals x)^"CD"^(string_of_int index)^"_"^x) else (getInterfaceString internal_signals x)^x)
                      ^ " = false;\n" >> text)) !to_false)
                 ++ (("state = " ^(String.lchop x)^ ";\n") >> text)
-                ++ ("return;\n" >> text)
+                ++ ("break;\n" >> text)
                 ++ ("}\n" >> text)
               else empty
             ) o guards
-        else [("state =  " ^(String.lchop n)^ "; return;\n">> text)]
+        else [("state =  " ^(String.lchop n)^ "; break;\n">> text)]
       )) 
-    ++ ("}\n" >> text)
 
 let make_interface java_channels java_gsigs fnwe =
   ("package "^fnwe^";\n" >> text)
@@ -101,10 +99,10 @@ let make_process internal_signals channels o index signals isignals init asignal
   (("public int state = " ^(String.lchop init)^"; // This must be from immortal mem\n") >> text)
   ++ ("public void run(){\n" >> text)
   ++ ("switch (state){\n" >> text)
-  ++ ((L.reduce (++) (L.map (fun x -> make_switch index (x.node,x.tlabels,x.guards)) lgn)) >> (4 >> indent))
+(*   ++ ((L.reduce (++) (L.map (fun x -> make_switch index (x.node,x.tlabels,x.guards)) lgn)) >> (4 >> indent)) *)
+  ++ ((L.reduce (++) (L.map (fun x -> make_body asignals internal_signals channels o index signals isignals (x.node,x.tlabels,x.guards)) lgn)) >> (4 >> indent))
   ++ ("default: System.err.println(\"System went to a wrong state !! \"+state); break;\n" >> text)
   ++ ("}\n}\n" >> text)
-  ++ ((L.reduce (++) (L.map (fun x -> make_body asignals internal_signals channels o index signals isignals (x.node,x.tlabels,x.guards)) lgn)) >> (4 >> indent))
   ++ (" " >> line)
 
 let make_main index file_name = 
