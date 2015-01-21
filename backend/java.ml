@@ -56,24 +56,13 @@ let make_body asignals internal_signals channels o index signals isignals = func
               if g <> "false" then
                 ("if" >> text)
                 ++ ((if g <> "" then ("(" ^ g ^ ") {\n") else "") >> text)
+                ++ ("resetCD();\n" >> text)
                 (* These are the updates to be made here!! *)
                 ++ L.fold_left (++) empty (L.mapi (fun i x -> 
                     ((if not (L.exists (fun t -> t = x) channels) then 
                         ((getInterfaceString internal_signals x)^"CD"^(string_of_int index)^"_"^x) else (getInterfaceString internal_signals x)^x)
                      ^ " = true;\nSystem.out.println(\"Emitted: "^x^"\");\n") >> text) updates)
                 ++ ((L.fold_left (^) "" (L.map (Util.build_data_stmt asignals index "java" internal_signals) datastmts)) >> text)
-                ++ L.fold_left (++) empty (Util.map2i (fun i x y -> 
-                    (match y with
-                     | None -> Pretty.empty
-                     | Some r -> 
-                       ((getInterfaceString internal_signals x)^"CD"^(string_of_int index)^"_"^x^"_val_pre = "
-                        ^(getInterfaceString internal_signals x)^"CD" ^ (string_of_int index)^"_"^x^"_val;\n" >> Pretty.text)
-                       ++ ((getInterfaceString internal_signals x)^"CD"^(string_of_int index)^"_"^x^"_val = "^r.Systemj.v^";\n"  >> Pretty.text)
-                    ))asignals_names asignals_options)
-                ++ L.fold_left (++) empty (L.mapi (fun i x ->
-                    ((if not (L.exists (fun t -> t = x) channels) then 
-                        ((getInterfaceString internal_signals x)^"CD"^(string_of_int index)^"_"^x) else (getInterfaceString internal_signals x)^x)
-                     ^ " = false;\n" >> text)) !to_false)
                 ++ (("state = " ^(String.lchop x)^ ";\n") >> text)
                 ++ ("break;\n" >> text)
                 ++ ("}\n" >> text)
@@ -95,8 +84,31 @@ let make_cdintf fnwe =
   ++ ("public void run (); \n" >> text)
   ++("}\n" >> text)
 
+let make_reset signals isignals asignals internal_signals channels index =
+  let asignals_names = List.split asignals |> (fun (x,_) -> x) in
+  let asignals_options = List.split asignals |> (fun (_,y) -> y) in
+  let to_false = ref signals in
+  let () = L.iter (fun x -> to_false := L.filter (fun y -> y <> x) !to_false) isignals in
+  ("public void resetCD() {\n" >> text)
+    ++ L.fold_left (++) empty (Util.map2i (fun i x y -> 
+        (match y with
+         | None -> Pretty.empty
+         | Some r -> 
+           ((getInterfaceString internal_signals x)^"CD"^(string_of_int index)^"_"^x^"_val_pre = "
+            ^(getInterfaceString internal_signals x)^"CD" ^ (string_of_int index)^"_"^x^"_val;\n" >> Pretty.text)
+           ++ ((getInterfaceString internal_signals x)^"CD"^(string_of_int index)^"_"^x^"_val = "^r.Systemj.v^";\n"  >> Pretty.text)
+        ))asignals_names asignals_options)
+    ++ L.fold_left (++) empty (L.mapi (fun i x ->
+        ((if not (L.exists (fun t -> t = x) channels) then 
+            ((getInterfaceString internal_signals x)^"CD"^(string_of_int index)^"_"^x) else (getInterfaceString internal_signals x)^x)
+         ^ " = false;\n" >> text)) !to_false)
+    ++ ("}\n" >> text)
+
+
+
 let make_process internal_signals channels o index signals isignals init asignals lgn = 
   (("public int state = " ^(String.lchop init)^"; // This must be from immortal mem\n") >> text)
+  ++ ((make_reset signals isignals asignals internal_signals channels index))
   ++ ("public void run(){\n" >> text)
   ++ ("switch (state){\n" >> text)
 (*   ++ ((L.reduce (++) (L.map (fun x -> make_switch index (x.node,x.tlabels,x.guards)) lgn)) >> (4 >> indent)) *)
