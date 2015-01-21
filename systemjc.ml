@@ -107,10 +107,6 @@ try
         let () = flush_all () in
         let st_node = List.find (fun {tlabels=t} -> (match t with | PL.Proposition (PL.Label x,_) -> x = "st" | _ -> false)) ret in
         init := st_node.node.name :: !init;
-        let () = print_endline "....Building SystemJ model......" in
-        let () = IFDEF DEBUG THEN List.iter (fun x -> 
-            let () = SS.output_hum Pervasives.stdout (SSL.sexp_of_list TableauBuchiAutomataGeneration.sexp_of_labeled_graph_node x) in
-            print_endline "\n\n\n\n\n\n-----------------------------------------------------\n\n\n\n") labeled_buchi_automatas ELSE () ENDIF in
         let () = List.iter (fun ({node=n} as ln) -> 
             let gg = ref [] in
             let ig = ref [] in
@@ -121,17 +117,7 @@ try
                 ig := !ig @ [(List.nth ln.guards c)]
             done;
             if !ig <> [] then
-              (* This is the only way this should be allowed: 1.) If there
-                 	     are multiple Init's then that means you could have run this
-                 	     thing with an || 2.) But, if there is a parent node, then
-                 	     that node needs to have been true for this node to have
-                 	     been executed. -- At least, that's the theory!
-                 	  *)
-              let ig = List.reduce (fun x y -> PL.Or(x,y)) !ig in
-              gg := List.map (fun x -> PL.solve_logic (PL.And (x,ig))) !gg;
               ln.guards <- !gg;
-              (* This is deleting the rest of the nodes with incoming as Init *)
-              (* n.incoming <- List.remove_all n.incoming "Init"; *)
           ) ret in
 
         (* There are other nodes without "st", these can be logic
@@ -142,7 +128,7 @@ try
            	 then these nodes and their corresponding guards should be
            	 delted!  *)
         let torep = (List.filter(fun {tlabels=t} -> (match t with | PL.Proposition (PL.Label x,_) -> x <> "st" | _ -> true))
-            (List.filter (fun{node=n} -> n.incoming=["Init"])ret)) in
+            (List.filter (fun{node=n} -> List.exists ((=) "Init") n.incoming)ret)) in
         let () = List.iter(fun {node=n} -> n.incoming <- List.remove_all n.incoming "Init";) ret in
         let () = if conf.!dot then
             Dot.generate_dot ~th:(Some i) [ret] ((Filename.chop_extension !file_name)^"_lgba_03_") 
