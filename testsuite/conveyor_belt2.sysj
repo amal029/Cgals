@@ -1,9 +1,8 @@
 {
 	output channel C;
 	output signal sent;
-	output signal VIOLATED;
-	signal last;
-	signal S1;
+	input signal last;
+	output signal S1;
 	{
 		loop {
 			abort(last)
@@ -16,20 +15,14 @@ S1: pause;
 		}
 	}
 	||
-	{
-		/* Env */
-		pause;
-		emit last;
-		pause;
-	}
+	{loop{pause;pause;}}
 }
 ><
 {
 	input channel C;
-	signal MOVE;
+	output signal MOVE;
 	output signal mv_belt;
-	output signal VIOLATED;
-	signal out;
+	input signal out;
 	{
 		loop {
 			C?;
@@ -41,4 +34,6 @@ MOVE: pause;
 				}
 		}
 	}
+	||
+	{loop{pause;pause;}}
 }
