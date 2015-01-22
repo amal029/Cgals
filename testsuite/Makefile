@@ -44,6 +44,9 @@ conveyor2: FORMULA = [] ((CD0_S1 || !CD0_sent) && (CD1_MOVE || !CD1_mv_belt))
 washing: FILE = washing
 washing: FORMULA = [] !(CD0_WASHING && CD0_DRYING)
 
+washing2: FILE = washing2
+washing2: FORMULA = [] !(CD0_WASHING && CD0_DRYING)
+
 abort_imm: FILE=abort_imm
 abort_imm: FORMULA=[] !CD0_B
 

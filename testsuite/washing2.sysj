@@ -1,0 +1,35 @@
+{
+	input signal wash_on;
+	input signal wash_off;
+	input signal spin_on;
+	input signal spin_off;
+	signal T1;
+	signal T2;
+
+	signal WASHING;
+	signal DRYING;
+	{
+		loop{
+			abort(wash_on){loop{pause;}}
+			abort(DRYING||T2){
+				emit T1;
+				pause;
+				abort(wash_off){loop{emit WASHING; pause;}}
+			}
+		}
+	}
+	||{
+		loop{
+			abort(spin_on){loop{pause;}}
+			abort(WASHING){
+				emit T2;
+				pause;
+				abort(spin_off){loop{emit DRYING; pause;}}
+			}
+		}
+	}
+	||
+	{
+		loop{pause;pause;}
+	}
+}
