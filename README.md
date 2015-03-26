@@ -41,11 +41,18 @@ make clean && make in the source directory.
 
 ## Language:
 
-The language description is available here:
+The language description and implementation description is available in the following papers:
 
-Avinash Malik, Zoran Salcic, Partha S. Roop, Alain Girault: SystemJ: A
+* Avinash Malik, Zoran Salcic, Partha S. Roop, Alain Girault: SystemJ: A
 GALS language for system level design. Computer Languages, Systems &
 Structures 36(4): 317-344 (2010)
+
+* HeeJong Park, Avinash Malik, Zoran A. Salcic: WYPIWYE automation systems - 
+An intelligent manufacturing system case study. ETFA 2014: 1-8
+
+* H.J. Park, A. Malik, Z. Salcic, Scheduling Globally Asynchronous Locally
+Synchronous Programs for Guaranteed Response Times, ACM Transactions on
+Design Automation of Electronic Systems (TODAES), 2015
 
 
 ## Compiling:
