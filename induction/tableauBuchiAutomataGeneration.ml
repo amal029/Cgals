@@ -36,7 +36,12 @@ let rec expand index node nodes_set =
   match node.neew with
   | [] -> 
     (try
-       let shared_node = List.filter (fun x -> (x.old = node.old) && (node.next = x.next)) !nodes_set in
+(*        let shared_node = List.filter (fun x -> (x.old = node.old) && (node.next = x.next)) !nodes_set in *)
+       let shared_node = List.filter (fun x -> 
+           (if List.length x.old = List.length node.old then x.old = node.old else false)
+           &&
+           (if List.length node.next = List.length x.next then node.next = x.next else false)
+         ) !nodes_set in
        let shared_node = if (List.length shared_node > 1) then raise (Internal_error "More than one shared node!") 
          else 
          if shared_node <> [] then
