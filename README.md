@@ -54,6 +54,10 @@ An intelligent manufacturing system case study. ETFA 2014: 1-8
 Synchronous Programs for Guaranteed Response Times, ACM Transactions on
 Design Automation of Electronic Systems (TODAES), 2015
 
+* HeeJong Park, Avinash Malik, Zoran A. Salcic: Compiling and verifying SC-SystemJ 
+programs for safety-critical reactive systems. Computer Languages, Systems & Structures 
+44: 251-282 (2015)
+
 
 ## Compiling:
 
